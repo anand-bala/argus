@@ -1,0 +1,11 @@
+edition = "2021"
+max_width = 120
+comment_width = 88
+wrap_comments = true
+format_strings = true
+group_imports = "StdExternalCrate"
+imports_granularity = "Module"
+condense_wildcard_suffixes = true
+use_field_init_shorthand = true
+
+unstable_features = true
