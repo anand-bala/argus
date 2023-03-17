@@ -1,11 +1,5 @@
-[package]
-name = "argus"
-version = "0.1.0"
-
-authors = ["Anand Balakrishnan"]
-license = "BSD-3-Clause"
-
-edition = "2021"
-rust-version = "1.66"
-
-[dependencies]
+[workspace]
+members = [
+    "argus",
+    "argus-core",
+]
