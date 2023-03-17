@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+
+use crate::{ArgusResult, Error};
+
 /// All expressions that are numeric
 #[derive(Clone, Debug)]
 pub enum NumExpr {
@@ -47,8 +51,158 @@ pub enum BoolExpr {
 }
 
 /// Expression builder
-#[derive(Clone, Debug)]
-pub struct ExprBuilder {}
+///
+/// The `ExprBuilder` is a factory structure that deals with the creation of expressions.
+/// The main goal of this is to ensure users do not create duplicate definitions for
+/// variables.
+#[derive(Clone, Debug, Default)]
+pub struct ExprBuilder {
+    declarations: HashSet<String>,
+}
+
+impl ExprBuilder {
+    pub fn new() -> Self {
+        Self {
+            declarations: Default::default(),
+        }
+    }
+
+    pub fn bool_const(&self, value: bool) -> Box<BoolExpr> {
+        Box::new(BoolExpr::BoolLit(value))
+    }
+
+    pub fn int_const(&self, value: i64) -> Box<NumExpr> {
+        Box::new(NumExpr::IntLit(value))
+    }
+
+    pub fn uint_const(&self, value: u64) -> Box<NumExpr> {
+        Box::new(NumExpr::UIntLit(value))
+    }
+
+    pub fn float_const(&self, value: f64) -> Box<NumExpr> {
+        Box::new(NumExpr::FloatLit(value))
+    }
+
+    pub fn bool_var(&mut self, name: String) -> ArgusResult<Box<BoolExpr>> {
+        if self.declarations.insert(name.clone()) {
+            Ok(Box::new(BoolExpr::BoolVar { name }))
+        } else {
+            Err(Error::IdentifierRedeclaration)
+        }
+    }
+
+    pub fn int_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
+        if self.declarations.insert(name.clone()) {
+            Ok(Box::new(NumExpr::IntVar { name }))
+        } else {
+            Err(Error::IdentifierRedeclaration)
+        }
+    }
+
+    pub fn uint_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
+        if self.declarations.insert(name.clone()) {
+            Ok(Box::new(NumExpr::UIntVar { name }))
+        } else {
+            Err(Error::IdentifierRedeclaration)
+        }
+    }
+
+    pub fn float_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
+        if self.declarations.insert(name.clone()) {
+            Ok(Box::new(NumExpr::FloatVar { name }))
+        } else {
+            Err(Error::IdentifierRedeclaration)
+        }
+    }
+
+    pub fn make_neg(&self, arg: Box<NumExpr>) -> Box<NumExpr> {
+        Box::new(NumExpr::Neg { arg })
+    }
+
+    pub fn make_add<I>(&self, args: I) -> ArgusResult<Box<NumExpr>>
+    where
+        I: IntoIterator<Item = NumExpr>,
+    {
+        let args: Vec<_> = args.into_iter().collect();
+        if args.len() < 2 {
+            Err(Error::IncompleteArgs)
+        } else {
+            Ok(Box::new(NumExpr::Add { args }))
+        }
+    }
+
+    pub fn make_mul<I>(&self, args: I) -> ArgusResult<Box<NumExpr>>
+    where
+        I: IntoIterator<Item = NumExpr>,
+    {
+        let args: Vec<_> = args.into_iter().collect();
+        if args.len() < 2 {
+            Err(Error::IncompleteArgs)
+        } else {
+            Ok(Box::new(NumExpr::Mul { args }))
+        }
+    }
+
+    pub fn make_div(&self, dividend: Box<NumExpr>, divisor: Box<NumExpr>) -> Box<NumExpr> {
+        Box::new(NumExpr::Div { dividend, divisor })
+    }
+
+    pub fn make_cmp(&self, op: Ordering, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Cmp { op, lhs, rhs })
+    }
+
+    pub fn make_lt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+        self.make_cmp(Ordering::Less { strict: true }, lhs, rhs)
+    }
+
+    pub fn make_le(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+        self.make_cmp(Ordering::Less { strict: false }, lhs, rhs)
+    }
+
+    pub fn make_gt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+        self.make_cmp(Ordering::Greater { strict: true }, lhs, rhs)
+    }
+
+    pub fn make_ge(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+        self.make_cmp(Ordering::Greater { strict: false }, lhs, rhs)
+    }
+
+    pub fn make_eq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+        self.make_cmp(Ordering::Eq, lhs, rhs)
+    }
+
+    pub fn make_neq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+        self.make_cmp(Ordering::NotEq, lhs, rhs)
+    }
+
+    pub fn make_not(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Not { arg })
+    }
+
+    pub fn make_or<I>(&self, args: I) -> ArgusResult<Box<BoolExpr>>
+    where
+        I: IntoIterator<Item = BoolExpr>,
+    {
+        let args: Vec<_> = args.into_iter().collect();
+        if args.len() < 2 {
+            Err(Error::IncompleteArgs)
+        } else {
+            Ok(Box::new(BoolExpr::Or { args }))
+        }
+    }
+
+    pub fn make_and<I>(&self, args: I) -> ArgusResult<Box<BoolExpr>>
+    where
+        I: IntoIterator<Item = BoolExpr>,
+    {
+        let args: Vec<_> = args.into_iter().collect();
+        if args.len() < 2 {
+            Err(Error::IncompleteArgs)
+        } else {
+            Ok(Box::new(BoolExpr::And { args }))
+        }
+    }
+}
 
 #[cfg(test)]
 pub mod arbitrary {
