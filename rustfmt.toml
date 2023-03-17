@@ -7,6 +7,6 @@ group_imports = "StdExternalCrate"
 imports_granularity = "Module"
 condense_wildcard_suffixes = true
 use_field_init_shorthand = true
-struct_variant_width = 45
+struct_variant_width = 65
 
 unstable_features = true

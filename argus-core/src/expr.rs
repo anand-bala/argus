@@ -1,7 +1,5 @@
-use std::{
-    collections::HashSet,
-    ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not},
-};
+use std::collections::HashSet;
+use std::ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not};
 
 pub(crate) mod internal_macros;
 
@@ -36,30 +34,18 @@ pub enum Ordering {
 #[derive(Clone, Debug)]
 pub enum BoolExpr {
     BoolLit(bool),
-    BoolVar {
-        name: String,
-    },
-    Cmp {
-        op: Ordering,
-        lhs: Box<NumExpr>,
-        rhs: Box<NumExpr>,
-    },
-    Not {
-        arg: Box<BoolExpr>,
-    },
-    And {
-        args: Vec<BoolExpr>,
-    },
-    Or {
-        args: Vec<BoolExpr>,
-    },
+    BoolVar { name: String },
+    Cmp { op: Ordering, lhs: Box<NumExpr>, rhs: Box<NumExpr> },
+    Not { arg: Box<BoolExpr> },
+    And { args: Vec<BoolExpr> },
+    Or { args: Vec<BoolExpr> },
 }
 
 /// Expression builder
 ///
-/// The `ExprBuilder` is a factory structure that deals with the creation of expressions.
-/// The main goal of this is to ensure users do not create duplicate definitions for
-/// variables.
+/// The `ExprBuilder` is a factory structure that deals with the creation of
+/// expressions. The main goal of this is to ensure users do not create duplicate
+/// definitions for variables.
 #[derive(Clone, Debug, Default)]
 pub struct ExprBuilder {
     declarations: HashSet<String>,
@@ -365,8 +351,9 @@ internal_macros::forward_box_binop! {impl BitAnd, bitand for BoolExpr, BoolExpr 
 #[cfg(test)]
 pub mod arbitrary {
     //! Helper functions to generate arbitrary expressions using [`proptest`].
-    use super::*;
     use proptest::prelude::*;
+
+    use super::*;
 
     pub fn num_expr() -> impl Strategy<Value = Box<NumExpr>> {
         let leaf = prop_oneof![
@@ -443,9 +430,10 @@ pub mod arbitrary {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use paste::paste;
     use proptest::prelude::*;
+
+    use super::*;
 
     proptest! {
         #[test]
