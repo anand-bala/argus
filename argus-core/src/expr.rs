@@ -1,4 +1,9 @@
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not},
+};
+
+pub(crate) mod internal_macros;
 
 use crate::{ArgusResult, Error};
 
@@ -204,6 +209,159 @@ impl ExprBuilder {
     }
 }
 
+impl Neg for NumExpr {
+    type Output = NumExpr;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        NumExpr::Neg { arg: Box::new(self) }
+    }
+}
+
+impl Neg for Box<NumExpr> {
+    type Output = NumExpr;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        NumExpr::Neg { arg: self }
+    }
+}
+
+impl Add for NumExpr {
+    type Output = NumExpr;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self::Output {
+        use NumExpr::*;
+
+        match (self, rhs) {
+            (Add { args: mut left }, Add { args: mut right }) => {
+                left.append(&mut right);
+                Add { args: left }
+            }
+            (Add { mut args }, other) | (other, Add { mut args }) => {
+                args.push(other);
+                Add { args }
+            }
+            (left, right) => {
+                let args = vec![left, right];
+                Add { args }
+            }
+        }
+    }
+}
+
+internal_macros::forward_box_binop! {impl Add, add for NumExpr, NumExpr }
+
+impl Mul for NumExpr {
+    type Output = NumExpr;
+
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        use NumExpr::*;
+
+        match (self, rhs) {
+            (Mul { args: mut left }, Mul { args: mut right }) => {
+                left.append(&mut right);
+                Mul { args: left }
+            }
+            (Mul { mut args }, other) | (other, Mul { mut args }) => {
+                args.push(other);
+                Mul { args }
+            }
+            (left, right) => {
+                let args = vec![left, right];
+                Mul { args }
+            }
+        }
+    }
+}
+
+internal_macros::forward_box_binop! {impl Mul, mul for NumExpr, NumExpr }
+
+impl Div for NumExpr {
+    type Output = NumExpr;
+
+    #[inline]
+    fn div(self, rhs: Self) -> Self::Output {
+        use NumExpr::*;
+        Div {
+            dividend: Box::new(self),
+            divisor: Box::new(rhs),
+        }
+    }
+}
+
+internal_macros::forward_box_binop! {impl Div, div for NumExpr, NumExpr }
+
+impl Not for BoolExpr {
+    type Output = BoolExpr;
+
+    fn not(self) -> Self::Output {
+        BoolExpr::Not { arg: Box::new(self) }
+    }
+}
+
+impl Not for Box<BoolExpr> {
+    type Output = BoolExpr;
+
+    fn not(self) -> Self::Output {
+        BoolExpr::Not { arg: self }
+    }
+}
+
+impl BitOr for BoolExpr {
+    type Output = BoolExpr;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        use BoolExpr::*;
+
+        match (self, rhs) {
+            (Or { args: mut left }, Or { args: mut right }) => {
+                left.append(&mut right);
+                Or { args: left }
+            }
+            (Or { mut args }, other) | (other, Or { mut args }) => {
+                args.push(other);
+                Or { args }
+            }
+            (left, right) => {
+                let args = vec![left, right];
+                Or { args }
+            }
+        }
+    }
+}
+
+internal_macros::forward_box_binop! {impl BitOr, bitor for BoolExpr, BoolExpr }
+
+impl BitAnd for BoolExpr {
+    type Output = BoolExpr;
+
+    #[inline]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        use BoolExpr::*;
+
+        match (self, rhs) {
+            (And { args: mut left }, And { args: mut right }) => {
+                left.append(&mut right);
+                And { args: left }
+            }
+            (And { mut args }, other) | (other, And { mut args }) => {
+                args.push(other);
+                And { args }
+            }
+            (left, right) => {
+                let args = vec![left, right];
+                And { args }
+            }
+        }
+    }
+}
+
+internal_macros::forward_box_binop! {impl BitAnd, bitand for BoolExpr, BoolExpr }
+
 #[cfg(test)]
 pub mod arbitrary {
     //! Helper functions to generate arbitrary expressions using [`proptest`].
@@ -286,6 +444,7 @@ pub mod arbitrary {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use paste::paste;
     use proptest::prelude::*;
 
     proptest! {
@@ -301,4 +460,66 @@ mod tests {
             _ = bool_expr;
         }
     }
+
+    proptest! {
+        #[test]
+        fn neg_num_expr(arg in arbitrary::num_expr()) {
+            let expr = -arg;
+            assert!(matches!(expr, NumExpr::Neg { arg: _ }));
+        }
+    }
+
+    macro_rules! test_num_binop {
+        ($name:ident, $method:ident with /) => {
+            paste! {
+                proptest! {
+                    #[test]
+                    fn [<$method _num_expr>](lhs in arbitrary::num_expr(), rhs in arbitrary::num_expr()) {
+                        let expr = lhs / rhs;
+                        assert!(matches!(expr, NumExpr::$name {dividend: _, divisor: _ }));
+                    }
+                }
+            }
+        };
+        ($name:ident, $method:ident with $op:tt) => {
+            paste! {
+                proptest! {
+                    #[test]
+                    fn [<$method _num_expr>](lhs in arbitrary::num_expr(), rhs in arbitrary::num_expr()) {
+                        let expr = lhs $op rhs;
+                        assert!(matches!(expr, NumExpr::$name { args: _ }));
+                    }
+                }
+            }
+        };
+    }
+
+    test_num_binop!(Add, add with +);
+    test_num_binop!(Mul, mul with *);
+    test_num_binop!(Div, div with /);
+
+    proptest! {
+        #[test]
+        fn not_bool_expr(arg in arbitrary::bool_expr()) {
+            let expr = !arg;
+            assert!(matches!(expr, BoolExpr::Not { arg: _ }));
+        }
+    }
+
+    macro_rules! test_bool_binop {
+        ($name:ident, $method:ident with $op:tt) => {
+            paste! {
+                proptest! {
+                    #[test]
+                    fn [<$method _bool_expr>](lhs in arbitrary::bool_expr(), rhs in arbitrary::bool_expr()) {
+                        let expr = Box::new(lhs $op rhs);
+                        assert!(matches!(*expr, BoolExpr::$name { args: _ }));
+                    }
+                }
+            }
+        };
+    }
+
+    test_bool_binop!(And, bitand with &);
+    test_bool_binop!(Or, bitor with |);
 }
