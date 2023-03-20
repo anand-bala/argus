@@ -1,12 +1,17 @@
-use std::collections::HashSet;
-use std::ops::{Add, BitAnd, BitOr, Div, Mul, Neg, Not};
+use std::{any::Any, collections::HashSet};
 
-pub(crate) mod internal_macros;
+mod bool_ops;
+mod internal_macros;
+pub mod iter;
+mod num_ops;
+
+pub use bool_ops::*;
+pub use num_ops::*;
 
 use crate::{ArgusResult, Error};
 
 /// All expressions that are numeric
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum NumExpr {
     IntLit(i64),
     UIntLit(u64),
@@ -22,7 +27,7 @@ pub enum NumExpr {
 }
 
 /// Types of comparison operations
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Ordering {
     Eq,
     NotEq,
@@ -31,7 +36,7 @@ pub enum Ordering {
 }
 
 /// All expressions that are evaluated to be of type `bool`
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BoolExpr {
     BoolLit(bool),
     BoolVar { name: String },
@@ -194,159 +199,6 @@ impl ExprBuilder {
         }
     }
 }
-
-impl Neg for NumExpr {
-    type Output = NumExpr;
-
-    #[inline]
-    fn neg(self) -> Self::Output {
-        NumExpr::Neg { arg: Box::new(self) }
-    }
-}
-
-impl Neg for Box<NumExpr> {
-    type Output = NumExpr;
-
-    #[inline]
-    fn neg(self) -> Self::Output {
-        NumExpr::Neg { arg: self }
-    }
-}
-
-impl Add for NumExpr {
-    type Output = NumExpr;
-
-    #[inline]
-    fn add(self, rhs: Self) -> Self::Output {
-        use NumExpr::*;
-
-        match (self, rhs) {
-            (Add { args: mut left }, Add { args: mut right }) => {
-                left.append(&mut right);
-                Add { args: left }
-            }
-            (Add { mut args }, other) | (other, Add { mut args }) => {
-                args.push(other);
-                Add { args }
-            }
-            (left, right) => {
-                let args = vec![left, right];
-                Add { args }
-            }
-        }
-    }
-}
-
-internal_macros::forward_box_binop! {impl Add, add for NumExpr, NumExpr }
-
-impl Mul for NumExpr {
-    type Output = NumExpr;
-
-    #[inline]
-    fn mul(self, rhs: Self) -> Self::Output {
-        use NumExpr::*;
-
-        match (self, rhs) {
-            (Mul { args: mut left }, Mul { args: mut right }) => {
-                left.append(&mut right);
-                Mul { args: left }
-            }
-            (Mul { mut args }, other) | (other, Mul { mut args }) => {
-                args.push(other);
-                Mul { args }
-            }
-            (left, right) => {
-                let args = vec![left, right];
-                Mul { args }
-            }
-        }
-    }
-}
-
-internal_macros::forward_box_binop! {impl Mul, mul for NumExpr, NumExpr }
-
-impl Div for NumExpr {
-    type Output = NumExpr;
-
-    #[inline]
-    fn div(self, rhs: Self) -> Self::Output {
-        use NumExpr::*;
-        Div {
-            dividend: Box::new(self),
-            divisor: Box::new(rhs),
-        }
-    }
-}
-
-internal_macros::forward_box_binop! {impl Div, div for NumExpr, NumExpr }
-
-impl Not for BoolExpr {
-    type Output = BoolExpr;
-
-    fn not(self) -> Self::Output {
-        BoolExpr::Not { arg: Box::new(self) }
-    }
-}
-
-impl Not for Box<BoolExpr> {
-    type Output = BoolExpr;
-
-    fn not(self) -> Self::Output {
-        BoolExpr::Not { arg: self }
-    }
-}
-
-impl BitOr for BoolExpr {
-    type Output = BoolExpr;
-
-    #[inline]
-    fn bitor(self, rhs: Self) -> Self::Output {
-        use BoolExpr::*;
-
-        match (self, rhs) {
-            (Or { args: mut left }, Or { args: mut right }) => {
-                left.append(&mut right);
-                Or { args: left }
-            }
-            (Or { mut args }, other) | (other, Or { mut args }) => {
-                args.push(other);
-                Or { args }
-            }
-            (left, right) => {
-                let args = vec![left, right];
-                Or { args }
-            }
-        }
-    }
-}
-
-internal_macros::forward_box_binop! {impl BitOr, bitor for BoolExpr, BoolExpr }
-
-impl BitAnd for BoolExpr {
-    type Output = BoolExpr;
-
-    #[inline]
-    fn bitand(self, rhs: Self) -> Self::Output {
-        use BoolExpr::*;
-
-        match (self, rhs) {
-            (And { args: mut left }, And { args: mut right }) => {
-                left.append(&mut right);
-                And { args: left }
-            }
-            (And { mut args }, other) | (other, And { mut args }) => {
-                args.push(other);
-                And { args }
-            }
-            (left, right) => {
-                let args = vec![left, right];
-                And { args }
-            }
-        }
-    }
-}
-
-internal_macros::forward_box_binop! {impl BitAnd, bitand for BoolExpr, BoolExpr }
 
 #[cfg(test)]
 pub mod arbitrary {
