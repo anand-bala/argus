@@ -40,3 +40,43 @@ impl<'a> Iterator for AstIter<'a> {
         Some(expr_ref)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::expr::{Expr, ExprBuilder, ExprRef};
+    use itertools::Itertools;
+
+    #[test]
+    fn simple_iter() {
+        let mut ctx = ExprBuilder::new();
+
+        let x = ctx.float_var("x".to_owned()).unwrap();
+        let y = ctx.float_var("y".to_owned()).unwrap();
+        let lit = ctx.float_const(2.0);
+
+        let pred1 = ctx.make_le(x.clone(), lit.clone());
+        let pred2 = ctx.make_gt(y.clone(), lit.clone());
+        let spec = ctx.make_or([*pred1.clone(), *pred2.clone()]).unwrap();
+
+        drop(ctx);
+
+        let expr_tree = spec.iter();
+        let expected: Vec<ExprRef<'_>> = vec![
+            spec.as_ref().into(),
+            pred1.as_ref().into(),
+            pred2.as_ref().into(),
+            x.as_ref().into(),
+            lit.as_ref().into(),
+            y.as_ref().into(),
+            lit.as_ref().into(),
+        ];
+
+        for (lhs, rhs) in expr_tree.zip_eq(expected.into_iter()) {
+            match (lhs, rhs) {
+                (ExprRef::Bool(lhs), ExprRef::Bool(rhs)) => assert_eq!(lhs, rhs),
+                (ExprRef::Num(lhs), ExprRef::Num(rhs)) => assert_eq!(lhs, rhs),
+                e => panic!("got mismatched pair: {:?}", e),
+            }
+        }
+    }
+}
