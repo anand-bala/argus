@@ -1,4 +1,4 @@
-use super::{internal_macros, NumExpr};
+use super::{internal_macros, BoolExpr, NumExpr};
 use std::ops::{Add, Div, Mul, Neg};
 
 impl Neg for NumExpr {
@@ -85,3 +85,55 @@ impl Div for NumExpr {
 }
 
 internal_macros::forward_box_binop! {impl Div, div for NumExpr, NumExpr }
+
+use super::Ordering;
+
+impl NumExpr {
+    pub fn less_than(self, rhs: Self) -> BoolExpr {
+        BoolExpr::Cmp {
+            op: Ordering::Less { strict: true },
+            lhs: Box::new(self),
+            rhs: Box::new(rhs),
+        }
+    }
+
+    pub fn less_than_eq(self, rhs: Self) -> BoolExpr {
+        BoolExpr::Cmp {
+            op: Ordering::Less { strict: false },
+            lhs: Box::new(self),
+            rhs: Box::new(rhs),
+        }
+    }
+
+    pub fn greater_than(self, rhs: Self) -> BoolExpr {
+        BoolExpr::Cmp {
+            op: Ordering::Greater { strict: true },
+            lhs: Box::new(self),
+            rhs: Box::new(rhs),
+        }
+    }
+
+    pub fn greater_than_eq(self, rhs: Self) -> BoolExpr {
+        BoolExpr::Cmp {
+            op: Ordering::Greater { strict: false },
+            lhs: Box::new(self),
+            rhs: Box::new(rhs),
+        }
+    }
+
+    pub fn equal(self, rhs: Self) -> BoolExpr {
+        BoolExpr::Cmp {
+            op: Ordering::Eq,
+            lhs: Box::new(self),
+            rhs: Box::new(rhs),
+        }
+    }
+
+    pub fn not_equal(self, rhs: Self) -> BoolExpr {
+        BoolExpr::Cmp {
+            op: Ordering::NotEq,
+            lhs: Box::new(self),
+            rhs: Box::new(rhs),
+        }
+    }
+}
