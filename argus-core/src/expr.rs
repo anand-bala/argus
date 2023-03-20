@@ -4,9 +4,11 @@ mod bool_ops;
 mod internal_macros;
 pub mod iter;
 mod num_ops;
+mod traits;
 
 pub use bool_ops::*;
 pub use num_ops::*;
+pub use traits::*;
 
 use crate::{ArgusResult, Error};
 
@@ -24,6 +26,21 @@ pub enum NumExpr {
     Add { args: Vec<NumExpr> },
     Mul { args: Vec<NumExpr> },
     Div { dividend: Box<NumExpr>, divisor: Box<NumExpr> },
+}
+
+impl Expr for NumExpr {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn args(&self) -> Vec<&dyn Expr> {
+        match self {
+            NumExpr::Neg { arg } => vec![arg.as_ref()],
+            NumExpr::Add { args } | NumExpr::Mul { args } => args.iter().map(|arg| arg as &dyn Expr).collect(),
+            NumExpr::Div { dividend, divisor } => vec![dividend.as_ref(), divisor.as_ref()],
+            _ => vec![],
+        }
+    }
 }
 
 /// Types of comparison operations
@@ -44,6 +61,21 @@ pub enum BoolExpr {
     Not { arg: Box<BoolExpr> },
     And { args: Vec<BoolExpr> },
     Or { args: Vec<BoolExpr> },
+}
+
+impl Expr for BoolExpr {
+    fn args(&self) -> Vec<&dyn Expr> {
+        match self {
+            BoolExpr::Cmp { op: _, lhs, rhs } => vec![lhs.as_ref(), rhs.as_ref()],
+            BoolExpr::Not { arg } => vec![arg.as_ref()],
+            BoolExpr::And { args } | BoolExpr::Or { args } => args.iter().map(|arg| arg as &dyn Expr).collect(),
+            _ => vec![],
+        }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// Expression builder
