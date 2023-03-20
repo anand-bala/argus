@@ -1,19 +1,17 @@
 use std::any::Any;
 
-use super::iter::AstIter;
+use super::{iter::AstIter, ExprRef};
 
 /// A trait representing expressions
 pub trait Expr {
-    fn args(&self) -> Vec<&dyn Expr>;
+    fn is_numeric(&self) -> bool;
+    fn is_boolean(&self) -> bool;
+
+    fn args(&self) -> Vec<ExprRef<'_>>;
 
     fn as_any(&self) -> &dyn Any;
 
-    fn iter(&self) -> AstIter<'_>
-    where
-        Self: Sized,
-    {
-        AstIter::new(self)
-    }
+    fn iter(&self) -> AstIter<'_>;
 }
 
 impl dyn Expr {

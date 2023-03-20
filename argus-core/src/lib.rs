@@ -12,3 +12,4 @@ pub enum Error {
 
 pub type ArgusError = Error;
 pub type ArgusResult<T> = Result<T, Error>;
+

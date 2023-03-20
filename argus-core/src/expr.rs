@@ -12,6 +12,8 @@ pub use traits::*;
 
 use crate::{ArgusResult, Error};
 
+use self::iter::AstIter;
+
 /// All expressions that are numeric
 #[derive(Clone, Debug, PartialEq)]
 pub enum NumExpr {
@@ -29,17 +31,29 @@ pub enum NumExpr {
 }
 
 impl Expr for NumExpr {
+    fn is_numeric(&self) -> bool {
+        true
+    }
+
+    fn is_boolean(&self) -> bool {
+        false
+    }
+
+    fn args(&self) -> Vec<ExprRef<'_>> {
+        match self {
+            NumExpr::Neg { arg } => vec![arg.as_ref().into()],
+            NumExpr::Add { args } | NumExpr::Mul { args } => args.iter().map(|arg| arg.into()).collect(),
+            NumExpr::Div { dividend, divisor } => vec![dividend.as_ref().into(), divisor.as_ref().into()],
+            _ => vec![],
+        }
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
 
-    fn args(&self) -> Vec<&dyn Expr> {
-        match self {
-            NumExpr::Neg { arg } => vec![arg.as_ref()],
-            NumExpr::Add { args } | NumExpr::Mul { args } => args.iter().map(|arg| arg as &dyn Expr).collect(),
-            NumExpr::Div { dividend, divisor } => vec![dividend.as_ref(), divisor.as_ref()],
-            _ => vec![],
-        }
+    fn iter(&self) -> iter::AstIter<'_> {
+        AstIter::new(self.into())
     }
 }
 
@@ -64,11 +78,19 @@ pub enum BoolExpr {
 }
 
 impl Expr for BoolExpr {
-    fn args(&self) -> Vec<&dyn Expr> {
+    fn is_numeric(&self) -> bool {
+        false
+    }
+
+    fn is_boolean(&self) -> bool {
+        true
+    }
+
+    fn args(&self) -> Vec<ExprRef<'_>> {
         match self {
-            BoolExpr::Cmp { op: _, lhs, rhs } => vec![lhs.as_ref(), rhs.as_ref()],
-            BoolExpr::Not { arg } => vec![arg.as_ref()],
-            BoolExpr::And { args } | BoolExpr::Or { args } => args.iter().map(|arg| arg as &dyn Expr).collect(),
+            BoolExpr::Cmp { op: _, lhs, rhs } => vec![lhs.as_ref().into(), rhs.as_ref().into()],
+            BoolExpr::Not { arg } => vec![arg.as_ref().into()],
+            BoolExpr::And { args } | BoolExpr::Or { args } => args.iter().map(|arg| arg.into()).collect(),
             _ => vec![],
         }
     }
@@ -76,6 +98,16 @@ impl Expr for BoolExpr {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn iter(&self) -> AstIter<'_> {
+        AstIter::new(self.into())
+    }
+}
+
+#[derive(Clone, Copy, Debug, derive_more::From)]
+pub enum ExprRef<'a> {
+    Bool(&'a BoolExpr),
+    Num(&'a NumExpr),
 }
 
 /// Expression builder
