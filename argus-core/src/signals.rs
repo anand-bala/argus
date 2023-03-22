@@ -201,7 +201,7 @@ impl<T> BaseSignal for Signal<T> {
 
         let last_time = self.time_points.last();
         match last_time {
-            Some(last_t) if last_t > &time => Err(Error::NonMonotonicSignal {
+            Some(last_t) if last_t >= &time => Err(Error::NonMonotonicSignal {
                 end_time: *last_t,
                 current_sample: time,
             }),
@@ -248,4 +248,156 @@ impl<T> BaseSignal for ConstantSignal<T> {
     fn push(&mut self, _time: Duration, _value: Self::Value) -> ArgusResult<bool> {
         Ok(false)
     }
+}
+
+#[cfg(test)]
+pub mod arbitrary {
+
+    use super::*;
+    use itertools::Itertools;
+    use proptest::{prelude::*, sample::SizeRange};
+
+    /// Generate an arbitrary list of samples and two indices within the list
+    pub fn samples_and_indices<T>(
+        size: impl Into<SizeRange>,
+    ) -> impl Strategy<Value = (Vec<(Duration, T)>, usize, usize)>
+    where
+        T: Arbitrary + Copy,
+    {
+        samples(size).prop_flat_map(|vec| {
+            let len = vec.len();
+            if len == 0 {
+                (Just(vec), 0..1, 0..1)
+            } else {
+                (Just(vec), 0..len, 0..len)
+            }
+        })
+    }
+
+    /// Generate arbitrary samples for a signal where the time stamps are strictly
+    /// monotonically increasing
+    pub fn samples<T>(size: impl Into<SizeRange>) -> impl Strategy<Value = Vec<(Duration, T)>>
+    where
+        T: Arbitrary + Copy,
+    {
+        prop::collection::vec(any::<T>(), size).prop_flat_map(|values| {
+            let len = values.len();
+            prop::collection::vec(any::<u64>(), len).prop_map(move |mut ts| {
+                ts.sort_unstable();
+                ts.dedup();
+                ts.into_iter()
+                    .map(Duration::from_secs)
+                    .zip(values.clone().into_iter())
+                    .collect_vec()
+            })
+        })
+    }
+
+    /// Generate arbitrary  signals of the given type
+    pub fn signal<T>(size: impl Into<SizeRange>) -> impl Strategy<Value = Signal<T>>
+    where
+        T: Arbitrary + Copy,
+    {
+        samples(size).prop_map(Signal::<T>::from_iter)
+    }
+
+    /// Generate an arbitrary constant signal
+    pub fn constant_signal<T>() -> impl Strategy<Value = ConstantSignal<T>>
+    where
+        T: Arbitrary,
+    {
+        any::<T>().prop_map(ConstantSignal::new)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::ops::Bound;
+    use paste::paste;
+    use proptest::prelude::*;
+
+    macro_rules! correctly_create_signals_impl {
+        ($ty:ty) => {
+            proptest! {
+                |((samples, idx, _) in arbitrary::samples_and_indices::<$ty>(0..100))| {
+                    // Creating a signal should be fine
+                    let signal: Signal<_> = samples.clone().into_iter().collect();
+
+                    if samples.len() > 0 {
+                        // We wil get the start and end times.
+                        let start_time = samples.first().unwrap().0;
+                        let end_time = samples.last().unwrap().0;
+                        // Get the value of the sample at a given index
+                        let (at, val) = samples[idx];
+
+                        assert_eq!(signal.start_time(), Bound::Included(start_time));
+                        assert_eq!(signal.end_time(), Bound::Included(end_time));
+                        assert_eq!(signal.at(at), Some(&val));
+                    } else {
+                        assert!(signal.is_empty());
+                        assert_eq!(signal.at(Duration::from_secs(1)), None);
+                    }
+                }
+            }
+
+            proptest! {
+                |((mut samples, a, b) in arbitrary::samples_and_indices::<$ty>(5..100))| {
+                    prop_assume!(a != b);
+                    // Swap two indices in the samples
+                    samples.swap(a, b);
+                    // Creating a signal should fail
+                    let signal = Signal::try_from_iter(samples.clone());
+                    assert!(signal.is_err(), "swapped {:?} and {:?}", samples[a], samples[b]);
+                }
+            }
+        };
+    }
+
+    #[test]
+    fn create_signals_from_samples() {
+        correctly_create_signals_impl!(bool);
+        correctly_create_signals_impl!(i8);
+        correctly_create_signals_impl!(i16);
+        correctly_create_signals_impl!(i32);
+        correctly_create_signals_impl!(i64);
+        correctly_create_signals_impl!(u8);
+        correctly_create_signals_impl!(u16);
+        correctly_create_signals_impl!(u32);
+        correctly_create_signals_impl!(u64);
+        correctly_create_signals_impl!(f32);
+        correctly_create_signals_impl!(f64);
+    }
+
+    macro_rules! signals_fromiter_panic {
+        ($ty:ty) => {
+            paste! {
+                proptest! {
+                    #[test]
+                    #[should_panic]
+                    fn [<fail_create_ $ty _signal>] ((mut samples, a, b) in arbitrary::samples_and_indices::<$ty>(5..100))
+                    {
+                        prop_assume!(a != b);
+                        // Swap two indices in the samples
+                        samples.swap(a, b);
+                        // Creating a signal should fail
+                        let _: Signal<_> = samples.into_iter().collect();
+                    }
+                }
+            }
+
+        };
+    }
+
+    signals_fromiter_panic!(bool);
+    signals_fromiter_panic!(i8);
+    signals_fromiter_panic!(i16);
+    signals_fromiter_panic!(i32);
+    signals_fromiter_panic!(i64);
+    signals_fromiter_panic!(u8);
+    signals_fromiter_panic!(u16);
+    signals_fromiter_panic!(u32);
+    signals_fromiter_panic!(u64);
+    signals_fromiter_panic!(f32);
+    signals_fromiter_panic!(f64);
 }
