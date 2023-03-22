@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 derive_more = "0.99.17"
+num-traits = "0.2.15"
 thiserror = "1.0.39"
 
 [dev-dependencies]
