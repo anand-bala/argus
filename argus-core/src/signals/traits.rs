@@ -1,9 +1,10 @@
-use num_traits::Num;
-use std::{ops::RangeBounds, time::Duration};
+use std::ops::RangeBounds;
+use std::time::Duration;
 
-use crate::ArgusResult;
+use num_traits::Num;
 
 use super::{InterpolationMethod, Sample};
+use crate::ArgusResult;
 
 /// A general Signal trait
 pub trait BaseSignal {

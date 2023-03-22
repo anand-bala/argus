@@ -11,14 +11,11 @@
 pub mod iter;
 pub mod traits;
 
-use std::{
-    ops::{RangeFull, RangeInclusive},
-    time::Duration,
-};
-
-use crate::{ArgusResult, Error};
+use std::ops::{RangeFull, RangeInclusive};
+use std::time::Duration;
 
 use self::traits::{BaseSignal, LinearInterpolatable};
+use crate::{ArgusResult, Error};
 
 #[derive(Debug, Clone, Copy)]
 pub enum InterpolationMethod {
@@ -253,9 +250,11 @@ impl<T> BaseSignal for ConstantSignal<T> {
 #[cfg(test)]
 pub mod arbitrary {
 
-    use super::*;
     use itertools::Itertools;
-    use proptest::{prelude::*, sample::SizeRange};
+    use proptest::prelude::*;
+    use proptest::sample::SizeRange;
+
+    use super::*;
 
     /// Generate an arbitrary list of samples and two indices within the list
     pub fn samples_and_indices<T>(
@@ -312,10 +311,12 @@ pub mod arbitrary {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use core::ops::Bound;
+
     use paste::paste;
     use proptest::prelude::*;
+
+    use super::*;
 
     macro_rules! correctly_create_signals_impl {
         ($ty:ty) => {

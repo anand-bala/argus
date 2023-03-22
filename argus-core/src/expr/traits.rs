@@ -1,6 +1,7 @@
 use std::any::Any;
 
-use super::{iter::AstIter, ExprRef};
+use super::iter::AstIter;
+use super::ExprRef;
 
 /// A trait representing expressions
 pub trait Expr {
@@ -25,9 +26,10 @@ impl dyn Expr {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::super::{arbitrary, BoolExpr, NumExpr};
     use super::*;
-    use proptest::prelude::*;
 
     proptest! {
         #[test]

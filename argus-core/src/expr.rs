@@ -1,4 +1,5 @@
-use std::{any::Any, collections::HashSet};
+use std::any::Any;
+use std::collections::HashSet;
 
 mod bool_ops;
 mod internal_macros;
@@ -10,9 +11,8 @@ pub use bool_ops::*;
 pub use num_ops::*;
 pub use traits::*;
 
-use crate::{ArgusResult, Error};
-
 use self::iter::AstIter;
+use crate::{ArgusResult, Error};
 
 /// All expressions that are numeric
 #[derive(Clone, Debug, PartialEq)]

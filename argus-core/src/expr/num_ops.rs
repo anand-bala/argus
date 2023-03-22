@@ -1,5 +1,6 @@
-use super::{internal_macros, BoolExpr, NumExpr};
 use std::ops::{Add, Div, Mul, Neg};
+
+use super::{internal_macros, BoolExpr, NumExpr};
 
 impl Neg for NumExpr {
     type Output = NumExpr;
