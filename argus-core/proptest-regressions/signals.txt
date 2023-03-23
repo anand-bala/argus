@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9d75c17b5aea213ae64cde3da8939775416a4ae6ccdda51c2e54ac067612ce86 # shrinks to (mut samples, a, b) = ([(0ns, false), (3606793s, false), (225236632134049379s, false), (1452516483796720883s, true), (1454074610924622985s, true), (2261379572419890469s, true), (2346287628474660760s, true), (3370236408549918743s, false), (3885751221773112430s, true), (3978746064686161523s, false), (3993201691451842848s, true), (4400859595782393585s, false), (5595174780223578169s, true), (6103121693246216159s, true), (7083137466118103668s, true), (7762254907571717843s, false), (7925271027375436371s, false), (8116317203292488589s, false), (8304849594782901286s, false), (8624344724558373380s, false), (8815156223625440978s, false), (9387270278621444607s, true), (12063545309142768726s, true), (13147668321430668654s, false), (14456000981272753118s, true), (15332734450820787217s, true), (16183101507372578898s, false), (16240800821249987611s, false), (16620766479072627673s, false)], 0, 1)
