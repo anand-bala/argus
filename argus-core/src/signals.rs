@@ -335,6 +335,8 @@ mod tests {
                         assert_eq!(signal.start_time(), Bound::Included(start_time));
                         assert_eq!(signal.end_time(), Bound::Included(end_time));
                         assert_eq!(signal.at(at), Some(&val));
+                        assert_eq!(signal.at(end_time + Duration::from_secs(1)), None);
+                        assert_eq!(signal.at(start_time - Duration::from_secs(1)), None);
                     } else {
                         assert!(signal.is_empty());
                         assert_eq!(signal.at(Duration::from_secs(1)), None);
