@@ -25,6 +25,18 @@ pub use num_ops::*;
 use self::traits::{BaseSignal, LinearInterpolatable};
 use crate::{ArgusResult, Error};
 
+/// All supported signal types in Argus
+pub enum AnySignal {
+    Bool(Signal<bool>),
+    ConstBool(ConstantSignal<bool>),
+    Int(Signal<i64>),
+    ConstInt(ConstantSignal<i64>),
+    UInt(Signal<u64>),
+    ConstUInt(ConstantSignal<u64>),
+    Float(Signal<f64>),
+    ConstFloat(ConstantSignal<f64>),
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum InterpolationMethod {
     Linear,
