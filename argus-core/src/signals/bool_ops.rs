@@ -29,7 +29,7 @@ impl core::ops::BitOr<Self> for &Signal<bool> {
     type Output = Signal<bool>;
 
     fn bitor(self, other: Self) -> Self::Output {
-        apply2(self, other, |lhs, rhs| lhs && rhs)
+        apply2(self, other, |lhs, rhs| lhs || rhs)
     }
 }
 
@@ -37,7 +37,7 @@ impl core::ops::BitOr<&ConstantSignal<bool>> for &Signal<bool> {
     type Output = Signal<bool>;
 
     fn bitor(self, other: &ConstantSignal<bool>) -> Self::Output {
-        apply2_const(self, other, |lhs, rhs| lhs && rhs)
+        apply2_const(self, other, |lhs, rhs| lhs || rhs)
     }
 }
 
@@ -68,7 +68,7 @@ impl core::ops::BitOr<Self> for &ConstantSignal<bool> {
     type Output = ConstantSignal<bool>;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        ConstantSignal::<bool>::new(self.value && rhs.value)
+        ConstantSignal::<bool>::new(self.value || rhs.value)
     }
 }
 
