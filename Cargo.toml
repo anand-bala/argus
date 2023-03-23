@@ -1,5 +1,2 @@
 [workspace]
-members = [
-    "argus",
-    "argus-core",
-]
+members = ["argus", "argus-core", "argus-semantics"]
