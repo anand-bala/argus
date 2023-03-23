@@ -1,9 +1,8 @@
 use num_traits::{Num, NumCast, Signed};
 
+use super::traits::LinearInterpolatable;
 use crate::signals::utils::{apply1, apply2, apply2_const};
 use crate::signals::{ConstantSignal, Signal};
-
-use super::traits::LinearInterpolatable;
 
 impl<T> core::ops::Neg for &Signal<T>
 where

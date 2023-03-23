@@ -15,12 +15,12 @@ pub mod num_ops;
 pub mod traits;
 mod utils;
 
+use std::ops::{RangeFull, RangeInclusive};
+use std::time::Duration;
+
 pub use bool_ops::*;
 pub use cmp_ops::*;
 pub use num_ops::*;
-
-use std::ops::{RangeFull, RangeInclusive};
-use std::time::Duration;
 
 use self::traits::{BaseSignal, LinearInterpolatable};
 use crate::{ArgusResult, Error};
@@ -300,8 +300,8 @@ pub mod arbitrary {
         })
     }
 
-    /// Generate arbitrary  signals of the given type
-    pub fn signal<T>(size: impl Into<SizeRange>) -> impl Strategy<Value = Signal<T>>
+    /// Generate arbitrary finite-length signals with samples of the given type
+    pub fn sampled_signal<T>(size: impl Into<SizeRange>) -> impl Strategy<Value = Signal<T>>
     where
         T: Arbitrary + Copy,
     {
@@ -411,4 +411,80 @@ mod tests {
     signals_fromiter_panic!(u64);
     signals_fromiter_panic!(f32);
     signals_fromiter_panic!(f64);
+
+    macro_rules! signal_ops_impl {
+        ($ty:ty, $op:tt sig) => {
+            proptest! {
+                |(sig in arbitrary::sampled_signal::<$ty>(1..100))| {
+                    use InterpolationMethod::Linear;
+                    let new_sig = $op (&sig);
+                    for (t, v) in new_sig.iter() {
+                        let prev = sig.interpolate_at(*t, Linear).unwrap();
+                        assert_eq!($op prev, *v);
+                    }
+                }
+            }
+        };
+        ($ty:ty, lhs $op:tt rhs) => {
+            proptest! {
+                |(sig1 in arbitrary::sampled_signal::<$ty>(1..100), sig2 in arbitrary::sampled_signal::<$ty>(1..100))| {
+                    use InterpolationMethod::Linear;
+                    let new_sig = &sig1 $op &sig2;
+                    for (t, v) in new_sig.iter() {
+                        let v1 = sig1.interpolate_at(*t, Linear).unwrap();
+                        let v2 = sig2.interpolate_at(*t, Linear).unwrap();
+                        assert_eq!(v1 $op v2, *v);
+                    }
+                }
+            }
+
+            proptest! {
+                |(sig1 in arbitrary::sampled_signal::<$ty>(1..100), sig2 in arbitrary::constant_signal::<$ty>())| {
+                    use InterpolationMethod::Linear;
+                    let new_sig = &sig1 $op &sig2;
+                    for (t, v) in new_sig.iter() {
+                        let v1 = sig1.interpolate_at(*t, Linear).unwrap();
+                        let v2 = sig2.interpolate_at(*t, Linear).unwrap();
+                        assert_eq!(v1 $op v2, *v);
+                    }
+                }
+            }
+
+            proptest! {
+                |(sig1 in arbitrary::constant_signal::<$ty>(), sig2 in arbitrary::constant_signal::<$ty>())| {
+                    let new_sig = &sig1 $op &sig2;
+                    let v1 = sig1.value;
+                    let v2 = sig2.value;
+                    let v = new_sig.value;
+                    assert_eq!(v1 $op v2, v);
+                }
+            }
+        };
+    }
+
+    #[test]
+    fn signal_ops() {
+        signal_ops_impl!(bool, !sig);
+        signal_ops_impl!(bool, lhs | rhs);
+        signal_ops_impl!(bool, lhs & rhs);
+
+        // signal_ops_impl!(u64, lhs + rhs);
+        // signal_ops_impl!(u64, lhs * rhs);
+        signal_ops_impl!(u64, lhs / rhs);
+
+        signal_ops_impl!(i64, -sig);
+        // signal_ops_impl!(i64, lhs + rhs);
+        // signal_ops_impl!(i64, lhs * rhs);
+        signal_ops_impl!(i64, lhs / rhs);
+
+        signal_ops_impl!(f32, -sig);
+        signal_ops_impl!(f32, lhs + rhs);
+        signal_ops_impl!(f32, lhs * rhs);
+        // signal_ops_impl!(f32, lhs / rhs);
+
+        signal_ops_impl!(f64, -sig);
+        signal_ops_impl!(f64, lhs + rhs);
+        signal_ops_impl!(f64, lhs * rhs);
+        // signal_ops_impl!(f64, lhs / rhs);
+    }
 }

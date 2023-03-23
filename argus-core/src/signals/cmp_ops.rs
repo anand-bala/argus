@@ -1,16 +1,12 @@
-use std::{cmp::Ordering, time::Duration};
+use std::cmp::Ordering;
+use std::time::Duration;
 
 use num_traits::NumCast;
 
-use crate::signals::{
-    utils::{find_intersection, Neighborhood},
-    InterpolationMethod, Sample,
-};
-
-use super::{
-    traits::{BaseSignal, LinearInterpolatable, SignalPartialOrd, SignalSyncPoints},
-    ConstantSignal, Signal,
-};
+use super::traits::{BaseSignal, LinearInterpolatable, SignalPartialOrd, SignalSyncPoints};
+use super::{ConstantSignal, Signal};
+use crate::signals::utils::{find_intersection, Neighborhood};
+use crate::signals::{InterpolationMethod, Sample};
 
 fn sync_with_intersection<'a, T, Sig1, Sig2, F>(
     sig1: &'a Sig1,
