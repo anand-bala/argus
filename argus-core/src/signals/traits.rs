@@ -1,10 +1,11 @@
-use paste::paste;
 use std::cmp::Ordering;
+use std::iter::Empty;
+use std::ops::RangeBounds;
 use std::time::Duration;
-use std::{iter::Empty, ops::RangeBounds};
 
 use itertools::Itertools;
 use num_traits::Num;
+use paste::paste;
 
 use super::{ConstantSignal, InterpolationMethod, Sample, Signal};
 use crate::signals::utils::intersect_bounds;
@@ -105,10 +106,9 @@ impl LinearInterpolatable for bool {
     where
         Self: Sized,
     {
-        use InterpolationMethod::Nearest;
         assert!(a.time < time && time < b.time);
-        // We can't linear interpolate a boolean, so we return the nearest.
-        Nearest.at(time, &Some(*a), &Some(*b)).unwrap()
+        // We can't linear interpolate a boolean, so we return the previous.
+        a.value
     }
 }
 
