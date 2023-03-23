@@ -26,6 +26,7 @@ use self::traits::{BaseSignal, LinearInterpolatable};
 use crate::{ArgusResult, Error};
 
 /// All supported signal types in Argus
+#[derive(Debug, Clone, derive_more::From)]
 pub enum AnySignal {
     Bool(Signal<bool>),
     ConstBool(ConstantSignal<bool>),

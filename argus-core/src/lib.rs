@@ -17,6 +17,9 @@ pub enum Error {
          ({current_sample:?})"
     )]
     NonMonotonicSignal { end_time: Duration, current_sample: Duration },
+
+    #[error("invalid operation due to bad type")]
+    InvalidOperation,
 }
 
 pub type ArgusError = Error;
