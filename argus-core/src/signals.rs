@@ -8,8 +8,16 @@
 //! 2. [`ConstantSignal<T>`] is a signal that maintains a constant value throughtout
 //!    its domain, and thus, do not require interpolation and extrapolation. Moreover,
 //!    since they are defined over the entire time domain, they cannot be iterated over.
+pub mod bool_ops;
+pub mod cmp_ops;
 pub mod iter;
+pub mod num_ops;
 pub mod traits;
+mod utils;
+
+pub use bool_ops::*;
+pub use cmp_ops::*;
+pub use num_ops::*;
 
 use std::ops::{RangeFull, RangeInclusive};
 use std::time::Duration;

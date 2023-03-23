@@ -1,9 +1,13 @@
-use std::ops::RangeBounds;
+use paste::paste;
+use std::cmp::Ordering;
 use std::time::Duration;
+use std::{iter::Empty, ops::RangeBounds};
 
+use itertools::Itertools;
 use num_traits::Num;
 
-use super::{InterpolationMethod, Sample};
+use super::{ConstantSignal, InterpolationMethod, Sample, Signal};
+use crate::signals::utils::intersect_bounds;
 use crate::ArgusResult;
 
 /// A general Signal trait
@@ -157,3 +161,168 @@ interpolate_for_num!(u32);
 interpolate_for_num!(u64);
 interpolate_for_num!(f32);
 interpolate_for_num!(f64);
+
+pub trait SignalSamplePoints {
+    type Output<'a>: IntoIterator<Item = &'a Duration>
+    where
+        Self: 'a;
+
+    /// Get the time points where the signal is sampled.
+    fn time_points(&'_ self) -> Option<Self::Output<'_>>;
+}
+
+pub trait SignalSyncPoints<Rhs = Self> {
+    type Output<'a>: IntoIterator<Item = &'a Duration>
+    where
+        Self: 'a,
+        Rhs: 'a;
+
+    /// Return the union list of time points where each of the given signals is sampled.
+    fn synchronization_points<'a>(&'a self, other: &'a Rhs) -> Option<Self::Output<'a>>;
+}
+
+impl<T> SignalSamplePoints for Signal<T>
+where
+    Signal<T>: BaseSignal,
+    T: Copy,
+{
+    type Output<'a> = Vec<&'a Duration>
+    where
+        Self: 'a;
+
+    fn time_points(&'_ self) -> Option<Self::Output<'_>> {
+        if self.is_empty() {
+            None
+        } else {
+            self.time_points.iter().collect_vec().into()
+        }
+    }
+}
+
+impl<T> SignalSamplePoints for ConstantSignal<T>
+where
+    T: Copy,
+{
+    type Output<'a> = Empty<&'a Duration>
+    where
+        Self: 'a;
+
+    fn time_points(&'_ self) -> Option<Self::Output<'_>> {
+        if self.is_empty() {
+            None
+        } else {
+            core::iter::empty().into()
+        }
+    }
+}
+
+impl<T> SignalSyncPoints<Self> for Signal<T>
+where
+    T: Copy,
+    Self: BaseSignal<Value = T>,
+{
+    type Output<'a> = Vec<&'a Duration>
+    where
+        Self: 'a,
+        Self: 'a;
+
+    fn synchronization_points<'a>(&'a self, other: &'a Self) -> Option<Self::Output<'a>> {
+        use core::ops::Bound::*;
+        if self.is_empty() || other.is_empty() {
+            return None;
+        }
+
+        let bounds = match intersect_bounds(&self.bounds(), &other.bounds()) {
+            (Included(start), Included(end)) => start..=end,
+            (..) => unreachable!(),
+        };
+
+        self.time_points
+            .iter()
+            .merge(other.time_points.iter())
+            .filter(|time| bounds.contains(time))
+            .dedup()
+            .collect_vec()
+            .into()
+    }
+}
+
+impl<T> SignalSyncPoints<ConstantSignal<T>> for Signal<T>
+where
+    T: Copy,
+    Self: BaseSignal<Value = T>,
+{
+    type Output<'a> = Vec<&'a Duration>
+    where
+        Self: 'a,
+        Self: 'a;
+
+    fn synchronization_points<'a>(&'a self, other: &'a ConstantSignal<T>) -> Option<Self::Output<'a>> {
+        if self.is_empty() || other.is_empty() {
+            return None;
+        }
+
+        self.time_points.iter().collect_vec().into()
+    }
+}
+
+impl<T> SignalSyncPoints<ConstantSignal<T>> for ConstantSignal<T>
+where
+    T: Copy,
+    Self: BaseSignal<Value = T>,
+{
+    type Output<'a> = Empty<&'a Duration>
+    where
+        Self: 'a,
+        Self: 'a;
+
+    fn synchronization_points<'a>(&'a self, _other: &'a ConstantSignal<T>) -> Option<Self::Output<'a>> {
+        Some(core::iter::empty())
+    }
+}
+
+impl<T> SignalSyncPoints<Signal<T>> for ConstantSignal<T>
+where
+    T: Copy,
+    Self: BaseSignal<Value = T>,
+{
+    type Output<'a> = Vec<&'a Duration>
+    where
+        Self: 'a,
+        Self: 'a;
+
+    fn synchronization_points<'a>(&'a self, other: &'a Signal<T>) -> Option<Self::Output<'a>> {
+        other.synchronization_points(self)
+    }
+}
+
+macro_rules! impl_signal_cmp {
+    ($cmp:ident) => {
+        paste! {
+            fn [<signal_ $cmp>](&self, other: &Rhs) -> Option<Self::Output> {
+                self.signal_cmp(other, |ord| ord.[<is_ $cmp>]())
+            }
+        }
+    };
+}
+
+/// A time-wise partial ordering defined for signals
+pub trait SignalPartialOrd<Rhs = Self>: BaseSignal {
+    type Output: BaseSignal<Value = bool>;
+
+    /// Compare two signals within each of their domains (using [`PartialOrd`]) and
+    /// apply the given function `op` to the ordering to create a signal.
+    ///
+    /// This function returns `None` if the comparison isn't possible, namely, when
+    /// either of the signals are empty.
+    fn signal_cmp<F>(&self, other: &Rhs, op: F) -> Option<Self::Output>
+    where
+        F: Fn(Ordering) -> bool;
+
+    impl_signal_cmp!(lt);
+    impl_signal_cmp!(le);
+    impl_signal_cmp!(gt);
+    impl_signal_cmp!(ge);
+    impl_signal_cmp!(eq);
+    impl_signal_cmp!(ne);
+}
