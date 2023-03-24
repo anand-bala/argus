@@ -21,6 +21,9 @@ pub enum Error {
 
     #[error("invalid operation due to bad type")]
     InvalidOperation,
+
+    #[error("name not in signal trace")]
+    SignalNotPresent,
 }
 
 pub type ArgusError = Error;
