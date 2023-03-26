@@ -1,9 +1,8 @@
-use argus_core::{
-    expr::NumExpr,
-    signals::{AnySignal, ConstantSignal},
-};
+use argus_core::expr::NumExpr;
+use argus_core::signals::{AnySignal, ConstantSignal};
 
-use crate::{utils::signal_num_op_impl, Trace};
+use crate::utils::signal_num_op_impl;
+use crate::Trace;
 
 /// Helper struct to evaluate a [`NumExpr`] given a trace.
 pub struct NumExprEval;

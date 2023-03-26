@@ -3,9 +3,9 @@
 //! In this crate, we are predominantly concerned with the monitoring of _offline system
 //! traces_, i.e., a collection of signals that have been extracted from observing and
 //! sampling from some system.
-use argus_core::expr::BoolExpr;
+use argus_core::expr::{BoolExpr, ExprRef};
+use argus_core::signals::AnySignal;
 use argus_core::ArgusResult;
-use argus_core::{expr::ExprRef, signals::AnySignal};
 
 pub mod eval;
 pub mod semantics;

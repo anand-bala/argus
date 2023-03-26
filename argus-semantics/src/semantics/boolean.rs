@@ -1,10 +1,9 @@
-use argus_core::{expr::BoolExpr, prelude::*};
+use argus_core::expr::BoolExpr;
+use argus_core::prelude::*;
 
-use crate::{
-    eval::NumExprEval,
-    utils::{signal_bool_op_impl, signal_cmp_op_impl},
-    Semantics, Trace,
-};
+use crate::eval::NumExprEval;
+use crate::utils::{signal_bool_op_impl, signal_cmp_op_impl};
+use crate::{Semantics, Trace};
 
 /// Boolean semantics of Argus expressions
 pub struct BooleanSemantics;

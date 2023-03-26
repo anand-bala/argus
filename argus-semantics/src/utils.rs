@@ -115,6 +115,4 @@ macro_rules! signal_bool_op_impl {
     };
 }
 
-pub(crate) use signal_bool_op_impl;
-pub(crate) use signal_cmp_op_impl;
-pub(crate) use signal_num_op_impl;
+pub(crate) use {signal_bool_op_impl, signal_cmp_op_impl, signal_num_op_impl};
