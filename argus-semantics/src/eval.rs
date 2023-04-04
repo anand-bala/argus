@@ -5,20 +5,23 @@ use crate::Trace;
 
 macro_rules! signal_num_op_impl {
     // Unary numeric opeartions
-    (- $signal:ident) => {{
-        use argus_core::prelude::*;
-        use AnySignal::*;
-        match $signal {
-            Bool(_) | ConstBool(_) => panic!("cannot perform unary operation (-) on Boolean signals"),
-            Int(signal) => AnySignal::from(-(&signal)),
-            ConstInt(signal) => AnySignal::from(-(&signal)),
-            UInt(_) | ConstUInt(_) => panic!("cannot perform unary operation (-) on unsigned integer signals"),
-            Float(signal) => AnySignal::from(-(&signal)),
-            ConstFloat(signal) => AnySignal::from(-(&signal)),
+    ($op:ident, $signal:ident, [$( $type:ident ),*]) => {
+        paste::paste! {
+            {
+                use argus_core::prelude::*;
+                use AnySignal::*;
+                match $signal {
+                    $(
+                        [< $type >](signal) => AnySignal::from(signal.$op()),
+                        [<Const $type >](signal) => AnySignal::from(signal.$op()),
+                    )*
+                    _ => panic!("cannot perform unary operation ({})", stringify!($op)),
+                }
+            }
         }
-    }};
+    };
 
-    ($lhs:ident $op:tt $rhs:ident, [$( $type:ident ),*]) => {
+    ($op:ident, $lhs:ident, $rhs:ident, [$( $type:ident ),*]) => {
         paste::paste!{
             {
             use argus_core::prelude::*;
@@ -26,10 +29,10 @@ macro_rules! signal_num_op_impl {
             match ($lhs, $rhs) {
                 (Bool(_), _) | (ConstBool(_), _) | (_, Bool(_)) | (_, ConstBool(_)) => panic!("cannot perform numeric operation {} for boolean arguments", stringify!($op)),
                 $(
-                    ([<$type >](lhs), [<  $type >](rhs)) => AnySignal::from(&lhs $op &rhs),
-                    ([<$type >](lhs), [< Const $type >](rhs)) => AnySignal::from(&lhs $op &rhs),
-                    ([<Const $type >](lhs), [<  $type >](rhs)) => AnySignal::from(&lhs $op &rhs),
-                    ([<Const $type >](lhs), [< Const $type >](rhs)) => AnySignal::from(&lhs $op &rhs),
+                    ([<$type >](lhs), [<  $type >](rhs)) => AnySignal::from(lhs.$op(&rhs)),
+                    ([<$type >](lhs), [< Const $type >](rhs)) => AnySignal::from(lhs.$op(&rhs)),
+                    ([<Const $type >](lhs), [<  $type >](rhs)) => AnySignal::from(lhs.$op(&rhs)),
+                    ([<Const $type >](lhs), [< Const $type >](rhs)) => AnySignal::from(lhs.$op(&rhs)),
                 )*
                 _ => panic!("mismatched argument types for {} operation", stringify!($op)),
                 }
@@ -38,9 +41,9 @@ macro_rules! signal_num_op_impl {
     };
 
     // Binary numeric opeartions
-    ($lhs:ident $op:tt $rhs:ident) => {
+    ($op:ident, $lhs:ident, $rhs:ident) => {
         signal_num_op_impl!(
-            $lhs $op $rhs,
+            $op, $lhs, $rhs,
             [Int, UInt, Float]
         )
     };
@@ -53,6 +56,9 @@ pub struct NumExprEval;
 
 impl NumExprEval {
     pub fn eval(root: &NumExpr, trace: &impl Trace) -> AnySignal {
+        use core::ops::{Add, Div, Mul, Neg, Sub};
+
+        use argus_core::signals::traits::SignalAbs;
         match root {
             NumExpr::IntLit(val) => ConstantSignal::new(*val).into(),
             NumExpr::UIntLit(val) => ConstantSignal::new(*val).into(),
@@ -63,20 +69,33 @@ impl NumExprEval {
             }
             NumExpr::Neg { arg } => {
                 let arg_sig = Self::eval(arg, trace);
-                signal_num_op_impl!(-arg_sig)
+                signal_num_op_impl!(neg, arg_sig, [Int, Float])
             }
             NumExpr::Add { args } => {
                 let args_signals = args.iter().map(|arg| Self::eval(arg, trace));
-                args_signals.reduce(|acc, arg| signal_num_op_impl!(acc + arg)).unwrap()
+                args_signals
+                    .reduce(|acc, arg| signal_num_op_impl!(add, acc, arg))
+                    .unwrap()
+            }
+            NumExpr::Sub { lhs, rhs } => {
+                let lhs = Self::eval(lhs, trace);
+                let rhs = Self::eval(rhs, trace);
+                signal_num_op_impl!(sub, lhs, rhs)
             }
             NumExpr::Mul { args } => {
                 let args_signals = args.iter().map(|arg| Self::eval(arg, trace));
-                args_signals.reduce(|acc, arg| signal_num_op_impl!(acc * arg)).unwrap()
+                args_signals
+                    .reduce(|acc, arg| signal_num_op_impl!(mul, acc, arg))
+                    .unwrap()
             }
             NumExpr::Div { dividend, divisor } => {
                 let dividend = Self::eval(dividend, trace);
                 let divisor = Self::eval(divisor, trace);
-                signal_num_op_impl!(dividend / divisor)
+                signal_num_op_impl!(div, dividend, divisor)
+            }
+            NumExpr::Abs { arg } => {
+                let arg = Self::eval(arg, trace);
+                signal_num_op_impl!(abs, arg, [Int, UInt, Float])
             }
         }
     }

@@ -26,8 +26,11 @@ pub enum NumExpr {
 
     Neg { arg: Box<NumExpr> },
     Add { args: Vec<NumExpr> },
+    Sub { lhs: Box<NumExpr>, rhs: Box<NumExpr> },
     Mul { args: Vec<NumExpr> },
     Div { dividend: Box<NumExpr>, divisor: Box<NumExpr> },
+
+    Abs { arg: Box<NumExpr> },
 }
 
 impl Expr for NumExpr {
