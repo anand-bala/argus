@@ -9,6 +9,7 @@
 //!    its domain, and thus, do not require interpolation and extrapolation. Moreover,
 //!    since they are defined over the entire time domain, they cannot be iterated over.
 pub mod bool_ops;
+pub mod cast;
 pub mod cmp_ops;
 pub mod iter;
 pub mod num_ops;
@@ -19,6 +20,7 @@ use std::ops::{RangeFull, RangeInclusive};
 use std::time::Duration;
 
 pub use bool_ops::*;
+pub use cast::*;
 pub use cmp_ops::*;
 pub use num_ops::*;
 
@@ -325,6 +327,40 @@ pub mod arbitrary {
         T: Arbitrary,
     {
         any::<T>().prop_map(ConstantSignal::new)
+    }
+
+    /// Generate an arbitrary boolean signal
+    pub fn any_bool_signal(size: impl Into<SizeRange>) -> impl Strategy<Value = AnySignal> {
+        prop_oneof![
+            constant_signal::<bool>().prop_map(AnySignal::from),
+            sampled_signal::<bool>(size).prop_map(AnySignal::from),
+        ]
+    }
+
+    /// Generate an arbitrary numeric signal
+    pub fn any_num_signal(size: impl Into<SizeRange> + Clone) -> impl Strategy<Value = AnySignal> {
+        prop_oneof![
+            constant_signal::<i64>().prop_map(AnySignal::from),
+            constant_signal::<u64>().prop_map(AnySignal::from),
+            constant_signal::<f64>().prop_map(AnySignal::from),
+            sampled_signal::<i64>(size.clone()).prop_map(AnySignal::from),
+            sampled_signal::<u64>(size.clone()).prop_map(AnySignal::from),
+            sampled_signal::<f64>(size).prop_map(AnySignal::from),
+        ]
+    }
+
+    /// Generate an arbitrary signal
+    pub fn any_signal(size: impl Into<SizeRange> + Clone) -> impl Strategy<Value = AnySignal> {
+        prop_oneof![
+            constant_signal::<bool>().prop_map(AnySignal::from),
+            constant_signal::<i64>().prop_map(AnySignal::from),
+            constant_signal::<u64>().prop_map(AnySignal::from),
+            constant_signal::<f64>().prop_map(AnySignal::from),
+            sampled_signal::<bool>(size.clone()).prop_map(AnySignal::from),
+            sampled_signal::<i64>(size.clone()).prop_map(AnySignal::from),
+            sampled_signal::<u64>(size.clone()).prop_map(AnySignal::from),
+            sampled_signal::<f64>(size).prop_map(AnySignal::from),
+        ]
     }
 }
 

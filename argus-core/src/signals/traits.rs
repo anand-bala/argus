@@ -4,7 +4,7 @@ use std::ops::RangeBounds;
 use std::time::Duration;
 
 use itertools::Itertools;
-use num_traits::Num;
+use num_traits::{Num, NumCast};
 use paste::paste;
 
 use super::{ConstantSignal, InterpolationMethod, Sample, Signal};
@@ -325,4 +325,34 @@ pub trait SignalPartialOrd<Rhs = Self>: BaseSignal {
     impl_signal_cmp!(ge);
     impl_signal_cmp!(eq);
     impl_signal_cmp!(ne);
+}
+
+/// Time-wise min-max of signal types
+pub trait SignalMinMax<Rhs = Self>: BaseSignal {
+    type Output: BaseSignal;
+
+    /// Compute the time-wise min of two signals
+    fn min(&self, rhs: &Rhs) -> Self::Output;
+
+    /// Compute the time-wise max of two signals
+    fn max(&self, rhs: &Rhs) -> Self::Output;
+}
+
+/// Trait for converting between numeric signal types
+pub trait SignalNumCast {
+    type Value: Num + NumCast;
+    type Output<T>: BaseSignal<Value = T>
+    where
+        T: Num + NumCast + Copy;
+
+    fn to_i8(&self) -> Option<Self::Output<i8>>;
+    fn to_i16(&self) -> Option<Self::Output<i16>>;
+    fn to_i32(&self) -> Option<Self::Output<i32>>;
+    fn to_i64(&self) -> Option<Self::Output<i64>>;
+    fn to_u8(&self) -> Option<Self::Output<u8>>;
+    fn to_u16(&self) -> Option<Self::Output<u16>>;
+    fn to_u32(&self) -> Option<Self::Output<u32>>;
+    fn to_u64(&self) -> Option<Self::Output<u64>>;
+    fn to_f32(&self) -> Option<Self::Output<f32>>;
+    fn to_f64(&self) -> Option<Self::Output<f64>>;
 }
