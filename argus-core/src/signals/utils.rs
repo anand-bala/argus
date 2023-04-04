@@ -109,11 +109,11 @@ where
     Some(return_points)
 }
 
-pub fn apply1<T, F>(signal: &Signal<T>, op: F) -> Signal<T>
+pub fn apply1<T, U, F>(signal: &Signal<T>, op: F) -> Signal<U>
 where
     T: Copy,
-    F: Fn(T) -> T,
-    Signal<T>: std::iter::FromIterator<(Duration, T)>,
+    F: Fn(T) -> U,
+    Signal<U>: std::iter::FromIterator<(Duration, U)>,
 {
     signal.iter().map(|(t, v)| (*t, op(*v))).collect()
 }

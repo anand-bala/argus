@@ -2,7 +2,7 @@ use itertools::Itertools;
 use num_traits::{Num, NumCast};
 
 use crate::signals::traits::SignalNumCast;
-use crate::signals::{AnySignal, ConstantSignal, Signal};
+use crate::signals::{ConstantSignal, Signal};
 
 macro_rules! impl_cast {
     ($type:ty) => {

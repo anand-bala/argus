@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use num_traits::NumCast;
 
-use super::traits::{BaseSignal, LinearInterpolatable, SignalMinMax, SignalPartialOrd};
+use super::traits::{BaseSignal, LinearInterpolatable, SignalMinMax, SignalPartialOrd, SignalSyncPoints};
 use super::utils::sync_with_intersection;
 use super::{ConstantSignal, InterpolationMethod, Signal};
 
@@ -109,13 +109,15 @@ where
     }
 }
 
-impl<T> SignalMinMax for Signal<T>
+impl<T, Lhs, Rhs> SignalMinMax<Rhs> for Lhs
 where
     T: PartialOrd + Copy + num_traits::NumCast + LinearInterpolatable,
+    Lhs: SignalSyncPoints<Rhs> + BaseSignal<Value = T>,
+    Rhs: SignalSyncPoints<Self> + BaseSignal<Value = T>,
 {
     type Output = Signal<T>;
 
-    fn min(&self, other: &Self) -> Self::Output {
+    fn min(&self, other: &Rhs) -> Self::Output {
         let time_points = sync_with_intersection(self, other).unwrap();
         time_points
             .into_iter()
@@ -131,7 +133,7 @@ where
             .collect()
     }
 
-    fn max(&self, other: &Self) -> Self::Output {
+    fn max(&self, other: &Rhs) -> Self::Output {
         let time_points = sync_with_intersection(self, other).unwrap();
         time_points
             .into_iter()

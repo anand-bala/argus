@@ -266,20 +266,20 @@ where
     }
 }
 
-impl<T> SignalSyncPoints<ConstantSignal<T>> for ConstantSignal<T>
-where
-    T: Copy,
-    Self: BaseSignal<Value = T>,
-{
-    type Output<'a> = Empty<&'a Duration>
-    where
-        Self: 'a,
-        Self: 'a;
-
-    fn synchronization_points<'a>(&'a self, _other: &'a ConstantSignal<T>) -> Option<Self::Output<'a>> {
-        Some(core::iter::empty())
-    }
-}
+// impl<T> SignalSyncPoints<ConstantSignal<T>> for ConstantSignal<T>
+// where
+//     T: Copy,
+//     Self: BaseSignal<Value = T>,
+// {
+//     type Output<'a> = Empty<&'a Duration>
+//     where
+//         Self: 'a,
+//         Self: 'a;
+//
+//     fn synchronization_points<'a>(&'a self, _other: &'a ConstantSignal<T>) ->
+// Option<Self::Output<'a>> {         Some(core::iter::empty())
+//     }
+// }
 
 impl<T> SignalSyncPoints<Signal<T>> for ConstantSignal<T>
 where
@@ -355,4 +355,9 @@ pub trait SignalNumCast {
     fn to_u64(&self) -> Option<Self::Output<u64>>;
     fn to_f32(&self) -> Option<Self::Output<f32>>;
     fn to_f64(&self) -> Option<Self::Output<f64>>;
+}
+
+/// Trait for computing the absolute value of the samples in a signal
+pub trait SignalAbs {
+    fn abs(&self) -> Self;
 }

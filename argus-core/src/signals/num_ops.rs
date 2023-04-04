@@ -1,6 +1,6 @@
 use num_traits::{Num, NumCast, Signed};
 
-use super::traits::{BaseSignal, LinearInterpolatable};
+use super::traits::{BaseSignal, LinearInterpolatable, SignalAbs};
 use crate::signals::utils::{apply1, apply2, apply2_const, sync_with_intersection};
 use crate::signals::{ConstantSignal, Signal};
 
@@ -280,5 +280,47 @@ where
     /// Returns the values in `self` to the power of the values in `other`
     fn pow(self, other: Self) -> Self::Output {
         apply2(self, other, |lhs, rhs| lhs.pow(rhs))
+    }
+}
+
+macro_rules! signal_abs_impl {
+    (const $( $ty:ty ), *) => {
+        $(
+        impl SignalAbs for ConstantSignal<$ty> {
+            /// Return the absolute value for the signal
+            fn abs(&self) -> ConstantSignal<$ty> {
+                ConstantSignal::new(self.value.abs())
+            }
+        }
+        )*
+    };
+
+    ($( $ty:ty ), *) => {
+        $(
+        impl SignalAbs for Signal<$ty> {
+            /// Return the absolute value for each sample in the signal
+            fn abs(&self) -> Signal<$ty> {
+                apply1(self, |v| v.abs())
+            }
+        }
+        )*
+    };
+}
+
+signal_abs_impl!(i64, f32, f64);
+
+impl SignalAbs for Signal<u64> {
+    /// Return the absolute value for each sample in the signal
+    fn abs(&self) -> Signal<u64> {
+        apply1(self, |v| v)
+    }
+}
+
+signal_abs_impl!(const i64, f32, f64);
+
+impl SignalAbs for ConstantSignal<u64> {
+    /// Return the absolute value for the signal
+    fn abs(&self) -> ConstantSignal<u64> {
+        ConstantSignal::new(self.value)
     }
 }
