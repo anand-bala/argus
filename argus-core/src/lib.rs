@@ -24,6 +24,9 @@ pub enum Error {
 
     #[error("name not in signal trace")]
     SignalNotPresent,
+
+    #[error("incorrect signal type")]
+    InvalidSignalType,
 }
 
 pub type ArgusError = Error;
