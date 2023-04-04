@@ -268,10 +268,8 @@ impl<T> BaseSignal for ConstantSignal<T> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "arbitrary"))]
 pub mod arbitrary {
-
-    use itertools::Itertools;
     use proptest::prelude::*;
     use proptest::sample::SizeRange;
 
@@ -308,7 +306,7 @@ pub mod arbitrary {
                 ts.into_iter()
                     .map(Duration::from_secs)
                     .zip(values.clone().into_iter())
-                    .collect_vec()
+                    .collect::<Vec<_>>()
             })
         })
     }

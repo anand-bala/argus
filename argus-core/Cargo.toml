@@ -9,8 +9,11 @@ itertools = "0.10.5"
 paste = "1.0.12"
 num-traits = "0.2.15"
 thiserror = "1.0.39"
+proptest = { version = "1.1.0", optional = true }
 
 [dev-dependencies]
-itertools = "0.10.5"
-paste = "1.0.12"
-proptest = "1.1.0"
+argus-core = { path = ".", features = ["arbitrary"] }
+
+[features]
+default = []
+arbitrary = ["dep:proptest"]

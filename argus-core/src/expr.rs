@@ -264,7 +264,7 @@ impl ExprBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "arbitrary"))]
 pub mod arbitrary {
     //! Helper functions to generate arbitrary expressions using [`proptest`].
     use proptest::prelude::*;
