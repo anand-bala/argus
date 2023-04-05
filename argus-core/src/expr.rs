@@ -69,6 +69,32 @@ pub enum Ordering {
     Greater { strict: bool },
 }
 
+impl Ordering {
+    pub fn equal() -> Self {
+        Self::Eq
+    }
+
+    pub fn not_equal() -> Self {
+        Self::NotEq
+    }
+
+    pub fn less_than() -> Self {
+        Self::Less { strict: true }
+    }
+
+    pub fn less_than_eq() -> Self {
+        Self::Less { strict: false }
+    }
+
+    pub fn greater_than() -> Self {
+        Self::Greater { strict: true }
+    }
+
+    pub fn greater_than_eq() -> Self {
+        Self::Greater { strict: false }
+    }
+}
+
 /// All expressions that are evaluated to be of type `bool`
 #[derive(Clone, Debug, PartialEq)]
 pub enum BoolExpr {
