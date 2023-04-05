@@ -10,4 +10,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 argus-core = { version = "0.1.0", path = "../argus-core" }
+derive_more = "0.99.17"
 pyo3 = "0.18.1"
