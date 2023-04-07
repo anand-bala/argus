@@ -104,6 +104,11 @@ pub enum BoolExpr {
     Not { arg: Box<BoolExpr> },
     And { args: Vec<BoolExpr> },
     Or { args: Vec<BoolExpr> },
+
+    Next { arg: Box<BoolExpr> },
+    Always { arg: Box<BoolExpr> },
+    Eventually { arg: Box<BoolExpr> },
+    Until { lhs: Box<BoolExpr>, rhs: Box<BoolExpr> },
 }
 
 impl Expr for BoolExpr {
@@ -291,6 +296,18 @@ impl ExprBuilder {
             Ok(Box::new(BoolExpr::And { args }))
         }
     }
+
+    pub fn make_next(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Next { arg })
+    }
+
+    pub fn make_always(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Always { arg })
+    }
+
+    pub fn make_eventually(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Eventually { arg })
+    }
 }
 
 #[cfg(any(test, feature = "arbitrary"))]
@@ -362,11 +379,15 @@ pub mod arbitrary {
                             args: args.into_iter().map(|arg| *arg).collect(),
                         })
                     }),
-                    prop::collection::vec(inner, 0..10).prop_map(|args| {
+                    prop::collection::vec(inner.clone(), 0..10).prop_map(|args| {
                         Box::new(BoolExpr::Or {
                             args: args.into_iter().map(|arg| *arg).collect(),
                         })
                     }),
+                    inner.clone().prop_map(|arg| Box::new(BoolExpr::Next { arg })),
+                    inner.clone().prop_map(|arg| Box::new(BoolExpr::Always { arg })),
+                    inner.clone().prop_map(|arg| Box::new(BoolExpr::Eventually { arg })),
+                    (inner.clone(), inner).prop_map(|(lhs, rhs)| Box::new(BoolExpr::Until { lhs, rhs })),
                 ]
             },
         )
