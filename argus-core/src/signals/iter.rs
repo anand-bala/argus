@@ -1,17 +1,23 @@
-use std::iter::Zip;
+use std::iter::{zip, Zip};
 use std::time::Duration;
 
 use super::Signal;
 
-pub struct Iter<'a, T> {
-    iter: Zip<core::slice::Iter<'a, Duration>, core::slice::Iter<'a, T>>,
+#[derive(Debug, Default)]
+pub enum Iter<'a, T> {
+    #[default]
+    Empty,
+    Iter(Zip<core::slice::Iter<'a, Duration>, core::slice::Iter<'a, T>>),
 }
 
 impl<'a, T> Iterator for Iter<'a, T> {
     type Item = (&'a Duration, &'a T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        match self {
+            Iter::Empty => None,
+            Iter::Iter(iter) => iter.next(),
+        }
     }
 }
 
@@ -20,8 +26,10 @@ impl<'a, T> IntoIterator for &'a Signal<T> {
     type Item = <Self::IntoIter as Iterator>::Item;
 
     fn into_iter(self) -> Self::IntoIter {
-        Iter {
-            iter: self.time_points.iter().zip(self.values.iter()),
+        match self {
+            Signal::Empty => Iter::default(),
+            Signal::Constant { value: _ } => Iter::default(),
+            Signal::Sampled { values, time_points } => Iter::Iter(zip(time_points, values)),
         }
     }
 }

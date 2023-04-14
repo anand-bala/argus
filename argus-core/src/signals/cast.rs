@@ -1,80 +1,71 @@
-use itertools::Itertools;
-use num_traits::{Num, NumCast};
+use core::iter::zip;
 
 use crate::signals::traits::SignalNumCast;
-use crate::signals::{ConstantSignal, Signal};
+use crate::signals::Signal;
 
 macro_rules! impl_cast {
-    ($type:ty) => {
+    (bool => $to:ty) => {
         paste::paste! {
             #[inline]
-            fn [<to_ $type>](&self) -> Option<Signal<$type>> {
-                let samples = self
-                    .iter()
-                    .map_while(|(&t, &v)| num_traits::cast::<_, $type>(v).map(|v| (t, v)))
-                    .collect_vec();
-                if samples.len() < self.time_points.len() {
-                    // Failed to convert some item
-                    None
-                } else {
-                    Some(samples.into_iter().collect())
+            fn [<to_ $to>](&self) -> Option<Signal<$to>> {
+                match self {
+                    Signal::Empty => Some(Signal::Empty),
+                    Signal::Constant { value } => num_traits::cast::<_, $to>(*value as i64).map(Signal::constant),
+                    Signal::Sampled { values, time_points } => {
+                        zip(time_points, values)
+                        .map(|(&t, &v)| {
+                        let val = num_traits::cast::<_, $to>(v as i64)?;
+                            Some((t, val))
+                        })
+                        .collect()
+                    }
                 }
             }
         }
     };
-}
-
-impl<T> SignalNumCast for Signal<T>
-where
-    T: Num + NumCast + Copy,
-{
-    type Value = T;
-
-    type Output<U> = Signal<U>
-    where
-        U: Num + NumCast + Copy;
-
-    impl_cast!(i8);
-    impl_cast!(i16);
-    impl_cast!(i32);
-    impl_cast!(i64);
-    impl_cast!(u8);
-    impl_cast!(u16);
-    impl_cast!(u32);
-    impl_cast!(u64);
-    impl_cast!(f32);
-    impl_cast!(f64);
-}
-
-macro_rules! impl_cast {
-    ($type:ty) => {
+    ($from:ty => $to:ty) => {
         paste::paste! {
             #[inline]
-            fn [<to_ $type>](&self) -> Option<ConstantSignal<$type>> {
-                num_traits::cast::<_, $type>(self.value).map(ConstantSignal::new)
+            fn [<to_ $to>](&self) -> Option<Signal<$to>> {
+                match self {
+                    Signal::Empty => Some(Signal::Empty),
+                    Signal::Constant { value } => num_traits::cast::<_, $to>(*value).map(Signal::constant),
+                    Signal::Sampled { values, time_points } => {
+                        zip(time_points, values)
+                        .map(|(&t, &v)| {
+                        let val = num_traits::cast::<_, $to>(v)?;
+                            Some((t, val))
+                        })
+                        .collect()
+                    }
+                }
             }
+        }
+    };
+
+    ($from:ty) => {
+        impl SignalNumCast for Signal<$from> {
+            impl_cast!($from => i8);
+            impl_cast!($from => i16);
+            impl_cast!($from => i32);
+            impl_cast!($from => i64);
+            impl_cast!($from => u8);
+            impl_cast!($from => u16);
+            impl_cast!($from => u32);
+            impl_cast!($from => u64);
+            impl_cast!($from => f32);
+            impl_cast!($from => f64);
         }
     };
 }
 
-impl<T> SignalNumCast for ConstantSignal<T>
-where
-    T: Num + NumCast + Copy,
-{
-    type Value = T;
-
-    type Output<U> = ConstantSignal<U>
-    where
-        U: Num + NumCast + Copy;
-
-    impl_cast!(i8);
-    impl_cast!(i16);
-    impl_cast!(i32);
-    impl_cast!(i64);
-    impl_cast!(u8);
-    impl_cast!(u16);
-    impl_cast!(u32);
-    impl_cast!(u64);
-    impl_cast!(f32);
-    impl_cast!(f64);
-}
+impl_cast!(i8);
+impl_cast!(i16);
+impl_cast!(i32);
+impl_cast!(i64);
+impl_cast!(u8);
+impl_cast!(u16);
+impl_cast!(u32);
+impl_cast!(u64);
+impl_cast!(f32);
+impl_cast!(f64);

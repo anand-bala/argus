@@ -13,6 +13,8 @@ pub enum Error {
     #[error("insufficient number of arguments")]
     IncompleteArgs,
 
+    #[error("cannot push value to non-sampled signal")]
+    InvalidPushToSignal,
     #[error(
         "trying to create a non-monotonically signal, signal end time ({end_time:?}) > sample time point \
          ({current_sample:?})"
