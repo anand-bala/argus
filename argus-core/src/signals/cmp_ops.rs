@@ -20,15 +20,16 @@ where
         // added to the signal appropriately.
         // the union of the sample points in self and other
         let sync_points = self.sync_with_intersection(other)?;
-        let sig: Signal<bool> = sync_points
+        let sig: Option<Signal<bool>> = sync_points
             .into_iter()
             .map(|t| {
                 let lhs = self.interpolate_at(t, Linear).unwrap();
                 let rhs = other.interpolate_at(t, Linear).unwrap();
-                (t, op(lhs.partial_cmp(&rhs).unwrap()))
+                let cmp = lhs.partial_cmp(&rhs);
+                cmp.map(|v| (t, op(v)))
             })
             .collect();
-        Some(sig)
+        sig
     }
 }
 

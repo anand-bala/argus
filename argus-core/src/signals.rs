@@ -24,7 +24,7 @@ pub use cast::*;
 pub use cmp_ops::*;
 use itertools::Itertools;
 pub use num_ops::*;
-use num_traits::NumCast;
+use num_traits::{Num, NumCast};
 pub use traits::*;
 use utils::intersect_bounds;
 
@@ -393,6 +393,16 @@ impl<T> Signal<T> {
         }
         return_points.shrink_to_fit();
         Some(return_points)
+    }
+}
+
+impl<T: Num> Signal<T> {
+    pub fn zero() -> Self {
+        Signal::constant(T::zero())
+    }
+
+    pub fn one() -> Self {
+        Signal::constant(T::one())
     }
 }
 
