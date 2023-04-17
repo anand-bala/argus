@@ -4,7 +4,7 @@
 //! traces_, i.e., a collection of signals that have been extracted from observing and
 //! sampling from some system.
 use argus_core::expr::BoolExpr;
-use argus_core::signals::AnySignal;
+use argus_core::signals::Signal;
 use argus_core::ArgusResult;
 
 pub mod eval;
@@ -21,38 +21,45 @@ pub use semantics::quantitative::QuantitativeSemantics;
 /// An example of a `Trace` may be:
 ///
 /// ```rust
-/// # use std::collections::HashMap;
-/// # use argus_core::signals::{ConstantSignal, AnySignal};
-/// # use argus_semantics::Trace;
+/// use argus_core::signals::{Signal, AnySignal};
+/// use argus_semantics::Trace;
 ///
-/// struct MyTrace(HashMap<String, AnySignal>);
+/// struct MyTrace {
+///     x: Signal<bool>,
+///     y: Signal<i64>,
+/// }
 ///
 /// impl Trace for MyTrace {
 ///     fn signal_names(&self) -> Vec<&str> {
-///         self.0.keys().map(|k| k.as_str()).collect()
+///         vec!["x", "y"]
 ///     }
 ///
-///     fn get(&self, name: &str) -> Option<&AnySignal> {
-///         self.0.get(name)
+///     fn get<T: 'static>(&self, name: &str) -> Option<&Signal<T>> {
+///         let sig: &dyn AnySignal = match name {
+///             "x" => &self.x,
+///             "y" => &self.y,
+///             _ => return None,
+///         };
+///         sig.as_any().downcast_ref::<Signal<T>>()
 ///     }
 /// }
 ///
-/// let trace = MyTrace(HashMap::from([
-///     ("x".to_string(), ConstantSignal::new(true).into()),
-///     ("y".to_string(), ConstantSignal::new(2.0).into()),
-/// ]));
+/// let trace = MyTrace {
+///     x: Signal::constant(true),
+///     y: Signal::constant(2),
+/// };
 /// let names = trace.signal_names();
 ///
 /// assert!(names == &["x", "y"] || names == &["y", "x"]);
-/// assert!(matches!(trace.get("x"), Some(AnySignal::ConstBool(_))));
-/// assert!(matches!(trace.get("y"), Some(AnySignal::ConstFloat(_))));
+/// assert!(matches!(trace.get::<bool>("x"), Some(Signal::Constant { value: true })));
+/// assert!(matches!(trace.get::<i64>("y"), Some(Signal::Constant { value: 2 })));
 /// ```
 pub trait Trace {
     /// Get the list of signal names contained within the trace.
     fn signal_names(&self) -> Vec<&str>;
 
     /// Query a signal using its name
-    fn get(&self, name: &str) -> Option<&AnySignal>;
+    fn get<T: 'static>(&self, name: &str) -> Option<&Signal<T>>;
 }
 
 /// General interface for defining semantics for the [`argus-core`](argus_core) logic.
