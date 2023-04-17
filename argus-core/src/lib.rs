@@ -29,6 +29,9 @@ pub enum Error {
 
     #[error("incorrect signal type")]
     InvalidSignalType,
+
+    #[error("invalid cast from {from} to {to}")]
+    InvalidCast { from: &'static str, to: &'static str },
 }
 
 pub type ArgusError = Error;

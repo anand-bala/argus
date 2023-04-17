@@ -4,6 +4,7 @@ use std::time::Duration;
 use paste::paste;
 
 use super::{Sample, Signal};
+use crate::ArgusResult;
 
 /// Trait for values that are linear interpolatable
 pub trait LinearInterpolatable {
@@ -113,7 +114,7 @@ pub trait SignalMinMax<Rhs = Self> {
     fn max(&self, rhs: &Rhs) -> Self::Output;
 }
 
-/// Trait for converting between numeric signal types
+/// Trait for converting between signal types
 pub trait SignalNumCast {
     fn to_i8(&self) -> Option<Signal<i8>>;
     fn to_i16(&self) -> Option<Signal<i16>>;
@@ -125,6 +126,11 @@ pub trait SignalNumCast {
     fn to_u64(&self) -> Option<Signal<u64>>;
     fn to_f32(&self) -> Option<Signal<f32>>;
     fn to_f64(&self) -> Option<Signal<f64>>;
+}
+
+/// Trait to cast signal onto some type
+pub trait TrySignalCast<T>: Sized + SignalNumCast {
+    fn try_cast(&self) -> ArgusResult<T>;
 }
 
 /// Trait for computing the absolute value of the samples in a signal
