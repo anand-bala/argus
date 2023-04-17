@@ -25,6 +25,7 @@ pub use cmp_ops::*;
 use itertools::Itertools;
 pub use num_ops::*;
 use num_traits::NumCast;
+pub use traits::*;
 use utils::intersect_bounds;
 
 use self::traits::LinearInterpolatable;

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::cmp::Ordering;
 use std::time::Duration;
 
@@ -73,6 +74,20 @@ interpolate_for_num!(u32);
 interpolate_for_num!(u64);
 interpolate_for_num!(f32);
 interpolate_for_num!(f64);
+
+/// Simple trait to be used as a trait object for [`Signal<T>`] types.
+///
+/// This is mainly for external libraries to use for trait objects and downcasting to
+/// concrete [`Signal`] types.
+pub trait AnySignal {
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: 'static> AnySignal for Signal<T> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
 
 macro_rules! impl_signal_cmp {
     ($cmp:ident) => {
