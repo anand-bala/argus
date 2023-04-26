@@ -3,12 +3,12 @@ name = "pyargus"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "pyargus"
 crate-type = ["cdylib"]
 
 [dependencies]
 argus-core = { version = "0.1.0", path = "../argus-core" }
+argus-semantics = { version = "0.1.0", path = "../argus-semantics" }
 derive_more = "0.99.17"
 pyo3 = "0.18.1"

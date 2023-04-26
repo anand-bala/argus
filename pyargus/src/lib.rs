@@ -318,6 +318,55 @@ impl Or {
     }
 }
 
+#[pyclass(extends=PyBoolExpr)]
+struct Next;
+
+#[pymethods]
+impl Next {
+    #[new]
+    fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
+        let arg = arg.0;
+        (Self, PyBoolExpr(Box::new(BoolExpr::Next { arg })))
+    }
+}
+
+#[pyclass(extends=PyBoolExpr)]
+struct Always;
+
+#[pymethods]
+impl Always {
+    #[new]
+    fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
+        let arg = arg.0;
+        (Self, PyBoolExpr(Box::new(BoolExpr::Always { arg })))
+    }
+}
+
+#[pyclass(extends=PyBoolExpr)]
+struct Eventually;
+
+#[pymethods]
+impl Eventually {
+    #[new]
+    fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
+        let arg = arg.0;
+        (Self, PyBoolExpr(Box::new(BoolExpr::Eventually { arg })))
+    }
+}
+
+#[pyclass(extends=PyBoolExpr)]
+struct Until;
+
+#[pymethods]
+impl Until {
+    #[new]
+    fn new(lhs: PyBoolExpr, rhs: PyBoolExpr) -> (Self, PyBoolExpr) {
+        let lhs = lhs.0;
+        let rhs = rhs.0;
+        (Self, PyBoolExpr(Box::new(BoolExpr::Until { lhs, rhs })))
+    }
+}
+
 #[pymodule]
 #[pyo3(name = "_argus")]
 fn pyargus(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -340,6 +389,10 @@ fn pyargus(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Not>()?;
     m.add_class::<And>()?;
     m.add_class::<Or>()?;
+    m.add_class::<Next>()?;
+    m.add_class::<Always>()?;
+    m.add_class::<Eventually>()?;
+    m.add_class::<Until>()?;
 
     Ok(())
 }
