@@ -83,7 +83,7 @@ impl Semantics for BooleanSemantics {
                 }
                 Ok(arg)
             }
-            BoolExpr::Until { lhs, rhs } => todo!(),
+            BoolExpr::Until { lhs: _, rhs: _ } => todo!(),
         }
     }
 }
