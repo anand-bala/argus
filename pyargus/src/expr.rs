@@ -3,8 +3,12 @@ use argus_core::prelude::*;
 use pyo3::prelude::*;
 use pyo3::pyclass::CompareOp;
 
-#[pyclass(name = "NumExpr", subclass)]
-#[derive(Clone, derive_more::From)]
+/// A base numeric expression
+///
+/// This is an abstract base class that provides an interface for all numeric
+/// expressions supported in Argus (literals, arithmetic, and so on).
+#[pyclass(name = "NumExpr", subclass, module = "argus")]
+#[derive(Debug, Clone, derive_more::From)]
 struct PyNumExpr(Box<NumExpr>);
 
 #[pymethods]
@@ -49,7 +53,8 @@ impl PyNumExpr {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create a constant integer expression
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct ConstInt;
 
 #[pymethods]
@@ -60,7 +65,13 @@ impl ConstInt {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create a constant _unsigned_ integer expression
+///
+/// # Warning
+///
+/// Negating an unsigned integer during evaluation _may_ lead to the evaluation method
+/// panicking.
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct ConstUInt;
 
 #[pymethods]
@@ -71,7 +82,8 @@ impl ConstUInt {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create a constant floating point number expression.
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct ConstFloat;
 
 #[pymethods]
@@ -82,7 +94,8 @@ impl ConstFloat {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create a integer variable
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct VarInt;
 
 #[pymethods]
@@ -93,7 +106,8 @@ impl VarInt {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create an _unsigned_ integer variable
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct VarUInt;
 
 #[pymethods]
@@ -104,7 +118,8 @@ impl VarUInt {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create a float variable
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct VarFloat;
 
 #[pymethods]
@@ -115,7 +130,8 @@ impl VarFloat {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create a numeric negation expression
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct Negate;
 
 #[pymethods]
@@ -127,7 +143,10 @@ impl Negate {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+/// Create a numeric addition expression
+///
+/// This expression is an `n`-ary expression that takes
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct Add;
 
 #[pymethods]
@@ -139,7 +158,7 @@ impl Add {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct Sub;
 
 #[pymethods]
@@ -152,7 +171,7 @@ impl Sub {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct Mul;
 
 #[pymethods]
@@ -164,7 +183,7 @@ impl Mul {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct Div;
 
 #[pymethods]
@@ -177,7 +196,7 @@ impl Div {
     }
 }
 
-#[pyclass(extends=PyNumExpr)]
+#[pyclass(extends=PyNumExpr, module = "argus")]
 struct Abs;
 
 #[pymethods]
@@ -189,8 +208,8 @@ impl Abs {
     }
 }
 
-#[pyclass(name = "BoolExpr", subclass)]
-#[derive(Clone, derive_more::From)]
+#[pyclass(name = "BoolExpr", subclass, module = "argus")]
+#[derive(Debug, Clone, derive_more::From)]
 struct PyBoolExpr(Box<BoolExpr>);
 
 #[pymethods]
@@ -212,7 +231,7 @@ impl PyBoolExpr {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct ConstBool;
 
 #[pymethods]
@@ -223,7 +242,7 @@ impl ConstBool {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct VarBool;
 
 #[pymethods]
@@ -234,23 +253,24 @@ impl VarBool {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct Cmp;
 
-#[pyclass]
-#[derive(Copy, Clone, derive_more::From)]
+#[pyclass(module = "argus")]
+#[derive(Debug, Copy, Clone, derive_more::From)]
 struct PyOrdering(Ordering);
 
-#[pymethods]
 impl Cmp {
-    #[new]
     fn new(op: PyOrdering, lhs: PyNumExpr, rhs: PyNumExpr) -> (Self, PyBoolExpr) {
         let op = op.0;
         let lhs = lhs.0;
         let rhs = rhs.0;
         (Self, Box::new(BoolExpr::Cmp { op, lhs, rhs }).into())
     }
+}
 
+#[pymethods]
+impl Cmp {
     #[staticmethod]
     fn less_than(lhs: PyNumExpr, rhs: PyNumExpr) -> PyResult<Py<Self>> {
         Python::with_gil(|py| Py::new(py, Cmp::new(PyOrdering(Ordering::less_than()), lhs, rhs)))
@@ -282,7 +302,7 @@ impl Cmp {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct Not;
 
 #[pymethods]
@@ -294,7 +314,7 @@ impl Not {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct And;
 
 #[pymethods]
@@ -306,7 +326,7 @@ impl And {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct Or;
 
 #[pymethods]
@@ -318,7 +338,7 @@ impl Or {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct Next;
 
 #[pymethods]
@@ -330,7 +350,7 @@ impl Next {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct Always;
 
 #[pymethods]
@@ -342,7 +362,7 @@ impl Always {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct Eventually;
 
 #[pymethods]
@@ -354,7 +374,7 @@ impl Eventually {
     }
 }
 
-#[pyclass(extends=PyBoolExpr)]
+#[pyclass(extends=PyBoolExpr, module = "argus")]
 struct Until;
 
 #[pymethods]
@@ -379,6 +399,7 @@ pub fn init(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Add>()?;
     m.add_class::<Mul>()?;
     m.add_class::<Div>()?;
+    m.add_class::<Abs>()?;
 
     m.add_class::<PyBoolExpr>()?;
     m.add_class::<ConstBool>()?;

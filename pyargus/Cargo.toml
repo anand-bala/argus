@@ -11,4 +11,5 @@ crate-type = ["cdylib"]
 argus-core = { version = "0.1.0", path = "../argus-core" }
 argus-semantics = { version = "0.1.0", path = "../argus-semantics" }
 derive_more = "0.99.17"
+paste = "1.0.12"
 pyo3 = "0.18.1"
