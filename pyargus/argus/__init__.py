@@ -1,5 +1,5 @@
 from argus import _argus
-from argus._argus import *
+from argus._argus import *  # noqa: F401
 
 __all__ = []
 

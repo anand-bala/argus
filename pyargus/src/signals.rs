@@ -6,32 +6,33 @@ use pyo3::prelude::*;
 use crate::PyArgusError;
 
 #[derive(Copy, Clone, Debug)]
-pub enum SignalKind {
+pub enum Kind {
     Bool,
     Int,
     UnsignedInt,
     Float,
 }
 
-#[pyclass(name = "Signal", subclass)]
+#[pyclass(name = "Signal", subclass, module = "argus")]
 #[derive(Debug, Clone)]
 pub struct PySignal {
-    pub kind: SignalKind,
+    pub kind: Kind,
     pub interpolation: InterpolationMethod,
 }
 
 macro_rules! impl_signals {
     ($ty_name:ident, $ty:ty) => {
         paste::paste! {
-            #[pyclass(extends=PySignal)]
-            pub struct [<$ty_name Signal>](Signal<$ty>);
+            #[pyclass(extends=PySignal, module = "argus")]
+            #[derive(Debug, Clone, derive_more::From)]
+            pub struct [<$ty_name Signal>](pub Signal<$ty>);
 
             impl [<$ty_name Signal>] {
                 #[inline]
-                fn super_type() -> PySignal {
+                pub fn super_type() -> PySignal {
                     PySignal {
                         interpolation: InterpolationMethod::Linear,
-                        kind: SignalKind::$ty_name,
+                        kind: Kind::$ty_name,
                     }
                 }
             }
@@ -72,13 +73,7 @@ macro_rules! impl_signals {
                     Python::with_gil(|py| {
                         Py::new(
                             py,
-                            (
-                                Self(ret),
-                                PySignal {
-                                    interpolation: InterpolationMethod::Linear,
-                                    kind: SignalKind::$ty_name,
-                                },
-                            ),
+                            (Self(ret), Self::super_type())
                         )
                     })
                 }

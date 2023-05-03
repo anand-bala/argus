@@ -30,6 +30,8 @@ impl From<PyArgusError> for PyErr {
 #[pymodule]
 #[pyo3(name = "_argus")]
 fn pyargus(py: Python, m: &PyModule) -> PyResult<()> {
+    pyo3_log::init();
+
     expr::init(py, m)?;
     signals::init(py, m)?;
     semantics::init(py, m)?;
