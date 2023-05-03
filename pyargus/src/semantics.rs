@@ -82,21 +82,15 @@ impl Trace for PyTrace {
     }
 }
 
-#[pyclass(name = "BooleanSemantics")]
-struct PyBooleanSemantics;
-
-#[pymethods]
-impl PyBooleanSemantics {
-    #[staticmethod]
-    fn eval(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<BoolSignal>> {
-        let sig = BooleanSemantics::eval(&expr.0, trace, ()).map_err(PyArgusError::from)?;
-        Python::with_gil(|py| Py::new(py, (BoolSignal::from(sig), BoolSignal::super_type())))
-    }
+#[pyfunction]
+fn eval_bool_semantics(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<BoolSignal>> {
+    let sig = BooleanSemantics::eval(&expr.0, trace, ()).map_err(PyArgusError::from)?;
+    Python::with_gil(|py| Py::new(py, (BoolSignal::from(sig), BoolSignal::super_type())))
 }
 
 pub fn init(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<PyBooleanSemantics>()?;
     m.add_class::<PyTrace>()?;
+    m.add_function(wrap_pyfunction!(eval_bool_semantics, m)?)?;
 
     Ok(())
 }
