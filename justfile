@@ -26,7 +26,7 @@ fmt:
   cd pyargus && black .
 
 doc:
-  cargo doc
+  cargo doc --no-deps
   fd -e md . doc/ -x rustdoc {}
   fd -e html . doc/ -x mv {} target/doc/argus/
 
