@@ -3,20 +3,12 @@ use std::time::Duration;
 use argus_core::signals::{InterpolationMethod, Signal};
 use pyo3::prelude::*;
 
-use crate::PyArgusError;
-
-#[derive(Copy, Clone, Debug)]
-pub enum Kind {
-    Bool,
-    Int,
-    UnsignedInt,
-    Float,
-}
+use crate::{DType, PyArgusError};
 
 #[pyclass(name = "Signal", subclass, module = "argus")]
 #[derive(Debug, Clone)]
 pub struct PySignal {
-    pub kind: Kind,
+    pub kind: DType,
     pub interpolation: InterpolationMethod,
 }
 
@@ -32,7 +24,7 @@ macro_rules! impl_signals {
                 pub fn super_type() -> PySignal {
                     PySignal {
                         interpolation: InterpolationMethod::Linear,
-                        kind: Kind::$ty_name,
+                        kind: DType::$ty_name,
                     }
                 }
             }

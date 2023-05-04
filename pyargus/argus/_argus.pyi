@@ -1,4 +1,5 @@
 from abc import ABC
+from enum import Enum, auto
 from typing import List, Tuple, final
 
 class NumExpr(ABC):
@@ -121,6 +122,13 @@ class Eventually(BoolExpr):
 class Until(BoolExpr):
     def __init__(self, lhs: BoolExpr, rhs: BoolExpr): ...
 
+@final
+class DType(Enum):
+    Bool = auto()
+    Int = auto()
+    UnsignedInt = auto()
+    Float = auto()
+
 class Signal(ABC): ...
 
 @final
@@ -162,7 +170,5 @@ class FloatSignal(Signal):
 @final
 class Trace: ...
 
-@final
-class BooleanSemantics:
-    @staticmethod
-    def eval(expr: BoolExpr, trace: Trace) -> BoolSignal: ...
+def eval_bool_semantics(expr: BoolExpr, trace: Trace) -> BoolSignal: ...
+def eval_robust_semantics(expr: BoolExpr, trace: Trace) -> BoolSignal: ...

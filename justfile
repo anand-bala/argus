@@ -6,6 +6,7 @@ test *ARGS:
 
 check:
   cargo +nightly clippy
+  cd pyargus && stubtest argus
   cd pyargus && mypy .
   cd pyargus && flake8
   cd pyargus && ruff .

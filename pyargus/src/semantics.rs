@@ -7,8 +7,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString};
 
 use crate::expr::PyBoolExpr;
-use crate::signals::{BoolSignal, FloatSignal, IntSignal, Kind, PySignal, UnsignedIntSignal};
-use crate::PyArgusError;
+use crate::signals::{BoolSignal, FloatSignal, IntSignal, PySignal, UnsignedIntSignal};
+use crate::{DType, PyArgusError};
 
 #[derive(Debug, Clone, derive_more::From, derive_more::TryInto)]
 #[try_into(owned, ref, ref_mut)]
@@ -42,16 +42,16 @@ impl PyTrace {
             })?;
             let kind = val.borrow().kind;
             let signal: SignalKind = match kind {
-                Kind::Bool => val.downcast::<PyCell<BoolSignal>>().unwrap().borrow().0.clone().into(),
-                Kind::Int => val.downcast::<PyCell<IntSignal>>().unwrap().borrow().0.clone().into(),
-                Kind::UnsignedInt => val
+                DType::Bool => val.downcast::<PyCell<BoolSignal>>().unwrap().borrow().0.clone().into(),
+                DType::Int => val.downcast::<PyCell<IntSignal>>().unwrap().borrow().0.clone().into(),
+                DType::UnsignedInt => val
                     .downcast::<PyCell<UnsignedIntSignal>>()
                     .unwrap()
                     .borrow()
                     .0
                     .clone()
                     .into(),
-                Kind::Float => val.downcast::<PyCell<FloatSignal>>().unwrap().borrow().0.clone().into(),
+                DType::Float => val.downcast::<PyCell<FloatSignal>>().unwrap().borrow().0.clone().into(),
             };
 
             signals.insert(key.to_string(), signal);

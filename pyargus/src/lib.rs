@@ -27,10 +27,21 @@ impl From<PyArgusError> for PyErr {
     }
 }
 
+#[pyclass]
+#[derive(Copy, Clone, Debug)]
+pub enum DType {
+    Bool,
+    Int,
+    UnsignedInt,
+    Float,
+}
+
 #[pymodule]
 #[pyo3(name = "_argus")]
 fn pyargus(py: Python, m: &PyModule) -> PyResult<()> {
     pyo3_log::init();
+
+    m.add_class::<DType>()?;
 
     expr::init(py, m)?;
     signals::init(py, m)?;
