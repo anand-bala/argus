@@ -5,17 +5,25 @@ use super::ExprRef;
 
 /// A trait representing expressions
 pub trait Expr {
+    /// Check if the given expression is a numeric expression
     fn is_numeric(&self) -> bool;
+    /// Check if the given expression is a boolean expression
     fn is_boolean(&self) -> bool;
-
+    /// Get the arguments to the current expression.
+    ///
+    /// If the expression doesn't contain arguments (i.e., it is a leaf expression) then
+    /// the vector is empty.
     fn args(&self) -> Vec<ExprRef<'_>>;
-
+    /// Helper function for upcasting to [`std::any::Any`] and then downcasting to a
+    /// concrete [`BoolExpr`](crate::expr::BoolExpr) or
+    /// [`NumExpr`](crate::expr::NumExpr).
     fn as_any(&self) -> &dyn Any;
-
+    /// An iterator over the AST starting from the current expression.
     fn iter(&self) -> AstIter<'_>;
 }
 
 impl dyn Expr {
+    /// Convenience method to downcast an expression to a concrete expression node.
     pub fn downcast_expr_ref<T>(&self) -> Option<&T>
     where
         T: Any,

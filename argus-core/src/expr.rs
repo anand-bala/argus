@@ -1,3 +1,5 @@
+//! Expression tree for Argus specifications
+
 use std::any::Any;
 use std::collections::HashSet;
 
@@ -17,20 +19,61 @@ use crate::{ArgusResult, Error};
 /// All expressions that are numeric
 #[derive(Clone, Debug, PartialEq)]
 pub enum NumExpr {
+    /// A signed integer literal
     IntLit(i64),
+    /// An unsigned integer literal
     UIntLit(u64),
+    /// A floating point literal
     FloatLit(f64),
-    IntVar { name: String },
-    UIntVar { name: String },
-    FloatVar { name: String },
-
-    Neg { arg: Box<NumExpr> },
-    Add { args: Vec<NumExpr> },
-    Sub { lhs: Box<NumExpr>, rhs: Box<NumExpr> },
-    Mul { args: Vec<NumExpr> },
-    Div { dividend: Box<NumExpr>, divisor: Box<NumExpr> },
-
-    Abs { arg: Box<NumExpr> },
+    /// A signed integer variable
+    IntVar {
+        /// Name of the variable
+        name: String,
+    },
+    /// A unsigned integer variable
+    UIntVar {
+        /// Name of the variable
+        name: String,
+    },
+    /// A floating point number variable
+    FloatVar {
+        /// Name of the variable
+        name: String,
+    },
+    /// Numeric negation of a numeric expression
+    Neg {
+        /// Numeric expression being negated
+        arg: Box<NumExpr>,
+    },
+    /// Arithmetic addition of a list of numeric expressions
+    Add {
+        /// List of expressions being added
+        args: Vec<NumExpr>,
+    },
+    /// Subtraction of two numbers
+    Sub {
+        /// LHS to the expression `lhs - rhs`
+        lhs: Box<NumExpr>,
+        /// RHS to the expression `lhs - rhs`
+        rhs: Box<NumExpr>,
+    },
+    /// Arithmetic multiplication of a list of numeric expressions
+    Mul {
+        /// List of expressions being multiplied
+        args: Vec<NumExpr>,
+    },
+    /// Divide two expressions `dividend / divisor`
+    Div {
+        /// The dividend
+        dividend: Box<NumExpr>,
+        /// The divisor
+        divisor: Box<NumExpr>,
+    },
+    /// The absolute value of an expression
+    Abs {
+        /// Argument to `abs`
+        arg: Box<NumExpr>,
+    },
 }
 
 impl Expr for NumExpr {
@@ -63,33 +106,49 @@ impl Expr for NumExpr {
 /// Types of comparison operations
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Ordering {
+    /// Equality check for two expressions
     Eq,
+    /// Non-equality check for two expressions
     NotEq,
-    Less { strict: bool },
-    Greater { strict: bool },
+    /// Less than check
+    Less {
+        /// Denotes `lhs < rhs` if `strict`, and `lhs <= rhs` otherwise.
+        strict: bool,
+    },
+    /// Greater than check
+    Greater {
+        /// Denotes `lhs > rhs` if `strict`, and `lhs >= rhs` otherwise.
+        strict: bool,
+    },
 }
 
 impl Ordering {
+    /// Check if `Ordering::Eq`
     pub fn equal() -> Self {
         Self::Eq
     }
 
+    /// Check if `Ordering::NotEq`
     pub fn not_equal() -> Self {
         Self::NotEq
     }
 
+    /// Check if `Ordering::Less { strict: true }`
     pub fn less_than() -> Self {
         Self::Less { strict: true }
     }
 
+    /// Check if `Ordering::Less { strict: false }`
     pub fn less_than_eq() -> Self {
         Self::Less { strict: false }
     }
 
+    /// Check if `Ordering::Greater { strict: true }`
     pub fn greater_than() -> Self {
         Self::Greater { strict: true }
     }
 
+    /// Check if `Ordering::Less { strict: false }`
     pub fn greater_than_eq() -> Self {
         Self::Greater { strict: false }
     }
@@ -98,17 +157,68 @@ impl Ordering {
 /// All expressions that are evaluated to be of type `bool`
 #[derive(Clone, Debug, PartialEq)]
 pub enum BoolExpr {
+    /// A `bool` literal
     BoolLit(bool),
-    BoolVar { name: String },
-    Cmp { op: Ordering, lhs: Box<NumExpr>, rhs: Box<NumExpr> },
-    Not { arg: Box<BoolExpr> },
-    And { args: Vec<BoolExpr> },
-    Or { args: Vec<BoolExpr> },
+    /// A `bool` variable
+    BoolVar {
+        /// Variable name
+        name: String,
+    },
+    /// A comparison expression
+    Cmp {
+        /// The type of comparison
+        op: Ordering,
+        /// The LHS for the comparison
+        lhs: Box<NumExpr>,
+        /// The RHS for the comparison
+        rhs: Box<NumExpr>,
+    },
+    /// Logical negation of an expression
+    Not {
+        /// Expression to be negated
+        arg: Box<BoolExpr>,
+    },
+    /// Logical conjunction of a list of expressions
+    And {
+        /// Expressions to be "and"-ed
+        args: Vec<BoolExpr>,
+    },
+    /// Logical disjunction of a list of expressions
+    Or {
+        /// Expressions to be "or"-ed
+        args: Vec<BoolExpr>,
+    },
 
-    Next { arg: Box<BoolExpr> },
-    Always { arg: Box<BoolExpr> },
-    Eventually { arg: Box<BoolExpr> },
-    Until { lhs: Box<BoolExpr>, rhs: Box<BoolExpr> },
+    /// A temporal next expression
+    ///
+    /// Checks if the next time point in a signal is `true` or not.
+    Next {
+        /// Argument for `Next`
+        arg: Box<BoolExpr>,
+    },
+    /// A temporal always expression
+    ///
+    /// Checks if the signal is `true` for all points in a signal.
+    Always {
+        /// Argument for `Always`
+        arg: Box<BoolExpr>,
+    },
+    /// A temporal eventually expression
+    ///
+    /// Checks if the signal is `true` for some point in a signal.
+    Eventually {
+        /// Argument for `Eventually`
+        arg: Box<BoolExpr>,
+    },
+    /// A temporal until expression
+    ///
+    /// Checks if the `lhs` is always `true` for a signal until `rhs` becomes `true`.
+    Until {
+        /// LHS to `lhs Until rhs`
+        lhs: Box<BoolExpr>,
+        /// RHS to `lhs Until rhs`
+        rhs: Box<BoolExpr>,
+    },
 }
 
 impl Expr for BoolExpr {
@@ -138,9 +248,12 @@ impl Expr for BoolExpr {
     }
 }
 
+/// A reference to an expression (either [`BoolExpr`] or [`NumExpr`]).
 #[derive(Clone, Copy, Debug, derive_more::From)]
 pub enum ExprRef<'a> {
+    /// A reference to a [`BoolExpr`]
     Bool(&'a BoolExpr),
+    /// A reference to a [`NumExpr`]
     Num(&'a NumExpr),
 }
 
@@ -155,28 +268,34 @@ pub struct ExprBuilder {
 }
 
 impl ExprBuilder {
+    /// Create a new `ExprBuilder` context.
     pub fn new() -> Self {
         Self {
             declarations: Default::default(),
         }
     }
 
+    /// Declare a constant boolean expression
     pub fn bool_const(&self, value: bool) -> Box<BoolExpr> {
         Box::new(BoolExpr::BoolLit(value))
     }
 
+    /// Declare a constant integer expression
     pub fn int_const(&self, value: i64) -> Box<NumExpr> {
         Box::new(NumExpr::IntLit(value))
     }
 
+    /// Declare a constant unsigned integer expression
     pub fn uint_const(&self, value: u64) -> Box<NumExpr> {
         Box::new(NumExpr::UIntLit(value))
     }
 
+    /// Declare a constant floating point expression
     pub fn float_const(&self, value: f64) -> Box<NumExpr> {
         Box::new(NumExpr::FloatLit(value))
     }
 
+    /// Declare a boolean variable
     pub fn bool_var(&mut self, name: String) -> ArgusResult<Box<BoolExpr>> {
         if self.declarations.insert(name.clone()) {
             Ok(Box::new(BoolExpr::BoolVar { name }))
@@ -185,6 +304,7 @@ impl ExprBuilder {
         }
     }
 
+    /// Declare a integer variable
     pub fn int_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
         if self.declarations.insert(name.clone()) {
             Ok(Box::new(NumExpr::IntVar { name }))
@@ -193,6 +313,7 @@ impl ExprBuilder {
         }
     }
 
+    /// Declare a unsigned integer variable
     pub fn uint_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
         if self.declarations.insert(name.clone()) {
             Ok(Box::new(NumExpr::UIntVar { name }))
@@ -201,6 +322,7 @@ impl ExprBuilder {
         }
     }
 
+    /// Declare a floating point variable
     pub fn float_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
         if self.declarations.insert(name.clone()) {
             Ok(Box::new(NumExpr::FloatVar { name }))
@@ -209,10 +331,12 @@ impl ExprBuilder {
         }
     }
 
+    /// Create a [`NumExpr::Neg`] expression
     pub fn make_neg(&self, arg: Box<NumExpr>) -> Box<NumExpr> {
         Box::new(NumExpr::Neg { arg })
     }
 
+    /// Create a [`NumExpr::Add`] expression
     pub fn make_add<I>(&self, args: I) -> ArgusResult<Box<NumExpr>>
     where
         I: IntoIterator<Item = NumExpr>,
@@ -225,6 +349,7 @@ impl ExprBuilder {
         }
     }
 
+    /// Create a [`NumExpr::Mul`] expression
     pub fn make_mul<I>(&self, args: I) -> ArgusResult<Box<NumExpr>>
     where
         I: IntoIterator<Item = NumExpr>,
@@ -237,42 +362,52 @@ impl ExprBuilder {
         }
     }
 
+    /// Create a [`NumExpr::Div`] expression
     pub fn make_div(&self, dividend: Box<NumExpr>, divisor: Box<NumExpr>) -> Box<NumExpr> {
         Box::new(NumExpr::Div { dividend, divisor })
     }
 
+    /// Create a [`BoolExpr::Cmp`] expression
     pub fn make_cmp(&self, op: Ordering, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
         Box::new(BoolExpr::Cmp { op, lhs, rhs })
     }
 
+    /// Create a "less than" ([`BoolExpr::Cmp`]) expression
     pub fn make_lt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
         self.make_cmp(Ordering::Less { strict: true }, lhs, rhs)
     }
 
+    /// Create a "less than or equal" ([`BoolExpr::Cmp`]) expression
     pub fn make_le(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
         self.make_cmp(Ordering::Less { strict: false }, lhs, rhs)
     }
 
+    /// Create a "greater than" ([`BoolExpr::Cmp`]) expression
     pub fn make_gt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
         self.make_cmp(Ordering::Greater { strict: true }, lhs, rhs)
     }
 
+    /// Create a "greater than or equal" ([`BoolExpr::Cmp`]) expression
     pub fn make_ge(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
         self.make_cmp(Ordering::Greater { strict: false }, lhs, rhs)
     }
 
+    /// Create a "equals" ([`BoolExpr::Cmp`]) expression
     pub fn make_eq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
         self.make_cmp(Ordering::Eq, lhs, rhs)
     }
 
+    /// Create a "not equals" ([`BoolExpr::Cmp`]) expression
     pub fn make_neq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
         self.make_cmp(Ordering::NotEq, lhs, rhs)
     }
 
+    /// Create a [`BoolExpr::Not`] expression.
     pub fn make_not(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
         Box::new(BoolExpr::Not { arg })
     }
 
+    /// Create a [`BoolExpr::Or`] expression.
     pub fn make_or<I>(&self, args: I) -> ArgusResult<Box<BoolExpr>>
     where
         I: IntoIterator<Item = BoolExpr>,
@@ -285,6 +420,7 @@ impl ExprBuilder {
         }
     }
 
+    /// Create a [`BoolExpr::And`] expression.
     pub fn make_and<I>(&self, args: I) -> ArgusResult<Box<BoolExpr>>
     where
         I: IntoIterator<Item = BoolExpr>,
@@ -297,26 +433,35 @@ impl ExprBuilder {
         }
     }
 
+    /// Create a [`BoolExpr::Next`] expression.
     pub fn make_next(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
         Box::new(BoolExpr::Next { arg })
     }
 
+    /// Create a [`BoolExpr::Always`] expression.
     pub fn make_always(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
         Box::new(BoolExpr::Always { arg })
     }
 
+    /// Create a [`BoolExpr::Eventually`] expression.
     pub fn make_eventually(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
         Box::new(BoolExpr::Eventually { arg })
+    }
+
+    /// Create a [`BoolExpr::Until`] expression.
+    pub fn make_until(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Until { lhs, rhs })
     }
 }
 
 #[cfg(any(test, feature = "arbitrary"))]
 pub mod arbitrary {
-    //! Helper functions to generate arbitrary expressions using [`proptest`].
+    //! Helper functions to generate arbitrary expressions using [`mod@proptest`].
     use proptest::prelude::*;
 
     use super::*;
 
+    /// Generate arbitrary numeric expressions
     pub fn num_expr() -> impl Strategy<Value = Box<NumExpr>> {
         let leaf = prop_oneof![
             any::<i64>().prop_map(|val| Box::new(NumExpr::IntLit(val))),
@@ -351,6 +496,7 @@ pub mod arbitrary {
         )
     }
 
+    /// Generate arbitrary comparison expressions
     pub fn cmp_expr() -> impl Strategy<Value = Box<BoolExpr>> {
         use Ordering::*;
         let op = prop_oneof![Just(Eq), Just(NotEq),];
@@ -360,6 +506,7 @@ pub mod arbitrary {
         (op, lhs, rhs).prop_map(|(op, lhs, rhs)| Box::new(BoolExpr::Cmp { op, lhs, rhs }))
     }
 
+    /// Generate arbitrary boolean expressions
     pub fn bool_expr() -> impl Strategy<Value = Box<BoolExpr>> {
         let leaf = prop_oneof![
             any::<bool>().prop_map(|val| Box::new(BoolExpr::BoolLit(val))),

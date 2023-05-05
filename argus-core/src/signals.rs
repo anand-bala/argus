@@ -1,18 +1,9 @@
-//! Concrete signal types
-//!
-//! In Argus, there are essentially 2 kinds of signals:
-//!
-//! 1. [`Signal<T>`] is a variable length signal with finitely many sampled points. This
-//!    implies that the signal has a fixed start and end point (both inclusive) and can
-//!    be iterated over.
-//! 2. [`ConstantSignal<T>`] is a signal that maintains a constant value throughtout
-//!    its domain, and thus, do not require interpolation and extrapolation. Moreover,
-//!    since they are defined over the entire time domain, they cannot be iterated over.
-pub mod bool_ops;
-pub mod cast;
-pub mod cmp_ops;
+//! Argus signals
+mod bool_ops;
+mod cast;
+mod cmp_ops;
 pub mod iter;
-pub mod num_ops;
+mod num_ops;
 pub mod traits;
 mod utils;
 
@@ -31,9 +22,16 @@ use utils::intersect_bounds;
 use self::traits::LinearInterpolatable;
 use crate::{ArgusResult, Error};
 
-#[derive(Debug, Clone, Copy)]
+/// Interpolation methods supported by Argus signals.
+///
+/// Defaults to `Linear` interpolation (which corresponds to constant interpolation for
+/// `bool` signals).
+#[derive(Debug, Clone, Copy, Default)]
 pub enum InterpolationMethod {
+    /// Linear interpolation
+    #[default]
     Linear,
+    /// Interpolate from the nearest sample point.
     Nearest,
 }
 
@@ -61,9 +59,12 @@ impl InterpolationMethod {
     }
 }
 
+/// A single sample of a signal.
 #[derive(Copy, Clone, Debug)]
 pub struct Sample<T> {
+    /// The time point when this sample was taken.
     pub time: Duration,
+    /// The value of the signal at th given sample.
     pub value: T,
 }
 
@@ -73,13 +74,22 @@ pub struct Sample<T> {
 /// finite set of strictly monotonically increasing time points.
 #[derive(Default, Clone, Debug)]
 pub enum Signal<T> {
+    /// An empty signal.
+    ///
+    /// This is only used in special (usually error) scenarios.
     #[default]
     Empty,
+    /// A signal that has a constant value for the entire time domain.
     Constant {
+        /// The value of the signal for all time.
         value: T,
     },
+    /// A finite set of signal values sampled at strictly monotonically increasing time
+    /// points.
     Sampled {
+        /// Values of the samples of the signal.
         values: Vec<T>,
+        /// List of time points where the signal is sampled.
         time_points: Vec<Duration>,
     },
 }
@@ -302,6 +312,14 @@ impl<T> Signal<T> {
         }
     }
 
+    /// Return the vector of points where the signal is sampled.
+    ///
+    /// - If the signal is empty ([`Signal::Empty`]), the output is `None`.
+    /// - If the signal is constant ([`Signal::Constant`]), the output is equivalent to
+    ///   `Some(vec![])` as there is no well defined list of sample points for a
+    ///   constant signal.
+    /// - Finally, if the signal is sampled ([`Signal::Sampled`]), the output is the
+    ///   list of time points corresponding to the samples in the signal.
     pub fn time_points(&self) -> Option<Vec<&Duration>> {
         match self {
             Signal::Empty => None,
@@ -397,17 +415,33 @@ impl<T> Signal<T> {
 }
 
 impl<T: Num> Signal<T> {
+    /// Create a constant `0` signal
     pub fn zero() -> Self {
         Signal::constant(T::zero())
     }
 
+    /// Create a constant `1` signal
     pub fn one() -> Self {
         Signal::constant(T::one())
     }
 }
 
+impl Signal<bool> {
+    /// Create a constant `true` signal.
+    pub fn const_true() -> Self {
+        Signal::constant(true)
+    }
+
+    /// Create a constant `false` signal.
+    pub fn const_false() -> Self {
+        Signal::constant(false)
+    }
+}
+
 #[cfg(any(test, feature = "arbitrary"))]
 pub mod arbitrary {
+    //! In this module, we use [`mod@proptest`] to define arbitrary generators for
+    //! different signals.
     use proptest::prelude::*;
     use proptest::sample::SizeRange;
 

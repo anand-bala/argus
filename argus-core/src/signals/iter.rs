@@ -1,12 +1,22 @@
+//! Signal iterator.
+
 use std::iter::{zip, Zip};
 use std::time::Duration;
 
 use super::Signal;
 
+/// An iterator over a [`Signal`].
+///
+/// This takes into account if the signal is iterable or not, i.e., it produces samples
+/// only for [`Signal::Sampled`] and empty iterators for [`Signal::Empty`] (as it
+/// contains no values) and [`Signal::Constant`] (as there is no well defined start and
+/// end to the signal).
 #[derive(Debug, Default)]
 pub enum Iter<'a, T> {
+    #[doc(hidden)]
     #[default]
     Empty,
+    #[doc(hidden)]
     Iter(Zip<core::slice::Iter<'a, Duration>, core::slice::Iter<'a, T>>),
 }
 

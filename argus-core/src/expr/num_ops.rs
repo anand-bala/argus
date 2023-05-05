@@ -90,6 +90,7 @@ internal_macros::forward_box_binop! {impl Div, div for NumExpr, NumExpr }
 use super::Ordering;
 
 impl NumExpr {
+    /// Convenience method to create an `lhs < rhs` expression.
     pub fn less_than(self, rhs: Self) -> BoolExpr {
         BoolExpr::Cmp {
             op: Ordering::Less { strict: true },
@@ -98,6 +99,7 @@ impl NumExpr {
         }
     }
 
+    /// Convenience method to create an `lhs <= rhs` expression.
     pub fn less_than_eq(self, rhs: Self) -> BoolExpr {
         BoolExpr::Cmp {
             op: Ordering::Less { strict: false },
@@ -106,6 +108,7 @@ impl NumExpr {
         }
     }
 
+    /// Convenience method to create an `lhs > rhs` expression.
     pub fn greater_than(self, rhs: Self) -> BoolExpr {
         BoolExpr::Cmp {
             op: Ordering::Greater { strict: true },
@@ -114,6 +117,7 @@ impl NumExpr {
         }
     }
 
+    /// Convenience method to create an `lhs >= rhs` expression.
     pub fn greater_than_eq(self, rhs: Self) -> BoolExpr {
         BoolExpr::Cmp {
             op: Ordering::Greater { strict: false },
@@ -122,6 +126,7 @@ impl NumExpr {
         }
     }
 
+    /// Convenience method to create an `lhs == rhs` expression.
     pub fn equal(self, rhs: Self) -> BoolExpr {
         BoolExpr::Cmp {
             op: Ordering::Eq,
@@ -130,6 +135,7 @@ impl NumExpr {
         }
     }
 
+    /// Convenience method to create an `lhs != rhs` expression.
     pub fn not_equal(self, rhs: Self) -> BoolExpr {
         BoolExpr::Cmp {
             op: Ordering::NotEq,

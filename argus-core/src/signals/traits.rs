@@ -1,3 +1,5 @@
+//! Helper traits for Argus signals.
+
 use std::any::Any;
 use std::cmp::Ordering;
 use std::time::Duration;
@@ -9,6 +11,10 @@ use crate::ArgusResult;
 
 /// Trait for values that are linear interpolatable
 pub trait LinearInterpolatable {
+    /// Compute the linear interpolation of two samples at `time`
+    ///
+    /// This should assume that the `time` value is between the sample times of `a` and
+    /// `b`. This should be enforced as an assertion.
     fn interpolate_at(a: &Sample<Self>, b: &Sample<Self>, time: Duration) -> Self
     where
         Self: Sized;
@@ -80,6 +86,8 @@ interpolate_for_num!(f64);
 /// This is mainly for external libraries to use for trait objects and downcasting to
 /// concrete [`Signal`] types.
 pub trait AnySignal {
+    /// Convenience method to upcast a signal to [`std::any::Any`] for later downcasting
+    /// to a concrete [`Signal`] type.
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -92,6 +100,7 @@ impl<T: 'static> AnySignal for Signal<T> {
 macro_rules! impl_signal_cmp {
     ($cmp:ident) => {
         paste! {
+            /// Compute the time-wise comparison of two signals
             fn [<signal_ $cmp>](&self, other: &Rhs) -> Option<Signal<bool>> {
                 self.signal_cmp(other, |ord| ord.[<is_ $cmp>]())
             }
@@ -120,6 +129,7 @@ pub trait SignalPartialOrd<Rhs = Self> {
 
 /// Time-wise min-max of signal types
 pub trait SignalMinMax<Rhs = Self> {
+    /// The output type of the signal after computing the min/max
     type Output;
 
     /// Compute the time-wise min of two signals
@@ -131,24 +141,39 @@ pub trait SignalMinMax<Rhs = Self> {
 
 /// Trait for converting between signal types
 pub trait SignalNumCast {
+    /// Try to convert the signal values/samples to `i8`
     fn to_i8(&self) -> Option<Signal<i8>>;
+    /// Try to convert the signal values/samples to `i16`
     fn to_i16(&self) -> Option<Signal<i16>>;
+    /// Try to convert the signal values/samples to `i32`
     fn to_i32(&self) -> Option<Signal<i32>>;
+    /// Try to convert the signal values/samples to `i64`
     fn to_i64(&self) -> Option<Signal<i64>>;
+    /// Try to convert the signal values/samples to `u8`
     fn to_u8(&self) -> Option<Signal<u8>>;
+    /// Try to convert the signal values/samples to `u16`
     fn to_u16(&self) -> Option<Signal<u16>>;
+    /// Try to convert the signal values/samples to `u32`
     fn to_u32(&self) -> Option<Signal<u32>>;
+    /// Try to convert the signal values/samples to `u64`
     fn to_u64(&self) -> Option<Signal<u64>>;
+    /// Try to convert the signal values/samples to `f32`
     fn to_f32(&self) -> Option<Signal<f32>>;
+    /// Try to convert the signal values/samples to `f64`
     fn to_f64(&self) -> Option<Signal<f64>>;
 }
 
 /// Trait to cast signal onto some type
 pub trait TrySignalCast<T>: Sized + SignalNumCast {
+    /// Try to cast the given signal to another numeric type.
+    ///
+    /// This returns a [`ArgusError::InvalidCast`](crate::Error::InvalidCast) if
+    /// some value in the signal isn't castable to the destination type.
     fn try_cast(&self) -> ArgusResult<T>;
 }
 
 /// Trait for computing the absolute value of the samples in a signal
 pub trait SignalAbs {
+    /// Compute the absolute value of the given signal
     fn abs(&self) -> Self;
 }

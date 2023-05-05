@@ -1,3 +1,5 @@
+//! Iterators for expression trees
+
 use std::collections::VecDeque;
 
 use super::{Expr, ExprRef};
