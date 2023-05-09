@@ -358,7 +358,13 @@ impl Always {
     #[new]
     fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
         let arg = arg.0;
-        (Self, PyBoolExpr(Box::new(BoolExpr::Always { arg })))
+        (
+            Self,
+            PyBoolExpr(Box::new(BoolExpr::Always {
+                arg,
+                interval: (..).into(),
+            })),
+        )
     }
 }
 
@@ -370,7 +376,13 @@ impl Eventually {
     #[new]
     fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
         let arg = arg.0;
-        (Self, PyBoolExpr(Box::new(BoolExpr::Eventually { arg })))
+        (
+            Self,
+            PyBoolExpr(Box::new(BoolExpr::Eventually {
+                arg,
+                interval: (..).into(),
+            })),
+        )
     }
 }
 
@@ -383,7 +395,14 @@ impl Until {
     fn new(lhs: PyBoolExpr, rhs: PyBoolExpr) -> (Self, PyBoolExpr) {
         let lhs = lhs.0;
         let rhs = rhs.0;
-        (Self, PyBoolExpr(Box::new(BoolExpr::Until { lhs, rhs })))
+        (
+            Self,
+            PyBoolExpr(Box::new(BoolExpr::Until {
+                lhs,
+                rhs,
+                interval: (..).into(),
+            })),
+        )
     }
 }
 

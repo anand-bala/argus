@@ -13,5 +13,5 @@ argus-semantics = { version = "0.1.0", path = "../argus-semantics" }
 derive_more = "0.99.17"
 log = "0.4.17"
 paste = "1.0.12"
-pyo3 = "0.18.1"
+pyo3 = "0.18.3"
 pyo3-log = "0.8.1"
