@@ -2,6 +2,8 @@
 
 use std::any::Any;
 use std::collections::HashSet;
+use std::ops::{Bound, RangeBounds};
+use std::time::Duration;
 
 mod bool_ops;
 mod internal_macros;
@@ -154,6 +156,27 @@ impl Ordering {
     }
 }
 
+/// A time interval for a temporal expression.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, derive_more::Into)]
+pub struct Interval {
+    /// Start of the interval
+    pub start: Bound<Duration>,
+    /// End of the interval
+    pub end: Bound<Duration>,
+}
+
+impl<T> From<T> for Interval
+where
+    T: RangeBounds<Duration>,
+{
+    fn from(value: T) -> Self {
+        Self {
+            start: value.start_bound().cloned(),
+            end: value.end_bound().cloned(),
+        }
+    }
+}
+
 /// All expressions that are evaluated to be of type `bool`
 #[derive(Clone, Debug, PartialEq)]
 pub enum BoolExpr {
@@ -196,20 +219,44 @@ pub enum BoolExpr {
         /// Argument for `Next`
         arg: Box<BoolExpr>,
     },
+
+    /// Temporal "oracle" expression
+    ///
+    /// This is equivalent to `steps` number of nested [`Next`](BoolExpr::Next)
+    /// expressions.
+    Oracle {
+        /// Number of steps to look ahead
+        steps: usize,
+        /// Argument for `Oracle`
+        arg: Box<BoolExpr>,
+    },
+
     /// A temporal always expression
     ///
-    /// Checks if the signal is `true` for all points in a signal.
+    /// - If the `interval` is `(Unbounded, Unbounded)` or equivalent to `(0,
+    ///   Unbounded)`: checks if the signal is `true` for all points in a signal.
+    /// - Otherwise: checks if the signal is `true` for all points within the
+    ///   `interval`.
     Always {
         /// Argument for `Always`
         arg: Box<BoolExpr>,
+        /// Interval for the expression
+        interval: Interval,
     },
+
     /// A temporal eventually expression
     ///
-    /// Checks if the signal is `true` for some point in a signal.
+    /// - If the `interval` is `(Unbounded, Unbounded)` or equivalent to `(0,
+    ///   Unbounded)`: checks if the signal is `true` for some point in a signal.
+    /// - Otherwise: checks if the signal is `true` for some point within the
+    ///   `interval`.
     Eventually {
         /// Argument for `Eventually`
         arg: Box<BoolExpr>,
+        /// Interval for the expression
+        interval: Interval,
     },
+
     /// A temporal until expression
     ///
     /// Checks if the `lhs` is always `true` for a signal until `rhs` becomes `true`.
@@ -218,6 +265,8 @@ pub enum BoolExpr {
         lhs: Box<BoolExpr>,
         /// RHS to `lhs Until rhs`
         rhs: Box<BoolExpr>,
+        /// Interval for the expression
+        interval: Interval,
     },
 }
 
@@ -438,19 +487,49 @@ impl ExprBuilder {
         Box::new(BoolExpr::Next { arg })
     }
 
+    /// Create a [`BoolExpr::Oracle`] expression.
+    pub fn make_oracle(&self, steps: usize, arg: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Oracle { steps, arg })
+    }
+
     /// Create a [`BoolExpr::Always`] expression.
     pub fn make_always(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Always { arg })
+        Box::new(BoolExpr::Always {
+            arg,
+            interval: (..).into(),
+        })
+    }
+
+    /// Create a [`BoolExpr::Always`] expression with an interval.
+    pub fn make_timed_always(&self, interval: Interval, arg: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Always { arg, interval })
     }
 
     /// Create a [`BoolExpr::Eventually`] expression.
     pub fn make_eventually(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Eventually { arg })
+        Box::new(BoolExpr::Eventually {
+            arg,
+            interval: (..).into(),
+        })
+    }
+
+    /// Create a [`BoolExpr::Eventually`] expression with an interval.
+    pub fn make_timed_eventually(&self, interval: Interval, arg: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Eventually { arg, interval })
     }
 
     /// Create a [`BoolExpr::Until`] expression.
     pub fn make_until(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Until { lhs, rhs })
+        Box::new(BoolExpr::Until {
+            lhs,
+            rhs,
+            interval: (..).into(),
+        })
+    }
+
+    /// Create a [`BoolExpr::Until`] expression with an interval.
+    pub fn make_timed_until(&self, interval: Interval, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> Box<BoolExpr> {
+        Box::new(BoolExpr::Until { lhs, rhs, interval })
     }
 }
 
@@ -519,6 +598,7 @@ pub mod arbitrary {
             128, // Shoot for maximum size of 256 nodes
             10,  // We put up to 10 items per collection
             |inner| {
+                let interval = (any::<(Bound<Duration>, Bound<Duration>)>()).prop_map_into::<Interval>();
                 prop_oneof![
                     inner.clone().prop_map(|arg| Box::new(BoolExpr::Not { arg })),
                     prop::collection::vec(inner.clone(), 0..10).prop_map(|args| {
@@ -532,9 +612,15 @@ pub mod arbitrary {
                         })
                     }),
                     inner.clone().prop_map(|arg| Box::new(BoolExpr::Next { arg })),
-                    inner.clone().prop_map(|arg| Box::new(BoolExpr::Always { arg })),
-                    inner.clone().prop_map(|arg| Box::new(BoolExpr::Eventually { arg })),
-                    (inner.clone(), inner).prop_map(|(lhs, rhs)| Box::new(BoolExpr::Until { lhs, rhs })),
+                    (inner.clone(), interval.clone())
+                        .prop_map(|(arg, interval)| Box::new(BoolExpr::Always { arg, interval })),
+                    (inner.clone(), interval.clone())
+                        .prop_map(|(arg, interval)| Box::new(BoolExpr::Eventually { arg, interval })),
+                    (inner.clone(), inner, interval).prop_map(|(lhs, rhs, interval)| Box::new(BoolExpr::Until {
+                        lhs,
+                        rhs,
+                        interval
+                    })),
                 ]
             },
         )
