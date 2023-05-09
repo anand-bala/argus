@@ -50,7 +50,8 @@ impl Semantics for BooleanSemantics {
                 Ok(ret)
             }
             BoolExpr::Next { arg: _ } => todo!(),
-            BoolExpr::Always { arg } => {
+            BoolExpr::Oracle { steps: _, arg: _ } => todo!(),
+            BoolExpr::Always { arg, interval } => {
                 let mut arg = Self::eval(arg, trace, ctx)?;
                 match &mut arg {
                     // if signal is empty or constant, return the signal itself.
@@ -66,7 +67,7 @@ impl Semantics for BooleanSemantics {
                 }
                 Ok(arg)
             }
-            BoolExpr::Eventually { arg } => {
+            BoolExpr::Eventually { arg, interval } => {
                 let mut arg = Self::eval(arg, trace, ctx)?;
                 match &mut arg {
                     // if signal is empty or constant, return the signal itself.
@@ -83,7 +84,11 @@ impl Semantics for BooleanSemantics {
                 }
                 Ok(arg)
             }
-            BoolExpr::Until { lhs: _, rhs: _ } => todo!(),
+            BoolExpr::Until {
+                lhs: _,
+                rhs: _,
+                interval,
+            } => todo!(),
         }
     }
 }
