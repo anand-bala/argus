@@ -77,6 +77,13 @@ pub enum Error {
         /// Type of the signal being cast to
         to: &'static str,
     },
+
+    /// Invalid interval
+    #[error("invalid interval: {reason}")]
+    InvalidInterval {
+        /// Reason for interval being invalid
+        reason: &'static str,
+    },
 }
 
 /// Alias for [`Error`](enum@Error)

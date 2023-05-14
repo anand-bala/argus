@@ -158,6 +158,7 @@ impl Ordering {
 
 /// A time interval for a temporal expression.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, derive_more::Into)]
+#[into(owned, ref, ref_mut)]
 pub struct Interval {
     /// Start of the interval
     pub start: Bound<Duration>,
@@ -165,15 +166,76 @@ pub struct Interval {
     pub end: Bound<Duration>,
 }
 
+impl Interval {
+    /// Create a new interval
+    ///
+    /// # Note
+    ///
+    /// Argus doesn't permit `Interval`s with [`Bound::Excluded(_)`] values (as these
+    /// can't be monitored reliably) and thus converts all such bounds to an
+    /// [`Bound::Included(_)`]. Moreover, if the `start` bound is [`Bound::Unbounded`],
+    /// it will get transformed to [`Bound::Included(Duration::ZERO)`].
+    pub fn new(start: Bound<Duration>, end: Bound<Duration>) -> Self {
+        use Bound::*;
+        let start = match start {
+            a @ Included(_) => a,
+            Excluded(b) => Included(b),
+            Unbounded => Included(Duration::ZERO),
+        };
+
+        let end = match end {
+            Excluded(b) => Included(b),
+            bound => bound,
+        };
+
+        Self { start, end }
+    }
+
+    /// Check if the interval is empty
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        use Bound::*;
+        match (&self.start, &self.end) {
+            (Included(a), Included(b)) => a > b,
+            (Included(a), Excluded(b)) | (Excluded(a), Included(b)) | (Excluded(a), Excluded(b)) => a >= b,
+            (Unbounded, Excluded(b)) => b == &Duration::ZERO,
+            _ => false,
+        }
+    }
+
+    /// Check if the interval is a singleton
+    ///
+    /// This implies that only 1 timepoint is valid within this interval.
+    #[inline]
+    pub fn is_singleton(&self) -> bool {
+        use Bound::*;
+        match (&self.start, &self.end) {
+            (Included(a), Included(b)) => a == b,
+            (Unbounded, Included(b)) => b == &Duration::ZERO,
+            _ => false,
+        }
+    }
+
+    /// Check if the interval covers `[0, ..)`.
+    #[inline]
+    pub fn is_untimed(&self) -> bool {
+        use Bound::*;
+        match (self.start, self.end) {
+            (Unbounded, Unbounded) | (Included(Duration::ZERO), Unbounded) => true,
+            (Included(_), Included(_)) | (Included(_), Unbounded) => false,
+            (Excluded(_), _) | (_, Excluded(_)) | (Unbounded, _) => {
+                unreachable!("looks like someone didn't use Interval::new")
+            }
+        }
+    }
+}
+
 impl<T> From<T> for Interval
 where
     T: RangeBounds<Duration>,
 {
     fn from(value: T) -> Self {
-        Self {
-            start: value.start_bound().cloned(),
-            end: value.end_bound().cloned(),
-        }
+        Self::new(value.start_bound().cloned(), value.end_bound().cloned())
     }
 }
 
