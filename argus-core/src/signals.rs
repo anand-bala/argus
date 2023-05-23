@@ -4,6 +4,7 @@ mod cast;
 mod cmp_ops;
 pub mod iter;
 mod num_ops;
+mod shift_ops;
 pub mod traits;
 mod utils;
 
@@ -16,6 +17,7 @@ pub use cmp_ops::*;
 use itertools::Itertools;
 pub use num_ops::*;
 use num_traits::{Num, NumCast};
+pub use shift_ops::*;
 pub use traits::*;
 use utils::intersect_bounds;
 
