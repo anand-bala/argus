@@ -16,12 +16,11 @@ pub use cast::*;
 pub use cmp_ops::*;
 use itertools::Itertools;
 pub use num_ops::*;
-use num_traits::{Num, NumCast};
+use num_traits::Num;
 pub use shift_ops::*;
 pub use traits::*;
 use utils::intersect_bounds;
 
-use self::traits::LinearInterpolatable;
 use crate::{ArgusResult, Error};
 
 /// Interpolation methods supported by Argus signals.
@@ -98,11 +97,13 @@ pub enum Signal<T> {
 
 impl<T> Signal<T> {
     /// Create a new empty signal
+    #[inline]
     pub fn new() -> Self {
         Self::Empty
     }
 
     /// Create a new constant signal
+    #[inline]
     pub fn constant(value: T) -> Self {
         Self::Constant { value }
     }
@@ -372,7 +373,7 @@ impl<T> Signal<T> {
     /// Augment synchronization points with time points where signals intersect
     pub fn sync_with_intersection(&self, other: &Signal<T>) -> Option<Vec<Duration>>
     where
-        T: PartialOrd + Copy + LinearInterpolatable + NumCast,
+        T: PartialOrd + Copy + LinearInterpolatable,
     {
         use core::cmp::Ordering::*;
         let sync_points: Vec<&Duration> = self.sync_points(other)?.into_iter().collect();
@@ -404,13 +405,14 @@ impl<T> Signal<T> {
                         first: other.at(tm1).copied().map(|value| Sample { time: tm1, value }),
                         second: other.at(*t).copied().map(|value| Sample { time: *t, value }),
                     };
-                    let intersect = utils::find_intersection(&a, &b);
+                    let intersect = T::find_intersection(&a, &b);
                     return_points.push(intersect.time);
                 }
             }
             return_points.push(*t);
             last_sample = Some((*t, ord));
         }
+        return_points.dedup();
         return_points.shrink_to_fit();
         Some(return_points)
     }

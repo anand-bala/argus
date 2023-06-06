@@ -1,9 +1,9 @@
-use std::any::Any;
+use enum_dispatch::enum_dispatch;
 
-use super::iter::AstIter;
-use super::ExprRef;
+use super::{BoolExpr, ExprRef, NumExpr};
 
 /// A trait representing expressions
+#[enum_dispatch]
 pub trait Expr {
     /// Check if the given expression is a numeric expression
     fn is_numeric(&self) -> bool;
@@ -14,48 +14,10 @@ pub trait Expr {
     /// If the expression doesn't contain arguments (i.e., it is a leaf expression) then
     /// the vector is empty.
     fn args(&self) -> Vec<ExprRef<'_>>;
-    /// Helper function for upcasting to [`std::any::Any`] and then downcasting to a
-    /// concrete [`BoolExpr`](crate::expr::BoolExpr) or
-    /// [`NumExpr`](crate::expr::NumExpr).
-    fn as_any(&self) -> &dyn Any;
-    /// An iterator over the AST starting from the current expression.
-    fn iter(&self) -> AstIter<'_>;
 }
 
-impl dyn Expr {
-    /// Convenience method to downcast an expression to a concrete expression node.
-    pub fn downcast_expr_ref<T>(&self) -> Option<&T>
-    where
-        T: Any,
-    {
-        self.as_any().downcast_ref::<T>()
-    }
-}
+/// Marker trait for numeric expressions
+pub trait IsNumExpr: Expr + Into<NumExpr> {}
 
-#[cfg(test)]
-mod tests {
-    use proptest::prelude::*;
-
-    use super::super::{arbitrary, BoolExpr, NumExpr};
-    use super::*;
-
-    proptest! {
-        #[test]
-        fn downcast_expr_bool(bool_expr in arbitrary::bool_expr()) {
-            let expr_ref = bool_expr.as_ref() as &dyn Expr;
-
-            let downcast_ref = expr_ref.downcast_expr_ref::<BoolExpr>().unwrap();
-            assert_eq!(downcast_ref, bool_expr.as_ref());
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn downcast_expr_num(num_expr in arbitrary::num_expr()) {
-            let expr_ref = num_expr.as_ref() as &dyn Expr;
-
-            let downcast_ref = expr_ref.downcast_expr_ref::<NumExpr>().unwrap();
-            assert_eq!(downcast_ref, num_expr.as_ref());
-        }
-    }
-}
+/// Marker trait for Boolean expressions
+pub trait IsBoolExpr: Expr + Into<BoolExpr> {}

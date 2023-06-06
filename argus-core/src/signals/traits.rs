@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use paste::paste;
 
+use super::utils::Neighborhood;
 use super::{Sample, Signal};
 use crate::ArgusResult;
 
@@ -18,6 +19,12 @@ pub trait LinearInterpolatable {
     fn interpolate_at(a: &Sample<Self>, b: &Sample<Self>, time: Duration) -> Self
     where
         Self: Sized;
+
+    /// Given two signals with two sample points each, find the intersection of the two
+    /// lines.
+    fn find_intersection(a: &Neighborhood<Self>, b: &Neighborhood<Self>) -> Sample<Self>
+    where
+        Self: Sized;
 }
 
 impl LinearInterpolatable for bool {
@@ -28,6 +35,45 @@ impl LinearInterpolatable for bool {
         assert!(a.time < time && time < b.time);
         // We can't linear interpolate a boolean, so we return the previous.
         a.value
+    }
+
+    fn find_intersection(a: &Neighborhood<Self>, b: &Neighborhood<Self>) -> Sample<Self>
+    where
+        Self: Sized,
+    {
+        let Sample { time: ta1, value: ya1 } = a.first.unwrap();
+        let Sample { time: ta2, value: ya2 } = a.second.unwrap();
+        let Sample { time: tb1, value: yb1 } = b.first.unwrap();
+        let Sample { time: tb2, value: yb2 } = b.second.unwrap();
+
+        let left_cmp = ya1.cmp(&yb1);
+        let right_cmp = ya2.cmp(&yb2);
+
+        if left_cmp.is_eq() {
+            // They already intersect, so we return the inner time-point
+            if ta1 < tb1 {
+                Sample { time: tb1, value: yb1 }
+            } else {
+                Sample { time: ta1, value: ya1 }
+            }
+        } else if right_cmp.is_eq() {
+            // They intersect at the end, so we return the outer time-point, as that is
+            // when they become equal.
+            if ta2 < tb2 {
+                Sample { time: tb2, value: yb2 }
+            } else {
+                Sample { time: ta2, value: ya2 }
+            }
+        } else {
+            // The switched, so the one that switched earlier will intersect with the
+            // other.
+            // So, we find the one that has a lower time point, i.e., the inner one.
+            if ta2 < tb2 {
+                Sample { time: ta2, value: ya2 }
+            } else {
+                Sample { time: tb2, value: yb2 }
+            }
+        }
     }
 }
 
@@ -65,6 +111,38 @@ macro_rules! interpolate_for_num {
                 };
 
                 cast(val).unwrap()
+            }
+
+            fn find_intersection(a: &Neighborhood<Self>, b: &Neighborhood<Self>) -> Sample<Self>
+            where
+                Self: Sized,
+            {
+                // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
+                use num_traits::cast;
+
+                let Sample { time: t1, value: y1 } = a.first.unwrap();
+                let Sample { time: t2, value: y2 } = a.second.unwrap();
+                let Sample { time: t3, value: y3 } = b.first.unwrap();
+                let Sample { time: t4, value: y4 } = b.second.unwrap();
+
+                let t1 = t1.as_secs_f64();
+                let t2 = t2.as_secs_f64();
+                let t3 = t3.as_secs_f64();
+                let t4 = t4.as_secs_f64();
+
+                let y1: f64 = cast(y1).unwrap();
+                let y2: f64 = cast(y2).unwrap();
+                let y3: f64 = cast(y3).unwrap();
+                let y4: f64 = cast(y4).unwrap();
+
+                let denom = ((t1 - t2) * (y3 - y4)) - ((y1 - y2) * (t3 - t4));
+
+                let t_top = (((t1 * y2) - (y1 * t2)) * (t3 - t4)) - ((t1 - t2) * (t3 * y4 - y3 * t4));
+                let y_top = (((t1 * y2) - (y1 * t2)) * (y3 - y4)) - ((y1 - y2) * (t3 * y4 - y3 * t4));
+
+                let t = Duration::from_secs_f64(t_top / denom);
+                let y: Self = cast(y_top / denom).unwrap();
+                Sample { time: t, value: y }
             }
         }
     };

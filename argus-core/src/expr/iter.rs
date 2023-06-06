@@ -47,7 +47,7 @@ impl<'a> Iterator for AstIter<'a> {
 mod tests {
     use itertools::Itertools;
 
-    use crate::expr::{Expr, ExprBuilder, ExprRef};
+    use crate::expr::{ExprBuilder, ExprRef};
 
     #[test]
     fn simple_iter() {

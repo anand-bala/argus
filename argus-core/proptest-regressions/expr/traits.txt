@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 400240db9d2e9afecba257e48d5385b34a5dc746c60b34c1621a1f6e8c41893f # shrinks to num_expr = IntLit(IntLit(0))
+cc 8f1f212537f462eb0d9f46febda2f5d1c57b60596290a70e9acca0d4162e90f5 # shrinks to bool_expr = Not(Not { arg: BoolVar(BoolVar { name: "Cz_da6bc_347__" }) })

@@ -8,8 +8,6 @@ use core::ops::{Bound, RangeBounds};
 use core::time::Duration;
 use std::iter::zip;
 
-use num_traits::NumCast;
-
 use super::traits::LinearInterpolatable;
 use super::{InterpolationMethod, Sample, Signal};
 
@@ -22,43 +20,9 @@ use super::{InterpolationMethod, Sample, Signal};
 /// This can be used to interpolate the value at the given `at` time using strategies
 /// like constant previous, constant following, and linear interpolation.
 #[derive(Copy, Clone, Debug)]
-pub struct Neighborhood<T: ?Sized + Copy> {
+pub struct Neighborhood<T> {
     pub first: Option<Sample<T>>,
     pub second: Option<Sample<T>>,
-}
-
-/// Given two signals with two sample points each, find the intersection of the two
-/// lines.
-pub fn find_intersection<T>(a: &Neighborhood<T>, b: &Neighborhood<T>) -> Sample<T>
-where
-    T: Copy + NumCast,
-{
-    // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
-    use num_traits::cast;
-
-    let Sample { time: t1, value: y1 } = a.first.unwrap();
-    let Sample { time: t2, value: y2 } = a.second.unwrap();
-    let Sample { time: t3, value: y3 } = b.first.unwrap();
-    let Sample { time: t4, value: y4 } = b.second.unwrap();
-
-    let t1 = t1.as_secs_f64();
-    let t2 = t2.as_secs_f64();
-    let t3 = t3.as_secs_f64();
-    let t4 = t4.as_secs_f64();
-
-    let y1: f64 = cast(y1).unwrap();
-    let y2: f64 = cast(y2).unwrap();
-    let y3: f64 = cast(y3).unwrap();
-    let y4: f64 = cast(y4).unwrap();
-
-    let denom = ((t1 - t2) * (y3 - y4)) - ((y1 - y2) * (t3 - t4));
-
-    let t_top = (((t1 * y2) - (y1 * t2)) * (t3 - t4)) - ((t1 - t2) * (t3 * y4 - y3 * t4));
-    let y_top = (((t1 * y2) - (y1 * t2)) * (y3 - y4)) - ((y1 - y2) * (t3 * y4 - y3 * t4));
-
-    let t = Duration::from_secs_f64(t_top / denom);
-    let y: T = cast(y_top / denom).unwrap();
-    Sample { time: t, value: y }
 }
 
 #[inline]

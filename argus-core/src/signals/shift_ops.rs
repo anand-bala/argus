@@ -1,7 +1,7 @@
 use core::iter::zip;
 use core::time::Duration;
 
-use itertools::{enumerate, Itertools};
+use itertools::Itertools;
 
 use super::traits::LinearInterpolatable;
 use super::{InterpolationMethod, Signal};
@@ -23,7 +23,7 @@ where
 
                 // Find the first index that satisfies `t >= delta` while also checking
                 // if we need to interpolate
-                let Some((idx, first_t)) = time_points.into_iter().find_position(|&t| t >= &delta)
+                let Some((idx, first_t)) = time_points.iter().find_position(|&t| t >= &delta)
                 else {
                     // Return an empty signal (we exhauseted all samples).
                     return Signal::Empty;

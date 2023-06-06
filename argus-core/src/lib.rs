@@ -9,6 +9,7 @@
 //!    [`enum@Error`]).
 
 #![warn(missing_docs)]
+extern crate self as argus_core;
 
 pub mod expr;
 pub mod prelude;

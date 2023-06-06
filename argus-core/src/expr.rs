@@ -1,297 +1,86 @@
 //! Expression tree for Argus specifications
 
-use std::any::Any;
 use std::collections::HashSet;
-use std::ops::{Bound, RangeBounds};
+use std::ops::Bound;
 use std::time::Duration;
 
-mod bool_ops;
-mod internal_macros;
+mod bool_expr;
 pub mod iter;
-mod num_ops;
+mod num_expr;
 mod traits;
 
-pub use bool_ops::*;
-pub use num_ops::*;
+pub use bool_expr::*;
+use enum_dispatch::enum_dispatch;
+pub use num_expr::*;
 pub use traits::*;
 
 use self::iter::AstIter;
 use crate::{ArgusResult, Error};
 
 /// All expressions that are numeric
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, argus_derive::NumExpr)]
+#[enum_dispatch(Expr)]
 pub enum NumExpr {
     /// A signed integer literal
-    IntLit(i64),
+    IntLit(IntLit),
     /// An unsigned integer literal
-    UIntLit(u64),
+    UIntLit(UIntLit),
     /// A floating point literal
-    FloatLit(f64),
+    FloatLit(FloatLit),
     /// A signed integer variable
-    IntVar {
-        /// Name of the variable
-        name: String,
-    },
+    IntVar(IntVar),
     /// A unsigned integer variable
-    UIntVar {
-        /// Name of the variable
-        name: String,
-    },
+    UIntVar(UIntVar),
     /// A floating point number variable
-    FloatVar {
-        /// Name of the variable
-        name: String,
-    },
+    FloatVar(FloatVar),
     /// Numeric negation of a numeric expression
-    Neg {
-        /// Numeric expression being negated
-        arg: Box<NumExpr>,
-    },
+    Neg(Neg),
     /// Arithmetic addition of a list of numeric expressions
-    Add {
-        /// List of expressions being added
-        args: Vec<NumExpr>,
-    },
+    Add(Add),
     /// Subtraction of two numbers
-    Sub {
-        /// LHS to the expression `lhs - rhs`
-        lhs: Box<NumExpr>,
-        /// RHS to the expression `lhs - rhs`
-        rhs: Box<NumExpr>,
-    },
+    Sub(Sub),
     /// Arithmetic multiplication of a list of numeric expressions
-    Mul {
-        /// List of expressions being multiplied
-        args: Vec<NumExpr>,
-    },
+    Mul(Mul),
     /// Divide two expressions `dividend / divisor`
-    Div {
-        /// The dividend
-        dividend: Box<NumExpr>,
-        /// The divisor
-        divisor: Box<NumExpr>,
-    },
+    Div(Div),
     /// The absolute value of an expression
-    Abs {
-        /// Argument to `abs`
-        arg: Box<NumExpr>,
-    },
+    Abs(Abs),
 }
 
-impl Expr for NumExpr {
-    fn is_numeric(&self) -> bool {
-        true
-    }
-
-    fn is_boolean(&self) -> bool {
-        false
-    }
-
-    fn args(&self) -> Vec<ExprRef<'_>> {
-        match self {
-            NumExpr::Neg { arg } => vec![arg.as_ref().into()],
-            NumExpr::Add { args } | NumExpr::Mul { args } => args.iter().map(|arg| arg.into()).collect(),
-            NumExpr::Div { dividend, divisor } => vec![dividend.as_ref().into(), divisor.as_ref().into()],
-            _ => vec![],
-        }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn iter(&self) -> iter::AstIter<'_> {
+impl NumExpr {
+    /// Create a borrowed iterator over the expression tree
+    pub fn iter(&self) -> AstIter<'_> {
         AstIter::new(self.into())
     }
 }
 
-/// Types of comparison operations
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Ordering {
-    /// Equality check for two expressions
-    Eq,
-    /// Non-equality check for two expressions
-    NotEq,
-    /// Less than check
-    Less {
-        /// Denotes `lhs < rhs` if `strict`, and `lhs <= rhs` otherwise.
-        strict: bool,
-    },
-    /// Greater than check
-    Greater {
-        /// Denotes `lhs > rhs` if `strict`, and `lhs >= rhs` otherwise.
-        strict: bool,
-    },
-}
-
-impl Ordering {
-    /// Check if `Ordering::Eq`
-    pub fn equal() -> Self {
-        Self::Eq
-    }
-
-    /// Check if `Ordering::NotEq`
-    pub fn not_equal() -> Self {
-        Self::NotEq
-    }
-
-    /// Check if `Ordering::Less { strict: true }`
-    pub fn less_than() -> Self {
-        Self::Less { strict: true }
-    }
-
-    /// Check if `Ordering::Less { strict: false }`
-    pub fn less_than_eq() -> Self {
-        Self::Less { strict: false }
-    }
-
-    /// Check if `Ordering::Greater { strict: true }`
-    pub fn greater_than() -> Self {
-        Self::Greater { strict: true }
-    }
-
-    /// Check if `Ordering::Less { strict: false }`
-    pub fn greater_than_eq() -> Self {
-        Self::Greater { strict: false }
-    }
-}
-
-/// A time interval for a temporal expression.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, derive_more::Into)]
-#[into(owned, ref, ref_mut)]
-pub struct Interval {
-    /// Start of the interval
-    pub start: Bound<Duration>,
-    /// End of the interval
-    pub end: Bound<Duration>,
-}
-
-impl Interval {
-    /// Create a new interval
-    ///
-    /// # Note
-    ///
-    /// Argus doesn't permit `Interval`s with [`Bound::Excluded(_)`] values (as these
-    /// can't be monitored reliably) and thus converts all such bounds to an
-    /// [`Bound::Included(_)`]. Moreover, if the `start` bound is [`Bound::Unbounded`],
-    /// it will get transformed to [`Bound::Included(Duration::ZERO)`].
-    pub fn new(start: Bound<Duration>, end: Bound<Duration>) -> Self {
-        use Bound::*;
-        let start = match start {
-            a @ Included(_) => a,
-            Excluded(b) => Included(b),
-            Unbounded => Included(Duration::ZERO),
-        };
-
-        let end = match end {
-            Excluded(b) => Included(b),
-            bound => bound,
-        };
-
-        Self { start, end }
-    }
-
-    /// Check if the interval is empty
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        use Bound::*;
-        match (&self.start, &self.end) {
-            (Included(a), Included(b)) => a > b,
-            (Included(a), Excluded(b)) | (Excluded(a), Included(b)) | (Excluded(a), Excluded(b)) => a >= b,
-            (Unbounded, Excluded(b)) => b == &Duration::ZERO,
-            _ => false,
-        }
-    }
-
-    /// Check if the interval is a singleton
-    ///
-    /// This implies that only 1 timepoint is valid within this interval.
-    #[inline]
-    pub fn is_singleton(&self) -> bool {
-        use Bound::*;
-        match (&self.start, &self.end) {
-            (Included(a), Included(b)) => a == b,
-            (Unbounded, Included(b)) => b == &Duration::ZERO,
-            _ => false,
-        }
-    }
-
-    /// Check if the interval covers `[0, ..)`.
-    #[inline]
-    pub fn is_untimed(&self) -> bool {
-        use Bound::*;
-        match (self.start, self.end) {
-            (Unbounded, Unbounded) | (Included(Duration::ZERO), Unbounded) => true,
-            (Included(_), Included(_)) | (Included(_), Unbounded) => false,
-            (Excluded(_), _) | (_, Excluded(_)) | (Unbounded, _) => {
-                unreachable!("looks like someone didn't use Interval::new")
-            }
-        }
-    }
-}
-
-impl<T> From<T> for Interval
-where
-    T: RangeBounds<Duration>,
-{
-    fn from(value: T) -> Self {
-        Self::new(value.start_bound().cloned(), value.end_bound().cloned())
-    }
-}
-
 /// All expressions that are evaluated to be of type `bool`
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[enum_dispatch(Expr)]
 pub enum BoolExpr {
     /// A `bool` literal
-    BoolLit(bool),
+    BoolLit(BoolLit),
     /// A `bool` variable
-    BoolVar {
-        /// Variable name
-        name: String,
-    },
+    BoolVar(BoolVar),
     /// A comparison expression
-    Cmp {
-        /// The type of comparison
-        op: Ordering,
-        /// The LHS for the comparison
-        lhs: Box<NumExpr>,
-        /// The RHS for the comparison
-        rhs: Box<NumExpr>,
-    },
+    Cmp(Cmp),
     /// Logical negation of an expression
-    Not {
-        /// Expression to be negated
-        arg: Box<BoolExpr>,
-    },
+    Not(Not),
     /// Logical conjunction of a list of expressions
-    And {
-        /// Expressions to be "and"-ed
-        args: Vec<BoolExpr>,
-    },
+    And(And),
     /// Logical disjunction of a list of expressions
-    Or {
-        /// Expressions to be "or"-ed
-        args: Vec<BoolExpr>,
-    },
+    Or(Or),
 
     /// A temporal next expression
     ///
     /// Checks if the next time point in a signal is `true` or not.
-    Next {
-        /// Argument for `Next`
-        arg: Box<BoolExpr>,
-    },
+    Next(Next),
 
     /// Temporal "oracle" expression
     ///
     /// This is equivalent to `steps` number of nested [`Next`](BoolExpr::Next)
     /// expressions.
-    Oracle {
-        /// Number of steps to look ahead
-        steps: usize,
-        /// Argument for `Oracle`
-        arg: Box<BoolExpr>,
-    },
+    Oracle(Oracle),
 
     /// A temporal always expression
     ///
@@ -299,12 +88,7 @@ pub enum BoolExpr {
     ///   Unbounded)`: checks if the signal is `true` for all points in a signal.
     /// - Otherwise: checks if the signal is `true` for all points within the
     ///   `interval`.
-    Always {
-        /// Argument for `Always`
-        arg: Box<BoolExpr>,
-        /// Interval for the expression
-        interval: Interval,
-    },
+    Always(Always),
 
     /// A temporal eventually expression
     ///
@@ -312,49 +96,17 @@ pub enum BoolExpr {
     ///   Unbounded)`: checks if the signal is `true` for some point in a signal.
     /// - Otherwise: checks if the signal is `true` for some point within the
     ///   `interval`.
-    Eventually {
-        /// Argument for `Eventually`
-        arg: Box<BoolExpr>,
-        /// Interval for the expression
-        interval: Interval,
-    },
+    Eventually(Eventually),
 
     /// A temporal until expression
     ///
     /// Checks if the `lhs` is always `true` for a signal until `rhs` becomes `true`.
-    Until {
-        /// LHS to `lhs Until rhs`
-        lhs: Box<BoolExpr>,
-        /// RHS to `lhs Until rhs`
-        rhs: Box<BoolExpr>,
-        /// Interval for the expression
-        interval: Interval,
-    },
+    Until(Until),
 }
 
-impl Expr for BoolExpr {
-    fn is_numeric(&self) -> bool {
-        false
-    }
-
-    fn is_boolean(&self) -> bool {
-        true
-    }
-
-    fn args(&self) -> Vec<ExprRef<'_>> {
-        match self {
-            BoolExpr::Cmp { op: _, lhs, rhs } => vec![lhs.as_ref().into(), rhs.as_ref().into()],
-            BoolExpr::Not { arg } => vec![arg.as_ref().into()],
-            BoolExpr::And { args } | BoolExpr::Or { args } => args.iter().map(|arg| arg.into()).collect(),
-            _ => vec![],
-        }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn iter(&self) -> AstIter<'_> {
+impl BoolExpr {
+    /// Create a borrowed iterator over the expression tree
+    pub fn iter(&self) -> AstIter<'_> {
         AstIter::new(self.into())
     }
 }
@@ -388,28 +140,28 @@ impl ExprBuilder {
 
     /// Declare a constant boolean expression
     pub fn bool_const(&self, value: bool) -> Box<BoolExpr> {
-        Box::new(BoolExpr::BoolLit(value))
+        Box::new(BoolLit(value).into())
     }
 
     /// Declare a constant integer expression
     pub fn int_const(&self, value: i64) -> Box<NumExpr> {
-        Box::new(NumExpr::IntLit(value))
+        Box::new(IntLit(value).into())
     }
 
     /// Declare a constant unsigned integer expression
     pub fn uint_const(&self, value: u64) -> Box<NumExpr> {
-        Box::new(NumExpr::UIntLit(value))
+        Box::new(UIntLit(value).into())
     }
 
     /// Declare a constant floating point expression
     pub fn float_const(&self, value: f64) -> Box<NumExpr> {
-        Box::new(NumExpr::FloatLit(value))
+        Box::new(FloatLit(value).into())
     }
 
     /// Declare a boolean variable
     pub fn bool_var(&mut self, name: String) -> ArgusResult<Box<BoolExpr>> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new(BoolExpr::BoolVar { name }))
+            Ok(Box::new((BoolVar { name }).into()))
         } else {
             Err(Error::IdentifierRedeclaration)
         }
@@ -418,7 +170,7 @@ impl ExprBuilder {
     /// Declare a integer variable
     pub fn int_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new(NumExpr::IntVar { name }))
+            Ok(Box::new((IntVar { name }).into()))
         } else {
             Err(Error::IdentifierRedeclaration)
         }
@@ -427,7 +179,7 @@ impl ExprBuilder {
     /// Declare a unsigned integer variable
     pub fn uint_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new(NumExpr::UIntVar { name }))
+            Ok(Box::new((UIntVar { name }).into()))
         } else {
             Err(Error::IdentifierRedeclaration)
         }
@@ -436,7 +188,7 @@ impl ExprBuilder {
     /// Declare a floating point variable
     pub fn float_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new(NumExpr::FloatVar { name }))
+            Ok(Box::new((FloatVar { name }).into()))
         } else {
             Err(Error::IdentifierRedeclaration)
         }
@@ -444,7 +196,7 @@ impl ExprBuilder {
 
     /// Create a [`NumExpr::Neg`] expression
     pub fn make_neg(&self, arg: Box<NumExpr>) -> Box<NumExpr> {
-        Box::new(NumExpr::Neg { arg })
+        Box::new((Neg { arg }).into())
     }
 
     /// Create a [`NumExpr::Add`] expression
@@ -456,7 +208,7 @@ impl ExprBuilder {
         if args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new(NumExpr::Add { args }))
+            Ok(Box::new((Add { args }).into()))
         }
     }
 
@@ -469,18 +221,18 @@ impl ExprBuilder {
         if args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new(NumExpr::Mul { args }))
+            Ok(Box::new((Mul { args }).into()))
         }
     }
 
     /// Create a [`NumExpr::Div`] expression
     pub fn make_div(&self, dividend: Box<NumExpr>, divisor: Box<NumExpr>) -> Box<NumExpr> {
-        Box::new(NumExpr::Div { dividend, divisor })
+        Box::new((Div { dividend, divisor }).into())
     }
 
     /// Create a [`BoolExpr::Cmp`] expression
     pub fn make_cmp(&self, op: Ordering, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Cmp { op, lhs, rhs })
+        Box::new((Cmp { op, lhs, rhs }).into())
     }
 
     /// Create a "less than" ([`BoolExpr::Cmp`]) expression
@@ -515,7 +267,7 @@ impl ExprBuilder {
 
     /// Create a [`BoolExpr::Not`] expression.
     pub fn make_not(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Not { arg })
+        Box::new((Not { arg }).into())
     }
 
     /// Create a [`BoolExpr::Or`] expression.
@@ -527,7 +279,7 @@ impl ExprBuilder {
         if args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new(BoolExpr::Or { args }))
+            Ok(Box::new((Or { args }).into()))
         }
     }
 
@@ -540,58 +292,67 @@ impl ExprBuilder {
         if args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new(BoolExpr::And { args }))
+            Ok(Box::new((And { args }).into()))
         }
     }
 
     /// Create a [`BoolExpr::Next`] expression.
     pub fn make_next(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Next { arg })
+        Box::new((Next { arg }).into())
     }
 
     /// Create a [`BoolExpr::Oracle`] expression.
     pub fn make_oracle(&self, steps: usize, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Oracle { steps, arg })
+        Box::new((Oracle { steps, arg }).into())
     }
 
     /// Create a [`BoolExpr::Always`] expression.
     pub fn make_always(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Always {
-            arg,
-            interval: (..).into(),
-        })
+        Box::new(
+            (Always {
+                arg,
+                interval: (..).into(),
+            })
+            .into(),
+        )
     }
 
     /// Create a [`BoolExpr::Always`] expression with an interval.
     pub fn make_timed_always(&self, interval: Interval, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Always { arg, interval })
+        Box::new((Always { arg, interval }).into())
     }
 
     /// Create a [`BoolExpr::Eventually`] expression.
     pub fn make_eventually(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Eventually {
-            arg,
-            interval: (..).into(),
-        })
+        Box::new(
+            (Eventually {
+                arg,
+                interval: (..).into(),
+            })
+            .into(),
+        )
     }
 
     /// Create a [`BoolExpr::Eventually`] expression with an interval.
     pub fn make_timed_eventually(&self, interval: Interval, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Eventually { arg, interval })
+        Box::new((Eventually { arg, interval }).into())
     }
 
     /// Create a [`BoolExpr::Until`] expression.
     pub fn make_until(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Until {
-            lhs,
-            rhs,
-            interval: (..).into(),
-        })
+        Box::new(
+            (Until {
+                lhs,
+                rhs,
+                interval: (..).into(),
+            })
+            .into(),
+        )
     }
 
     /// Create a [`BoolExpr::Until`] expression with an interval.
     pub fn make_timed_until(&self, interval: Interval, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(BoolExpr::Until { lhs, rhs, interval })
+        Box::new((Until { lhs, rhs, interval }).into())
     }
 }
 
@@ -605,12 +366,12 @@ pub mod arbitrary {
     /// Generate arbitrary numeric expressions
     pub fn num_expr() -> impl Strategy<Value = Box<NumExpr>> {
         let leaf = prop_oneof![
-            any::<i64>().prop_map(|val| Box::new(NumExpr::IntLit(val))),
-            any::<u64>().prop_map(|val| Box::new(NumExpr::UIntLit(val))),
-            any::<f64>().prop_map(|val| Box::new(NumExpr::FloatLit(val))),
-            "[[:word:]]*".prop_map(|name| Box::new(NumExpr::IntVar { name })),
-            "[[:word:]]*".prop_map(|name| Box::new(NumExpr::UIntVar { name })),
-            "[[:word:]]*".prop_map(|name| Box::new(NumExpr::FloatVar { name })),
+            any::<i64>().prop_map(|val| Box::new(IntLit(val).into())),
+            any::<u64>().prop_map(|val| Box::new(UIntLit(val).into())),
+            any::<f64>().prop_map(|val| Box::new(FloatLit(val).into())),
+            "[[:word:]]*".prop_map(|name| Box::new((IntVar { name }).into())),
+            "[[:word:]]*".prop_map(|name| Box::new((UIntVar { name }).into())),
+            "[[:word:]]*".prop_map(|name| Box::new((FloatVar { name }).into())),
         ];
 
         leaf.prop_recursive(
@@ -619,19 +380,25 @@ pub mod arbitrary {
             10,  // We put up to 10 items per collection
             |inner| {
                 prop_oneof![
-                    inner.clone().prop_map(|arg| Box::new(NumExpr::Neg { arg })),
+                    inner.clone().prop_map(|arg| Box::new((Neg { arg }).into())),
                     prop::collection::vec(inner.clone(), 0..10).prop_map(|args| {
-                        Box::new(NumExpr::Add {
-                            args: args.into_iter().map(|arg| *arg).collect(),
-                        })
+                        Box::new(
+                            (Add {
+                                args: args.into_iter().map(|arg| *arg).collect(),
+                            })
+                            .into(),
+                        )
                     }),
                     prop::collection::vec(inner.clone(), 0..10).prop_map(|args| {
-                        Box::new(NumExpr::Mul {
-                            args: args.into_iter().map(|arg| *arg).collect(),
-                        })
+                        Box::new(
+                            (Mul {
+                                args: args.into_iter().map(|arg| *arg).collect(),
+                            })
+                            .into(),
+                        )
                     }),
                     (inner.clone(), inner)
-                        .prop_map(|(dividend, divisor)| { Box::new(NumExpr::Div { dividend, divisor }) })
+                        .prop_map(|(dividend, divisor)| { Box::new((Div { dividend, divisor }).into()) })
                 ]
             },
         )
@@ -644,14 +411,14 @@ pub mod arbitrary {
         let lhs = num_expr();
         let rhs = num_expr();
 
-        (op, lhs, rhs).prop_map(|(op, lhs, rhs)| Box::new(BoolExpr::Cmp { op, lhs, rhs }))
+        (op, lhs, rhs).prop_map(|(op, lhs, rhs)| Box::new((Cmp { op, lhs, rhs }).into()))
     }
 
     /// Generate arbitrary boolean expressions
     pub fn bool_expr() -> impl Strategy<Value = Box<BoolExpr>> {
         let leaf = prop_oneof![
-            any::<bool>().prop_map(|val| Box::new(BoolExpr::BoolLit(val))),
-            "[[:word:]]*".prop_map(|name| Box::new(BoolExpr::BoolVar { name })),
+            any::<bool>().prop_map(|val| Box::new(BoolLit(val).into())),
+            "[[:word:]]*".prop_map(|name| Box::new((BoolVar { name }).into())),
             cmp_expr(),
         ];
 
@@ -662,27 +429,30 @@ pub mod arbitrary {
             |inner| {
                 let interval = (any::<(Bound<Duration>, Bound<Duration>)>()).prop_map_into::<Interval>();
                 prop_oneof![
-                    inner.clone().prop_map(|arg| Box::new(BoolExpr::Not { arg })),
+                    inner.clone().prop_map(|arg| Box::new((Not { arg }).into())),
                     prop::collection::vec(inner.clone(), 0..10).prop_map(|args| {
-                        Box::new(BoolExpr::And {
-                            args: args.into_iter().map(|arg| *arg).collect(),
-                        })
+                        Box::new(
+                            (And {
+                                args: args.into_iter().map(|arg| *arg).collect(),
+                            })
+                            .into(),
+                        )
                     }),
                     prop::collection::vec(inner.clone(), 0..10).prop_map(|args| {
-                        Box::new(BoolExpr::Or {
-                            args: args.into_iter().map(|arg| *arg).collect(),
-                        })
+                        Box::new(
+                            (Or {
+                                args: args.into_iter().map(|arg| *arg).collect(),
+                            })
+                            .into(),
+                        )
                     }),
-                    inner.clone().prop_map(|arg| Box::new(BoolExpr::Next { arg })),
+                    inner.clone().prop_map(|arg| Box::new((Next { arg }).into())),
                     (inner.clone(), interval.clone())
-                        .prop_map(|(arg, interval)| Box::new(BoolExpr::Always { arg, interval })),
+                        .prop_map(|(arg, interval)| Box::new((Always { arg, interval }).into())),
                     (inner.clone(), interval.clone())
-                        .prop_map(|(arg, interval)| Box::new(BoolExpr::Eventually { arg, interval })),
-                    (inner.clone(), inner, interval).prop_map(|(lhs, rhs, interval)| Box::new(BoolExpr::Until {
-                        lhs,
-                        rhs,
-                        interval
-                    })),
+                        .prop_map(|(arg, interval)| Box::new((Eventually { arg, interval }).into())),
+                    (inner.clone(), inner, interval)
+                        .prop_map(|(lhs, rhs, interval)| Box::new((Until { lhs, rhs, interval }).into())),
                 ]
             },
         )
@@ -713,8 +483,8 @@ mod tests {
     proptest! {
         #[test]
         fn neg_num_expr(arg in arbitrary::num_expr()) {
-            let expr = -arg;
-            assert!(matches!(expr, NumExpr::Neg { arg: _ }));
+            let expr = -*arg;
+            assert!(matches!(expr, NumExpr::Neg(Neg { arg: _ })));
         }
     }
 
@@ -724,8 +494,8 @@ mod tests {
                 proptest! {
                     #[test]
                     fn [<$method _num_expr>](lhs in arbitrary::num_expr(), rhs in arbitrary::num_expr()) {
-                        let expr = lhs / rhs;
-                        assert!(matches!(expr, NumExpr::$name {dividend: _, divisor: _ }));
+                        let expr = *lhs / *rhs;
+                        assert!(matches!(expr, NumExpr::$name($name {dividend: _, divisor: _ })));
                     }
                 }
             }
@@ -735,8 +505,8 @@ mod tests {
                 proptest! {
                     #[test]
                     fn [<$method _num_expr>](lhs in arbitrary::num_expr(), rhs in arbitrary::num_expr()) {
-                        let expr = lhs $op rhs;
-                        assert!(matches!(expr, NumExpr::$name { args: _ }));
+                        let expr = *lhs $op *rhs;
+                        assert!(matches!(expr, NumExpr::$name($name { args: _ })));
                     }
                 }
             }
@@ -750,8 +520,8 @@ mod tests {
     proptest! {
         #[test]
         fn not_bool_expr(arg in arbitrary::bool_expr()) {
-            let expr = !arg;
-            assert!(matches!(expr, BoolExpr::Not { arg: _ }));
+            let expr = !*arg;
+            assert!(matches!(expr, BoolExpr::Not(Not { arg: _ })));
         }
     }
 
@@ -761,8 +531,8 @@ mod tests {
                 proptest! {
                     #[test]
                     fn [<$method _bool_expr>](lhs in arbitrary::bool_expr(), rhs in arbitrary::bool_expr()) {
-                        let expr = Box::new(lhs $op rhs);
-                        assert!(matches!(*expr, BoolExpr::$name { args: _ }));
+                        let expr = *lhs $op *rhs;
+                        assert!(matches!(expr, BoolExpr::$name($name { args: _ })));
                     }
                 }
             }

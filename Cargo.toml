@@ -1,4 +1,10 @@
 [workspace]
-members = ["argus", "argus-core", "argus-semantics"]
+members = [
+  "argus",
+  "argus-core",
+  "argus-semantics",
+  "argus-automata",
+  "argus-derive",
+]
 
 exclude = ["pyargus"]
