@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use argus_core::expr::BoolExpr;
+use argus_core::expr::{Always, And, BoolExpr, BoolVar, Cmp, Eventually, Next, Not, Or, Oracle, Until};
 use argus_core::prelude::*;
 use argus_core::signals::traits::{SignalAbs, SignalMinMax};
 use argus_core::signals::SignalNumCast;
@@ -27,12 +27,12 @@ impl Semantics for QuantitativeSemantics {
 
     fn eval(expr: &BoolExpr, trace: &impl Trace, ctx: Self::Context) -> ArgusResult<Self::Output> {
         let ret: Self::Output = match expr {
-            BoolExpr::BoolLit(val) => top_or_bot(&Signal::constant(*val)),
-            BoolExpr::BoolVar { name } => {
+            BoolExpr::BoolLit(val) => top_or_bot(&Signal::constant(val.0)),
+            BoolExpr::BoolVar(BoolVar { name }) => {
                 let sig = trace.get::<bool>(name.as_str()).ok_or(ArgusError::SignalNotPresent)?;
                 top_or_bot(sig)
             }
-            BoolExpr::Cmp { op, lhs, rhs } => {
+            BoolExpr::Cmp(Cmp { op, lhs, rhs }) => {
                 use argus_core::expr::Ordering::*;
                 let lhs = eval_num_expr::<f64>(lhs, trace)?;
                 let rhs = eval_num_expr::<f64>(rhs, trace)?;
@@ -44,11 +44,11 @@ impl Semantics for QuantitativeSemantics {
                     Greater { strict: _ } => &lhs - &rhs,
                 }
             }
-            BoolExpr::Not { arg } => {
+            BoolExpr::Not(Not { arg }) => {
                 let arg = Self::eval(arg, trace, ctx)?;
                 -&arg
             }
-            BoolExpr::And { args } => {
+            BoolExpr::And(And { args }) => {
                 assert!(args.len() >= 2);
                 let args = args
                     .iter()
@@ -58,7 +58,7 @@ impl Semantics for QuantitativeSemantics {
                     .reduce(|lhs, rhs| lhs.min(&rhs))
                     .ok_or(ArgusError::InvalidOperation)?
             }
-            BoolExpr::Or { args } => {
+            BoolExpr::Or(Or { args }) => {
                 assert!(args.len() >= 2);
                 let args = args
                     .iter()
@@ -68,9 +68,9 @@ impl Semantics for QuantitativeSemantics {
                     .reduce(|lhs, rhs| lhs.max(&rhs))
                     .ok_or(ArgusError::InvalidOperation)?
             }
-            BoolExpr::Next { arg: _ } => todo!(),
-            BoolExpr::Oracle { steps: _, arg: _ } => todo!(),
-            BoolExpr::Always { arg, interval } => {
+            BoolExpr::Next(Next { arg: _ }) => todo!(),
+            BoolExpr::Oracle(Oracle { steps: _, arg: _ }) => todo!(),
+            BoolExpr::Always(Always { arg, interval: _ }) => {
                 let mut arg = Self::eval(arg, trace, ctx)?;
                 match &mut arg {
                     // if signal is empty or constant, return the signal itself.
@@ -86,7 +86,7 @@ impl Semantics for QuantitativeSemantics {
                 }
                 arg
             }
-            BoolExpr::Eventually { arg, interval } => {
+            BoolExpr::Eventually(Eventually { arg, interval: _ }) => {
                 let mut arg = Self::eval(arg, trace, ctx)?;
                 match &mut arg {
                     // if signal is empty or constant, return the signal itself.
@@ -102,11 +102,11 @@ impl Semantics for QuantitativeSemantics {
                 }
                 arg
             }
-            BoolExpr::Until {
+            BoolExpr::Until(Until {
                 lhs: _,
                 rhs: _,
-                interval,
-            } => todo!(),
+                interval: _,
+            }) => todo!(),
         };
         Ok(ret)
     }
