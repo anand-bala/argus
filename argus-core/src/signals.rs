@@ -2,6 +2,7 @@
 mod bool_ops;
 mod cast;
 mod cmp_ops;
+pub mod interpolation;
 pub mod iter;
 mod num_ops;
 mod shift_ops;
@@ -22,43 +23,6 @@ pub use traits::*;
 use utils::intersect_bounds;
 
 use crate::{ArgusResult, Error};
-
-/// Interpolation methods supported by Argus signals.
-///
-/// Defaults to `Linear` interpolation (which corresponds to constant interpolation for
-/// `bool` signals).
-#[derive(Debug, Clone, Copy, Default)]
-pub enum InterpolationMethod {
-    /// Linear interpolation
-    #[default]
-    Linear,
-    /// Interpolate from the nearest sample point.
-    Nearest,
-}
-
-impl InterpolationMethod {
-    pub(crate) fn at<T>(self, time: Duration, a: &Option<Sample<T>>, b: &Option<Sample<T>>) -> Option<T>
-    where
-        T: Copy + LinearInterpolatable,
-    {
-        use InterpolationMethod::*;
-        match (self, a, b) {
-            (Nearest, Some(ref a), Some(ref b)) => {
-                assert!(a.time < time && time < b.time);
-                if (b.time - time) > (time - a.time) {
-                    // a is closer to the required time than b
-                    Some(a.value)
-                } else {
-                    // b is closer
-                    Some(b.value)
-                }
-            }
-            (Nearest, Some(nearest), None) | (Nearest, None, Some(nearest)) => Some(nearest.value),
-            (Linear, Some(a), Some(b)) => Some(T::interpolate_at(a, b, time)),
-            _ => None,
-        }
-    }
-}
 
 /// A single sample of a signal.
 #[derive(Copy, Clone, Debug)]
@@ -241,80 +205,6 @@ impl<T> Signal<T> {
         }
     }
 
-    /// Interpolate the value of the signal at the given time point
-    ///
-    /// If there exists a sample at the given time point then `Some(value)` is returned
-    /// with the value of the signal at the point. Otherwise, a the
-    /// [`InterpolationMethod`] is used to compute the value. If the given interpolation
-    /// method cannot be used at the given time (for example, if we use
-    /// [`InterpolationMethod::Linear`] and the `time` point is outside the signal
-    /// domain), then a `None` is returned.
-    pub fn interpolate_at(&self, time: Duration, interp: InterpolationMethod) -> Option<T>
-    where
-        T: Copy + LinearInterpolatable,
-    {
-        match self {
-            Signal::Empty => None,
-            Signal::Constant { value } => Some(*value),
-            Signal::Sampled { values, time_points } => {
-                assert_eq!(
-                    time_points.len(),
-                    values.len(),
-                    "invariant: number of time points must equal number of samples"
-                );
-                // if there are no sample points, then there is no sample point (nor neighboring
-                // sample points) to return
-                if time_points.is_empty() {
-                    return None;
-                }
-
-                // We will use binary search to find the appropriate index
-                let hint_idx = match time_points.binary_search(&time) {
-                    Ok(idx) => return values.get(idx).copied(),
-                    Err(idx) => idx,
-                };
-
-                // We have an hint as to where the sample _should have been_.
-                // So, lets check if there is a preceding and/or following sample.
-                let (first, second) = if hint_idx == 0 {
-                    // Sample appears before the start of the signal
-                    // So, let's return just the following sample, which is the first sample
-                    // (since we know that the signal is non-empty).
-                    let preceding = None;
-                    let following = Some(Sample {
-                        time: time_points[hint_idx],
-                        value: values[hint_idx],
-                    });
-                    (preceding, following)
-                } else if hint_idx == time_points.len() {
-                    // Sample appears past the end of the signal
-                    // So, let's return just the preceding sample, which is the last sample
-                    // (since we know the signal is non-empty)
-                    let preceding = Some(Sample {
-                        time: time_points[hint_idx - 1],
-                        value: values[hint_idx - 1],
-                    });
-                    let following = None;
-                    (preceding, following)
-                } else {
-                    // The sample should exist within the signal.
-                    assert!(time_points.len() >= 2, "There should be at least 2 elements");
-                    let preceding = Some(Sample {
-                        time: time_points[hint_idx - 1],
-                        value: values[hint_idx - 1],
-                    });
-                    let following = Some(Sample {
-                        time: time_points[hint_idx],
-                        value: values[hint_idx],
-                    });
-                    (preceding, following)
-                };
-
-                interp.at(time, &first, &second)
-            }
-        }
-    }
-
     /// Return the vector of points where the signal is sampled.
     ///
     /// - If the signal is empty ([`Signal::Empty`]), the output is `None`.
@@ -371,9 +261,10 @@ impl<T> Signal<T> {
     }
 
     /// Augment synchronization points with time points where signals intersect
-    pub fn sync_with_intersection(&self, other: &Signal<T>) -> Option<Vec<Duration>>
+    pub fn sync_with_intersection<Interp>(&self, other: &Signal<T>) -> Option<Vec<Duration>>
     where
-        T: PartialOrd + Copy + LinearInterpolatable,
+        T: PartialOrd + Copy,
+        Interp: FindIntersectionMethod<T>,
     {
         use core::cmp::Ordering::*;
         let sync_points: Vec<&Duration> = self.sync_points(other)?.into_iter().collect();
@@ -405,7 +296,7 @@ impl<T> Signal<T> {
                         first: other.at(tm1).copied().map(|value| Sample { time: tm1, value }),
                         second: other.at(*t).copied().map(|value| Sample { time: *t, value }),
                     };
-                    let intersect = T::find_intersection(&a, &b);
+                    let intersect = Interp::find_intersection(&a, &b);
                     return_points.push(intersect.time);
                 }
             }
@@ -415,6 +306,70 @@ impl<T> Signal<T> {
         return_points.dedup();
         return_points.shrink_to_fit();
         Some(return_points)
+    }
+}
+
+impl<T: Copy> Signal<T> {
+    /// Interpolate the value of the signal at the given time point
+    ///
+    /// If there exists a sample at the given time point then `Some(value)` is returned
+    /// with the value of the signal at the point. Otherwise, a the
+    /// [`InterpolationMethod`] is used to compute the value. If the given interpolation
+    /// method cannot be used at the given time (for example, if we use
+    /// [`interpolation::Linear`] and the `time` point is outside the signal
+    /// domain), then a `None` is returned.
+    pub fn interpolate_at<Interp>(&self, time: Duration) -> Option<T>
+    where
+        Interp: InterpolationMethod<T>,
+    {
+        match self {
+            Signal::Empty => None,
+            Signal::Constant { value } => Some(*value),
+            Signal::Sampled { values, time_points } => {
+                assert_eq!(
+                    time_points.len(),
+                    values.len(),
+                    "invariant: number of time points must equal number of samples"
+                );
+                // if there are no sample points, then there is no sample point (nor neighboring
+                // sample points) to return
+                if time_points.is_empty() {
+                    return None;
+                }
+
+                // We will use binary search to find the appropriate index
+                let hint_idx = match time_points.binary_search(&time) {
+                    Ok(idx) => return values.get(idx).copied(),
+                    Err(idx) => idx,
+                };
+
+                // We have an hint as to where the sample _should have been_.
+                // So, lets check if there is a preceding and/or following sample.
+                if hint_idx == 0 {
+                    // Sample appears before the start of the signal
+                    // So, let's return just the following sample, which is the first sample
+                    // (since we know that the signal is non-empty).
+                    Some(values[hint_idx])
+                } else if hint_idx == time_points.len() {
+                    // Sample appears past the end of the signal
+                    // So, let's return just the preceding sample, which is the last sample
+                    // (since we know the signal is non-empty)
+                    Some(values[hint_idx - 1])
+                } else {
+                    // The sample should exist within the signal.
+                    assert!(time_points.len() >= 2, "There should be at least 2 elements");
+                    let first = Sample {
+                        time: time_points[hint_idx - 1],
+                        value: values[hint_idx - 1],
+                    };
+                    let second = Sample {
+                        time: time_points[hint_idx],
+                        value: values[hint_idx],
+                    };
+                    Interp::at(&first, &second, time)
+                }
+            }
+        }
     }
 }
 
@@ -611,10 +566,10 @@ mod tests {
         ($ty:ty, $op:tt sig) => {
             proptest! {
                 |(sig in arbitrary::sampled_signal::<$ty>(1..100))| {
-                    use InterpolationMethod::Linear;
+                    use interpolation::Linear;
                     let new_sig = $op (&sig);
                     for (t, v) in new_sig.iter() {
-                        let prev = sig.interpolate_at(*t, Linear).unwrap();
+                        let prev = sig.interpolate_at::<Linear>(*t).unwrap();
                         assert_eq!($op prev, *v);
                     }
                 }
@@ -623,11 +578,11 @@ mod tests {
         ($ty:ty, lhs $op:tt rhs) => {
             proptest! {
                 |(sig1 in arbitrary::sampled_signal::<$ty>(1..100), sig2 in arbitrary::sampled_signal::<$ty>(1..100))| {
-                    use InterpolationMethod::Linear;
+                    use interpolation::Linear;
                     let new_sig = &sig1 $op &sig2;
                     for (t, v) in new_sig.iter() {
-                        let v1 = sig1.interpolate_at(*t, Linear).unwrap();
-                        let v2 = sig2.interpolate_at(*t, Linear).unwrap();
+                        let v1 = sig1.interpolate_at::<Linear>(*t).unwrap();
+                        let v2 = sig2.interpolate_at::<Linear>(*t).unwrap();
                         assert_eq!(v1 $op v2, *v);
                     }
                 }
@@ -635,11 +590,11 @@ mod tests {
 
             proptest! {
                 |(sig1 in arbitrary::sampled_signal::<$ty>(1..100), sig2 in arbitrary::constant_signal::<$ty>())| {
-                    use InterpolationMethod::Linear;
+                    use interpolation::Linear;
                     let new_sig = &sig1 $op &sig2;
                     for (t, v) in new_sig.iter() {
-                        let v1 = sig1.interpolate_at(*t, Linear).unwrap();
-                        let v2 = sig2.interpolate_at(*t, Linear).unwrap();
+                        let v1 = sig1.interpolate_at::<Linear>(*t).unwrap();
+                        let v2 = sig2.interpolate_at::<Linear>(*t).unwrap();
                         assert_eq!(v1 $op v2, *v);
                     }
                 }

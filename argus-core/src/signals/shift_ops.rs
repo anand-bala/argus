@@ -3,12 +3,13 @@ use core::time::Duration;
 
 use itertools::Itertools;
 
-use super::traits::LinearInterpolatable;
+use super::interpolation::Linear;
 use super::{InterpolationMethod, Signal};
 
 impl<T> Signal<T>
 where
-    T: Copy + LinearInterpolatable,
+    T: Copy,
+    Linear: InterpolationMethod<T>,
 {
     /// Shift all samples in the signal by `delta` amount to the left.
     ///
@@ -34,7 +35,7 @@ where
                 if idx > 0 && first_t != &delta {
                     // The shifted signal will not start at 0, and we have a previous
                     // index to interpolate from.
-                    let v = self.interpolate_at(delta, InterpolationMethod::Linear).unwrap();
+                    let v = self.interpolate_at::<Linear>(delta).unwrap();
                     new_samples.push((Duration::ZERO, v));
                 }
                 // Shift the rest of the samples

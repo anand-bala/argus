@@ -8,7 +8,6 @@ use core::ops::{Bound, RangeBounds};
 use core::time::Duration;
 use std::iter::zip;
 
-use super::traits::LinearInterpolatable;
 use super::{InterpolationMethod, Sample, Signal};
 
 /// The neighborhood around a signal such that the time `at` is between the `first` and
@@ -42,11 +41,12 @@ where
 }
 
 #[inline]
-pub fn apply2<'a, T, U, F>(lhs: &'a Signal<T>, rhs: &'a Signal<T>, op: F) -> Signal<U>
+pub fn apply2<'a, T, U, F, Interp>(lhs: &'a Signal<T>, rhs: &'a Signal<T>, op: F) -> Signal<U>
 where
-    T: Copy + LinearInterpolatable,
+    T: Copy,
     U: Copy,
     F: Fn(T, T) -> U,
+    Interp: InterpolationMethod<T>,
 {
     use Signal::*;
     // If either of the signals are empty, we return an empty signal.
@@ -67,8 +67,8 @@ where
             time_points
                 .into_iter()
                 .map(|t| {
-                    let v1 = lhs.interpolate_at(*t, InterpolationMethod::Linear).unwrap();
-                    let v2 = rhs.interpolate_at(*t, InterpolationMethod::Linear).unwrap();
+                    let v1 = lhs.interpolate_at::<Interp>(*t).unwrap();
+                    let v2 = rhs.interpolate_at::<Interp>(*t).unwrap();
                     (*t, op(v1, v2))
                 })
                 .collect()
