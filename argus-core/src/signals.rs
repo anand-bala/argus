@@ -12,16 +12,16 @@ mod utils;
 use std::ops::{Bound, RangeBounds};
 use std::time::Duration;
 
-pub use bool_ops::*;
-pub use cast::*;
-pub use cmp_ops::*;
 use itertools::Itertools;
-pub use num_ops::*;
 use num_traits::Num;
-pub use shift_ops::*;
-pub use traits::*;
-use utils::intersect_bounds;
 
+pub use self::bool_ops::*;
+pub use self::cast::*;
+pub use self::cmp_ops::*;
+pub use self::num_ops::*;
+pub use self::shift_ops::*;
+pub use self::traits::*;
+use self::utils::intersect_bounds;
 use crate::{ArgusResult, Error};
 
 /// A single sample of a signal.

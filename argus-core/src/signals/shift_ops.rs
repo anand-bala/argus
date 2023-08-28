@@ -24,8 +24,7 @@ where
 
                 // Find the first index that satisfies `t >= delta` while also checking
                 // if we need to interpolate
-                let Some((idx, first_t)) = time_points.iter().find_position(|&t| t >= &delta)
-                else {
+                let Some((idx, first_t)) = time_points.iter().find_position(|&t| t >= &delta) else {
                     // Return an empty signal (we exhauseted all samples).
                     return Signal::Empty;
                 };
