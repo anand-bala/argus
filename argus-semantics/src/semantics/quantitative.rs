@@ -6,7 +6,7 @@ use argus_core::signals::traits::{SignalAbs, SignalMinMax};
 use argus_core::signals::SignalNumCast;
 
 use crate::eval::eval_num_expr;
-use crate::{Semantics, Trace};
+use crate::Trace;
 
 fn top_or_bot(sig: &Signal<bool>) -> Signal<f64> {
     match sig {

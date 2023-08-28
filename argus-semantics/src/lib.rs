@@ -3,71 +3,10 @@
 //! In this crate, we are predominantly concerned with the monitoring of _offline system
 //! traces_, i.e., a collection of signals that have been extracted from observing and
 //! sampling from some system.
-use argus_core::expr::BoolExpr;
-use argus_core::signals::Signal;
-use argus_core::ArgusResult;
 
-pub mod eval;
-pub mod semantics;
+// pub mod eval;
+// pub mod semantics;
+// pub mod traits;
 pub mod utils;
 
-pub use semantics::boolean::BooleanSemantics;
-pub use semantics::quantitative::QuantitativeSemantics;
-
-/// A trace is a collection of signals
-///
-/// # Example
-///
-/// An example of a `Trace` may be:
-///
-/// ```rust
-/// use argus_core::signals::{Signal, AnySignal};
-/// use argus_semantics::Trace;
-///
-/// struct MyTrace {
-///     x: Signal<bool>,
-///     y: Signal<i64>,
-/// }
-///
-/// impl Trace for MyTrace {
-///     fn signal_names(&self) -> Vec<&str> {
-///         vec!["x", "y"]
-///     }
-///
-///     fn get<T: 'static>(&self, name: &str) -> Option<&Signal<T>> {
-///         let sig: &dyn AnySignal = match name {
-///             "x" => &self.x,
-///             "y" => &self.y,
-///             _ => return None,
-///         };
-///         sig.as_any().downcast_ref::<Signal<T>>()
-///     }
-/// }
-///
-/// let trace = MyTrace {
-///     x: Signal::constant(true),
-///     y: Signal::constant(2),
-/// };
-/// let names = trace.signal_names();
-///
-/// assert!(names == &["x", "y"] || names == &["y", "x"]);
-/// assert!(matches!(trace.get::<bool>("x"), Some(Signal::Constant { value: true })));
-/// assert!(matches!(trace.get::<i64>("y"), Some(Signal::Constant { value: 2 })));
-/// ```
-pub trait Trace {
-    /// Get the list of signal names contained within the trace.
-    fn signal_names(&self) -> Vec<&str>;
-
-    /// Query a signal using its name
-    fn get<T: 'static>(&self, name: &str) -> Option<&Signal<T>>;
-}
-
-/// General interface for defining semantics for the [`argus-core`](argus_core) logic.
-pub trait Semantics {
-    /// The output of applying the given semantics to an expression and trace.
-    type Output;
-    /// Any additional possible context that can be passed to the semantics evaluator.
-    type Context;
-
-    fn eval(expr: &BoolExpr, trace: &impl Trace, ctx: Self::Context) -> ArgusResult<Self::Output>;
-}
+// pub use traits::{BooleanSemantics, QuantitativeSemantics, Trace};
