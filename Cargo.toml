@@ -5,6 +5,5 @@ members = [
   "argus-semantics",
   "argus-automata",
   "argus-derive",
+  "pyargus",
 ]
-
-exclude = ["pyargus"]
