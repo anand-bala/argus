@@ -1,10 +1,7 @@
-[build-system]
-requires = ["maturin>=0.14,<0.15"]
-build-backend = "maturin"
-
 [project]
 name = "pyargus"
-requires-python = ">=3.7"
+version = "0.1.0"
+requires-python = ">=3.8"
 classifiers = [
   "Programming Language :: Rust",
   "Programming Language :: Python :: Implementation :: CPython",
@@ -27,12 +24,19 @@ dev = [
   "black",
 ]
 
+test = ["pytest", "pytest-cov", "hypothesis"]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+
 [tool.maturin]
 features = ["pyo3/extension-module"]
 module-name = "argus._argus"
 
-[tool.pyright]
-include = ["argus/", "examples/"]
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
 
 [tool.mypy]
 # ignore_missing_imports = true
@@ -72,7 +76,6 @@ profile = "black"
 line_length = 127
 skip_gitignore = false
 group_by_package = true
-src_paths = ["argus", "examples/"]
 extend_skip = [
   # No need to traverse our git directory
   ".git/",

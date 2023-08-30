@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional, Type, Union
 
 from argus import _argus
 from argus._argus import DType as DType
@@ -13,7 +13,7 @@ except AttributeError:
     ...
 
 
-def declare_var(name: str, dtype: Union[DType, type[Union[bool, int, float]]]) -> Union[VarBool, VarInt, VarUInt, VarFloat]:
+def declare_var(name: str, dtype: Union[DType, Type[Union[bool, int, float]]]) -> Union[VarBool, VarInt, VarUInt, VarFloat]:
     """Declare a variable with the given name and type"""
     if isinstance(dtype, type):
         if dtype == bool:
@@ -46,7 +46,7 @@ def literal(value: Union[bool, int, float]) -> Union[ConstBool, ConstInt, ConstU
 
 
 def signal(
-    dtype: Union[DType, type[Union[bool, int, float]]],
+    dtype: Union[DType, Type[Union[bool, int, float]]],
     *,
     value: Optional[Union[bool, int, float]] = None,
 ) -> Signal:
