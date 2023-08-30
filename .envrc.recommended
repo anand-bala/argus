@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+strict_env
+
+ARGUS_ENV="argus"
+
+mamba_exe=""
+conda_exe=""
+
+if command -v conda &>/dev/null; then
+	conda_exe=$(command -v conda)
+else
+	log_error "No conda executable found."
+	exit 2
+fi
+
+if command -v mamba &>/dev/null; then
+	mamba_exe=$(command -v mamba)
+else
+	# Just use conda
+	mamba_exe=$conda_exe
+fi
+
+log_status "Using conda executable: $conda_exe"
+log_status "Using mamba executable: $mamba_exe"
+
+env_loc=$("$conda_exe" env list | grep -- '^'"$ARGUS_ENV"'\s')
+env_loc="${env_loc##* }"
+
+if [[ ! -d "$env_loc" ]]; then
+	"$mamba_exe" env create --name "$ARGUS_ENV"
+	env_loc=$("$conda_exe" env list | grep -- '^'"$ARGUS_ENV"'\s')
+	env_loc="${env_loc##* }"
+fi
+
+eval "$("$conda_exe" shell.bash activate "$env_loc")"
