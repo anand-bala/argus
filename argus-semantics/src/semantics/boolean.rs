@@ -3,88 +3,93 @@ use std::time::Duration;
 
 use argus_core::expr::*;
 use argus_core::prelude::*;
+use argus_core::signals::interpolation::Linear;
+use argus_core::signals::SignalPartialOrd;
 
-use crate::traits::{BooleanSemantics, QuantitativeSemantics, Trace};
+use crate::semantics::QuantitativeSemantics;
+use crate::traits::Trace;
+use crate::utils::lemire_minmax::MonoWedge;
 
-impl BooleanSemantics for BoolExpr {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        match self {
-            BoolExpr::BoolLit(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::BoolVar(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Cmp(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Not(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::And(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Or(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Next(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Oracle(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Always(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Eventually(sig) => BooleanSemantics::eval(sig, trace),
-            BoolExpr::Until(sig) => BooleanSemantics::eval(sig, trace),
-        }
-    }
-}
+pub struct BooleanSemantics;
 
-impl BooleanSemantics for BoolLit {
-    fn eval(&self, _trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        Ok(Signal::constant(self.0))
-    }
-}
+impl BooleanSemantics {
+    pub fn eval(expr: &BoolExpr, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
+        let ret = match expr {
+            BoolExpr::BoolLit(val) => Signal::constant(val.0),
+            BoolExpr::BoolVar(BoolVar { name }) => trace
+                .get::<bool>(name.as_str())
+                .ok_or(ArgusError::SignalNotPresent)?
+                .clone(),
+            BoolExpr::Cmp(Cmp { op, lhs, rhs }) => {
+                use argus_core::expr::Ordering::*;
+                let lhs = QuantitativeSemantics::eval_num_expr::<f64>(lhs, trace)?;
+                let rhs = QuantitativeSemantics::eval_num_expr::<f64>(rhs, trace)?;
 
-impl BooleanSemantics for BoolVar {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        trace
-            .get(self.name.as_str())
-            .cloned()
-            .ok_or(ArgusError::SignalNotPresent)
-    }
-}
-
-impl BooleanSemantics for Cmp {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        use argus_core::expr::Ordering::*;
-
-        let lhs = QuantitativeSemantics::eval(self.lhs.as_ref(), trace)?;
-        let rhs = QuantitativeSemantics::eval(self.rhs.as_ref(), trace)?;
-        let ret = match self.op {
-            Eq => lhs.signal_eq(&rhs),
-            NotEq => lhs.signal_ne(&rhs),
-            Less { strict } if *strict => lhs.signal_lt(&rhs),
-            Less { strict: _ } => lhs.signal_le(&rhs),
-            Greater { strict } if *strict => lhs.signal_gt(&rhs),
-            Greater { strict: _ } => lhs.signal_ge(&rhs),
+                match op {
+                    Eq => lhs.signal_eq(&rhs).unwrap(),
+                    NotEq => lhs.signal_ne(&rhs).unwrap(),
+                    Less { strict } if *strict => lhs.signal_lt(&rhs).unwrap(),
+                    Less { strict: _ } => lhs.signal_le(&rhs).unwrap(),
+                    Greater { strict } if *strict => lhs.signal_gt(&rhs).unwrap(),
+                    Greater { strict: _ } => lhs.signal_ge(&rhs).unwrap(),
+                }
+            }
+            BoolExpr::Not(Not { arg }) => {
+                let arg = Self::eval(arg, trace)?;
+                !&arg
+            }
+            BoolExpr::And(And { args }) => {
+                assert!(args.len() >= 2);
+                args.iter()
+                    .map(|arg| Self::eval(arg, trace))
+                    .try_fold(Signal::const_true(), |acc, item| {
+                        let item = item?;
+                        Ok(acc.and(&item))
+                    })?
+            }
+            BoolExpr::Or(Or { args }) => {
+                assert!(args.len() >= 2);
+                args.iter()
+                    .map(|arg| Self::eval(arg, trace))
+                    .try_fold(Signal::const_true(), |acc, item| {
+                        let item = item?;
+                        Ok(acc.or(&item))
+                    })?
+            }
+            BoolExpr::Next(Next { arg }) => {
+                let arg = Self::eval(arg, trace)?;
+                compute_next(arg)?
+            }
+            BoolExpr::Oracle(Oracle { steps, arg }) => {
+                let arg = Self::eval(arg, trace)?;
+                compute_oracle(arg, *steps)?
+            }
+            BoolExpr::Always(Always { arg, interval }) => {
+                let arg = Self::eval(arg, trace)?;
+                compute_always(arg, interval)?
+            }
+            BoolExpr::Eventually(Eventually { arg, interval }) => {
+                let arg = Self::eval(arg, trace)?;
+                compute_eventually(arg, interval)?
+            }
+            BoolExpr::Until(Until { lhs, rhs, interval }) => {
+                let lhs = Self::eval(lhs, trace)?;
+                let rhs = Self::eval(rhs, trace)?;
+                compute_until(lhs, rhs, interval)?
+            }
         };
-        ret.ok_or(ArgusError::InvalidOperation)
-    }
-}
-
-impl BooleanSemantics for Not {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        let arg = BooleanSemantics::eval(self.arg.as_ref(), trace)?;
-        Ok(arg.not())
-    }
-}
-
-impl BooleanSemantics for And {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        let mut ret = Signal::constant(true);
-        for arg in self.args.iter() {
-            let arg = Self::eval(arg, trace)?;
-            ret = ret.and(&arg);
-        }
-    }
-}
-
-impl BooleanSemantics for Or {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        let mut ret = Signal::constant(true);
-        for arg in self.args.iter() {
-            let arg = Self::eval(arg, trace)?;
-            ret = ret.or(&arg);
-        }
+        Ok(ret)
     }
 }
 
 fn compute_next(arg: Signal<bool>) -> ArgusResult<Signal<bool>> {
+    compute_oracle(arg, 1)
+}
+
+fn compute_oracle(arg: Signal<bool>, steps: usize) -> ArgusResult<Signal<bool>> {
+    if steps == 0 {
+        return Ok(Signal::Empty);
+    }
     match arg {
         Signal::Empty => Ok(Signal::Empty),
         sig @ Signal::Constant { value: _ } => {
@@ -96,33 +101,18 @@ fn compute_next(arg: Signal<bool>) -> ArgusResult<Signal<bool>> {
             mut time_points,
         } => {
             // TODO(anand): Verify this
-            // Just shift the signal by 1 timestamp
-            assert!(values.len() == time_points.len());
-            if values.len() <= 1 {
+            // Just shift the signal by `steps` timestamps
+            assert_eq!(values.len(), time_points.len());
+            if values.len() <= steps {
                 return Ok(Signal::Empty);
             }
-            values.remove(0);
-            time_points.pop();
+            let expected_len = values.len() - steps;
+            let values = values.split_off(steps);
+            let _ = time_points.split_off(steps);
+
+            assert_eq!(values.len(), expected_len);
+            assert_eq!(values.len(), time_points.len());
             Ok(Signal::Sampled { values, time_points })
-        }
-    }
-}
-
-impl BooleanSemantics for Next {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        let arg = BooleanSemantics::eval(self.arg.as_ref(), trace)?;
-        compute_next(arg)
-    }
-}
-
-impl BooleanSemantics for Oracle {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        if self.steps == 0 {
-            Ok(Signal::Empty)
-        } else {
-            (0..self.steps).try_fold(BooleanSemantics::eval(self.arg.as_ref(), trace)?, |arg, _| {
-                compute_next(arg)
-            })
         }
     }
 }
@@ -134,45 +124,20 @@ fn compute_always(signal: Signal<bool>, interval: &Interval) -> ArgusResult<Sign
             reason: "interval is either empty or singleton",
         });
     }
-    let ret = match signal {
-        // if signal is empty or constant, return the signal itself.
-        // This works because if a signal is True everythere, then it must
-        // "always be true".
-        sig @ (Signal::Empty | Signal::Constant { value: _ }) => sig,
-        sig => {
-            use Bound::*;
-            if interval.is_untimed() {
-                compute_untimed_always(sig)
-            } else if let (Included(a), Included(b)) = interval.into() {
-                compute_timed_always(sig, *a, Some(*b))
-            } else if let (Included(a), Unbounded) = interval.into() {
-                compute_timed_always(sig, *a, None)
-            } else {
-                unreachable!("interval should be created using Interval::new, and is_untimed checks this")
-            }
-        }
-    };
-    Ok(ret)
+    let z1 = !signal;
+    let z2 = compute_eventually(z1, interval)?;
+    Ok(!z2)
 }
 
 /// Compute timed always for the interval `[a, b]` (or, if `b` is `None`, `[a, ..]`.
-fn compute_timed_always(signal: Signal<bool>, a: Duration, b: Option<Duration>) -> Signal<bool> {
-    match b {
-        Some(b) => {
-            // We want to compute the windowed min/and of the signal.
-            // The window is dictated by the time duration though.
-            todo!()
-        }
-        None => {
-            // Shift the signal to the left by `a` and then run the untimed always.
-            let shifted = signal.shift_left(a);
-            compute_untimed_always(shifted)
-        }
-    }
+fn compute_timed_always(signal: Signal<bool>, a: Duration, b: Option<Duration>) -> ArgusResult<Signal<bool>> {
+    let z1 = !signal;
+    let z2 = compute_timed_eventually(z1, a, b)?;
+    Ok(!z2)
 }
 
 /// Compute untimed always
-fn compute_untimed_always(signal: Signal<bool>) -> Signal<bool> {
+fn compute_untimed_always(signal: Signal<bool>) -> ArgusResult<Signal<bool>> {
     let Signal::Sampled {
         mut values,
         time_points,
@@ -184,14 +149,7 @@ fn compute_untimed_always(signal: Signal<bool>) -> Signal<bool> {
     for i in (0..(time_points.len() - 1)).rev() {
         values[i] &= values[i + 1];
     }
-    Signal::Sampled { values, time_points }
-}
-
-impl BooleanSemantics for Always {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        let arg = BooleanSemantics::eval(&self.arg, trace)?;
-        compute_always(arg, &self.interval)
-    }
+    Ok(Signal::Sampled { values, time_points })
 }
 
 /// Compute eventually for a signal
@@ -212,11 +170,11 @@ fn compute_eventually(signal: Signal<bool>, interval: &Interval) -> ArgusResult<
                 // for singleton intervals, return the signal itself.
                 sig
             } else if interval.is_untimed() {
-                compute_untimed_eventually(sig)
+                compute_untimed_eventually(sig)?
             } else if let (Included(a), Included(b)) = interval.into() {
-                compute_timed_eventually(sig, *a, Some(*b))
+                compute_timed_eventually(sig, *a, Some(*b))?
             } else if let (Included(a), Unbounded) = interval.into() {
-                compute_timed_eventually(sig, *a, None)
+                compute_timed_eventually(sig, *a, None)?
             } else {
                 unreachable!("interval should be created using Interval::new, and is_untimed checks this")
             }
@@ -226,15 +184,42 @@ fn compute_eventually(signal: Signal<bool>, interval: &Interval) -> ArgusResult<
 }
 
 /// Compute timed eventually for the interval `[a, b]` (or, if `b` is `None`, `[a,..]`.
-fn compute_timed_eventually(signal: Signal<bool>, a: Duration, b: Option<Duration>) -> Signal<bool> {
+fn compute_timed_eventually(signal: Signal<bool>, a: Duration, b: Option<Duration>) -> ArgusResult<Signal<bool>> {
     match b {
         Some(b) => {
             // We want to compute the windowed max/or of the signal.
             // The window is dictated by the time duration though.
-            todo!()
+            let Signal::Sampled { values, time_points } = signal else {
+                unreachable!("we shouldn't be passing non-sampled signals here")
+            };
+            assert!(b > a);
+            assert!(!time_points.is_empty());
+            let signal_duration = *time_points.last().unwrap() - *time_points.first().unwrap();
+            let width = if signal_duration < (b - a) {
+                signal_duration
+            } else {
+                b - a
+            };
+            let mut ret_vals = Vec::with_capacity(values.len());
+
+            // For boolean signals we dont need to worry about intersections with ZERO as much as
+            // for quantitative signals, as linear interpolation is just a discrte switch.
+            let mut wedge = MonoWedge::<bool>::max_wedge(width);
+            for (i, value) in time_points.iter().zip(&values) {
+                wedge.update((i, value));
+                if i >= &(time_points[0] + width) {
+                    ret_vals.push(
+                        wedge
+                            .front()
+                            .map(|(&t, &v)| (t, v))
+                            .unwrap_or_else(|| panic!("wedge should have at least 1 element")),
+                    )
+                }
+            }
+            Signal::try_from_iter(ret_vals.into_iter())
         }
         None => {
-            // Shift the signal to the left by `a` and then run the untimedeventually.
+            // Shift the signal to the left by `a` and then run the untimed eventually.
             let shifted = signal.shift_left(a);
             compute_untimed_eventually(shifted)
         }
@@ -242,7 +227,7 @@ fn compute_timed_eventually(signal: Signal<bool>, a: Duration, b: Option<Duratio
 }
 
 /// Compute untimed eventually
-fn compute_untimed_eventually(signal: Signal<bool>) -> Signal<bool> {
+fn compute_untimed_eventually(signal: Signal<bool>) -> ArgusResult<Signal<bool>> {
     let Signal::Sampled {
         mut values,
         time_points,
@@ -254,14 +239,7 @@ fn compute_untimed_eventually(signal: Signal<bool>) -> Signal<bool> {
     for i in (0..(time_points.len() - 1)).rev() {
         values[i] |= values[i + 1];
     }
-    Signal::Sampled { values, time_points }
-}
-
-impl BooleanSemantics for Eventually {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        let arg = BooleanSemantics::eval(&self.arg, trace)?;
-        compute_eventually(arg, &self.interval)
-    }
+    Ok(Signal::Sampled { values, time_points })
 }
 
 /// Compute until
@@ -292,11 +270,11 @@ fn compute_until(lhs: Signal<bool>, rhs: Signal<bool>, interval: &Interval) -> A
         ) => {
             use Bound::*;
             if interval.is_untimed() {
-                compute_untimed_until(lhs, rhs)
+                compute_untimed_until(lhs, rhs)?
             } else if let (Included(a), Included(b)) = interval.into() {
-                compute_timed_until(lhs, rhs, *a, Some(*b))
+                compute_timed_until(lhs, rhs, *a, Some(*b))?
             } else if let (Included(a), Unbounded) = interval.into() {
-                compute_timed_until(lhs, rhs, *a, None)
+                compute_timed_until(lhs, rhs, *a, None)?
             } else {
                 unreachable!("interval should be created using Interval::new, and is_untimed checks this")
             }
@@ -306,31 +284,36 @@ fn compute_until(lhs: Signal<bool>, rhs: Signal<bool>, interval: &Interval) -> A
 }
 
 /// Compute timed until for the interval `[a, b]` (or, if `b` is `None`, `[a, ..]`.
-fn compute_timed_until(lhs: Signal<bool>, rhs: Signal<bool>, a: Duration, b: Option<Duration>) -> Signal<bool> {
-    // For this, we will perform the Until rewrite defined in [1]:
-    // $$
-    //  \varphi_1 U_{[a, b]} \varphi_2 = F_{[a,b]} \varphi_2 \land (\varphi_1 U_{[a,
-    // \infty)} \varphi_2)
-    // $$
-    //
-    // $$
-    //  \varphi_1 U_{[a, \infty)} \varphi_2 = G_{[0,a]} (\varphi_1 U \varphi_2)
-    // $$
-    //
-    // [1] A. Donzé, T. Ferrère, and O. Maler, "Efficient Robust Monitoring for STL."
-
+///
+/// For this, we will perform the Until rewrite defined in [1]:
+/// $$
+///  \varphi_1 U_{[a, b]} \varphi_2 = F_{[a,b]} \varphi_2 \land (\varphi_1 U_{[a,
+/// \infty)} \varphi_2)
+/// $$
+///
+/// $$
+///  \varphi_1 U_{[a, \infty)} \varphi_2 = G_{[0,a]} (\varphi_1 U \varphi_2)
+/// $$
+///
+/// [1]: <> (A. Donzé, T. Ferrère, and O. Maler, "Efficient Robust Monitoring for STL.")
+fn compute_timed_until(
+    lhs: Signal<bool>,
+    rhs: Signal<bool>,
+    a: Duration,
+    b: Option<Duration>,
+) -> ArgusResult<Signal<bool>> {
     match b {
         Some(b) => {
             // First compute eventually [a, b]
-            let ev_a_b_rhs = compute_timed_eventually(rhs, a, Some(b));
+            let ev_a_b_rhs = compute_timed_eventually(rhs.clone(), a, Some(b))?;
             // Then compute until [a, \infty) (lhs, rhs)
-            let unt_a_inf = compute_timed_until(lhs, rhs, a, None);
+            let unt_a_inf = compute_timed_until(lhs, rhs, a, None)?;
             // Then & them
-            &ev_a_b_rhs & &unt_a_inf
+            Ok(&ev_a_b_rhs & &unt_a_inf)
         }
         None => {
             // First compute untimed until (lhs, rhs)
-            let untimed_until = compute_untimed_until(lhs, rhs);
+            let untimed_until = compute_untimed_until(lhs, rhs)?;
             // Compute G [0, a]
             compute_untimed_always(untimed_until)
         }
@@ -338,13 +321,116 @@ fn compute_timed_until(lhs: Signal<bool>, rhs: Signal<bool>, a: Duration, b: Opt
 }
 
 /// Compute untimed until
-fn compute_untimed_until(lhs: Signal<bool>, rhs: Signal<bool>) -> Signal<bool> {
-    let sync_points = lhs.sync_with_intersection(&rhs);
+fn compute_untimed_until(lhs: Signal<bool>, rhs: Signal<bool>) -> ArgusResult<Signal<bool>> {
+    let sync_points = lhs.sync_with_intersection::<Linear>(&rhs);
     todo!()
 }
 
-impl BooleanSemantics for Until {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
-        todo!()
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use argus_core::expr::ExprBuilder;
+    use argus_core::signals::AnySignal;
+    use itertools::assert_equal;
+
+    use super::*;
+
+    #[derive(Default)]
+    struct MyTrace {
+        signals: HashMap<String, Box<dyn AnySignal>>,
+    }
+
+    impl Trace for MyTrace {
+        fn signal_names(&self) -> Vec<&str> {
+            self.signals.keys().map(|key| key.as_str()).collect()
+        }
+
+        fn get<T: 'static>(&self, name: &str) -> Option<&Signal<T>> {
+            let signal = self.signals.get(name)?;
+            signal.as_any().downcast_ref::<Signal<T>>()
+        }
+    }
+
+    #[test]
+    fn less_than() {
+        let mut ctx = ExprBuilder::new();
+
+        let a = ctx.float_var("a".to_owned()).unwrap();
+        let spec = ctx.make_lt(a, ctx.float_const(0.0));
+
+        let signals = HashMap::from_iter(vec![(
+            "a".to_owned(),
+            Box::new(Signal::from_iter(vec![
+                (Duration::from_secs_f64(0.0), 1.3),
+                (Duration::from_secs_f64(0.7), 3.0),
+                (Duration::from_secs_f64(1.3), 0.1),
+                (Duration::from_secs_f64(2.1), -2.2),
+            ])) as Box<dyn AnySignal>,
+        )]);
+
+        let trace = MyTrace { signals };
+
+        let rob = BooleanSemantics::eval(&spec, &trace).unwrap();
+        let expected = Signal::from_iter(vec![
+            (Duration::from_secs_f64(0.0), false),
+            (Duration::from_secs_f64(0.7), false),
+            (Duration::from_secs_f64(1.3), false),
+            (Duration::from_secs_f64(1.334782609), true), // interpolated at
+            (Duration::from_secs_f64(2.1), true),
+        ]);
+
+        assert_equal(&rob, &expected);
+    }
+
+    #[test]
+    fn eventually_unbounded() {
+        let mut ctx = ExprBuilder::new();
+
+        let a = ctx.float_var("a".to_owned()).unwrap();
+        let cmp = ctx.make_ge(a, ctx.float_const(0.0));
+        let spec = ctx.make_eventually(cmp);
+
+        {
+            let signals = HashMap::from_iter(vec![(
+                "a".to_owned(),
+                Box::new(Signal::from_iter(vec![
+                    (Duration::from_secs_f64(0.0), 2.5),
+                    (Duration::from_secs_f64(0.7), 4.0),
+                    (Duration::from_secs_f64(1.3), -1.0),
+                    (Duration::from_secs_f64(2.1), 1.7),
+                ])) as Box<dyn AnySignal>,
+            )]);
+
+            let trace = MyTrace { signals };
+            let rob = BooleanSemantics::eval(&spec, &trace).unwrap();
+
+            let Signal::Sampled { values, time_points: _ } = rob else {
+                panic!("boolean semantics should remain sampled");
+            };
+            assert!(values.into_iter().all(|v| v));
+        }
+        {
+            let signals = HashMap::from_iter(vec![(
+                "a".to_owned(),
+                Box::new(Signal::from_iter(vec![
+                    (Duration::from_secs_f64(0.0), 2.5),
+                    (Duration::from_secs_f64(0.7), 4.0),
+                    (Duration::from_secs_f64(1.3), 1.7),
+                    (Duration::from_secs_f64(1.4), 0.0),
+                    (Duration::from_secs_f64(2.1), -2.0),
+                ])) as Box<dyn AnySignal>,
+            )]);
+
+            let trace = MyTrace { signals };
+            let rob = BooleanSemantics::eval(&spec, &trace).unwrap();
+            println!("{:#?}", rob);
+
+            let Signal::Sampled { values, time_points: _ } = rob else {
+                panic!("boolean semantics should remain sampled");
+            };
+            assert!(values[..values.len() - 1].iter().all(|&v| v));
+            assert!(!values[values.len() - 1]);
+        }
     }
 }

@@ -1,2 +1,5 @@
-pub mod boolean;
-// pub mod quantitative;
+mod boolean;
+mod quantitative;
+
+pub use boolean::BooleanSemantics;
+pub use quantitative::QuantitativeSemantics;

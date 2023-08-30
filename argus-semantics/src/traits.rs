@@ -1,6 +1,5 @@
 //! Traits to define semantics for temporal logic specifications
 
-use argus_core::expr::{IsBoolExpr, IsNumExpr};
 use argus_core::prelude::*;
 
 /// A trace is a collection of signals
@@ -49,14 +48,4 @@ pub trait Trace {
 
     /// Query a signal using its name
     fn get<T: 'static>(&self, name: &str) -> Option<&Signal<T>>;
-}
-
-/// Boolean semantics for a [`BoolExpr`] or type that is
-/// convertable to a [`BoolExpr`]
-pub trait BooleanSemantics: IsBoolExpr {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>>;
-}
-
-pub trait QuantitativeSemantics: IsNumExpr {
-    fn eval(&self, trace: &impl Trace) -> ArgusResult<Signal<bool>>;
 }

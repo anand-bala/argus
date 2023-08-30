@@ -8,6 +8,8 @@
 //! [^2]: Daniel Lemire. 2007. Streaming Maximum-Minimum Filter Using No More than Three
 //! Comparisons per Element. arXiv:cs/0610046.
 
+// TODO: Make a MonoWedge iterator adapter.
+
 use std::collections::VecDeque;
 use std::time::Duration;
 
