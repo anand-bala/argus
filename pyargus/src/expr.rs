@@ -1,4 +1,5 @@
-use argus_core::expr::Ordering;
+use std::time::Duration;
+
 use argus_core::prelude::*;
 use pyo3::prelude::*;
 use pyo3::pyclass::CompareOp;
@@ -61,7 +62,7 @@ pub struct ConstInt;
 impl ConstInt {
     #[new]
     fn new(val: i64) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::IntLit(val)).into())
+        (Self, Box::new(NumExpr::IntLit(argus_core::expr::IntLit(val))).into())
     }
 }
 
@@ -78,7 +79,7 @@ pub struct ConstUInt;
 impl ConstUInt {
     #[new]
     fn new(val: u64) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::UIntLit(val)).into())
+        (Self, Box::new(NumExpr::UIntLit(argus_core::expr::UIntLit(val))).into())
     }
 }
 
@@ -90,7 +91,10 @@ pub struct ConstFloat;
 impl ConstFloat {
     #[new]
     fn new(val: f64) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::FloatLit(val)).into())
+        (
+            Self,
+            Box::new(NumExpr::FloatLit(argus_core::expr::FloatLit(val))).into(),
+        )
     }
 }
 
@@ -102,7 +106,10 @@ pub struct VarInt;
 impl VarInt {
     #[new]
     fn new(name: String) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::IntVar { name }).into())
+        (
+            Self,
+            Box::new(NumExpr::IntVar(argus_core::expr::IntVar { name })).into(),
+        )
     }
 }
 
@@ -114,7 +121,10 @@ pub struct VarUInt;
 impl VarUInt {
     #[new]
     fn new(name: String) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::UIntVar { name }).into())
+        (
+            Self,
+            Box::new(NumExpr::UIntVar(argus_core::expr::UIntVar { name })).into(),
+        )
     }
 }
 
@@ -126,7 +136,10 @@ pub struct VarFloat;
 impl VarFloat {
     #[new]
     fn new(name: String) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::FloatVar { name }).into())
+        (
+            Self,
+            Box::new(NumExpr::FloatVar(argus_core::expr::FloatVar { name })).into(),
+        )
     }
 }
 
@@ -139,7 +152,7 @@ impl Negate {
     #[new]
     fn new(arg: PyNumExpr) -> (Self, PyNumExpr) {
         let arg = arg.0;
-        (Self, Box::new(NumExpr::Neg { arg }).into())
+        (Self, Box::new(NumExpr::Neg(argus_core::expr::Neg { arg })).into())
     }
 }
 
@@ -154,7 +167,7 @@ impl Add {
     #[new]
     fn new(args: Vec<PyNumExpr>) -> (Self, PyNumExpr) {
         let args: Vec<NumExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, Box::new(NumExpr::Add { args }).into())
+        (Self, Box::new(NumExpr::Add(argus_core::expr::Add { args })).into())
     }
 }
 
@@ -167,7 +180,7 @@ impl Sub {
     fn new(lhs: PyNumExpr, rhs: PyNumExpr) -> (Self, PyNumExpr) {
         let lhs = lhs.0;
         let rhs = rhs.0;
-        (Self, Box::new(NumExpr::Sub { lhs, rhs }).into())
+        (Self, Box::new(NumExpr::Sub(argus_core::expr::Sub { lhs, rhs })).into())
     }
 }
 
@@ -179,7 +192,7 @@ impl Mul {
     #[new]
     fn new(args: Vec<PyNumExpr>) -> (Self, PyNumExpr) {
         let args: Vec<NumExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, Box::new(NumExpr::Mul { args }).into())
+        (Self, Box::new(NumExpr::Mul(argus_core::expr::Mul { args })).into())
     }
 }
 
@@ -192,7 +205,10 @@ impl Div {
     fn new(dividend: PyNumExpr, divisor: PyNumExpr) -> (Self, PyNumExpr) {
         let dividend = dividend.0;
         let divisor = divisor.0;
-        (Self, Box::new(NumExpr::Div { dividend, divisor }).into())
+        (
+            Self,
+            Box::new(NumExpr::Div(argus_core::expr::Div { dividend, divisor })).into(),
+        )
     }
 }
 
@@ -204,7 +220,7 @@ impl Abs {
     #[new]
     fn new(arg: PyNumExpr) -> (Self, PyNumExpr) {
         let arg = arg.0;
-        (Self, Box::new(NumExpr::Abs { arg }).into())
+        (Self, Box::new(NumExpr::Abs(argus_core::expr::Abs { arg })).into())
     }
 }
 
@@ -238,7 +254,7 @@ pub struct ConstBool;
 impl ConstBool {
     #[new]
     fn new(val: bool) -> (Self, PyBoolExpr) {
-        (Self, Box::new(BoolExpr::BoolLit(val)).into())
+        (Self, Box::new(BoolExpr::BoolLit(argus_core::expr::BoolLit(val))).into())
     }
 }
 
@@ -249,7 +265,10 @@ pub struct VarBool;
 impl VarBool {
     #[new]
     fn new(name: String) -> (Self, PyBoolExpr) {
-        (Self, Box::new(BoolExpr::BoolVar { name }).into())
+        (
+            Self,
+            Box::new(BoolExpr::BoolVar(argus_core::expr::BoolVar { name })).into(),
+        )
     }
 }
 
@@ -265,7 +284,10 @@ impl Cmp {
         let op = op.0;
         let lhs = lhs.0;
         let rhs = rhs.0;
-        (Self, Box::new(BoolExpr::Cmp { op, lhs, rhs }).into())
+        (
+            Self,
+            Box::new(BoolExpr::Cmp(argus_core::expr::Cmp { op, lhs, rhs })).into(),
+        )
     }
 }
 
@@ -310,7 +332,7 @@ impl Not {
     #[new]
     fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
         let arg = arg.0;
-        (Self, PyBoolExpr(Box::new(BoolExpr::Not { arg })))
+        (Self, PyBoolExpr(Box::new(BoolExpr::Not(argus_core::expr::Not { arg }))))
     }
 }
 
@@ -322,7 +344,10 @@ impl And {
     #[new]
     fn new(args: Vec<PyBoolExpr>) -> (Self, PyBoolExpr) {
         let args: Vec<BoolExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, PyBoolExpr(Box::new(BoolExpr::And { args })))
+        (
+            Self,
+            PyBoolExpr(Box::new(BoolExpr::And(argus_core::expr::And { args }))),
+        )
     }
 }
 
@@ -334,7 +359,7 @@ impl Or {
     #[new]
     fn new(args: Vec<PyBoolExpr>) -> (Self, PyBoolExpr) {
         let args: Vec<BoolExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, PyBoolExpr(Box::new(BoolExpr::Or { args })))
+        (Self, PyBoolExpr(Box::new(BoolExpr::Or(argus_core::expr::Or { args }))))
     }
 }
 
@@ -346,7 +371,10 @@ impl Next {
     #[new]
     fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
         let arg = arg.0;
-        (Self, PyBoolExpr(Box::new(BoolExpr::Next { arg })))
+        (
+            Self,
+            PyBoolExpr(Box::new(BoolExpr::Next(argus_core::expr::Next { arg }))),
+        )
     }
 }
 
@@ -356,14 +384,18 @@ pub struct Always;
 #[pymethods]
 impl Always {
     #[new]
-    fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
+    #[pyo3(signature = (arg, *, interval=(None, None)))]
+    fn new(arg: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> (Self, PyBoolExpr) {
         let arg = arg.0;
+        let interval: Interval = match interval {
+            (None, None) => (..).into(),
+            (None, Some(b)) => (..Duration::from_secs_f64(b)).into(),
+            (Some(a), None) => (Duration::from_secs_f64(a)..).into(),
+            (Some(a), Some(b)) => (Duration::from_secs_f64(a)..Duration::from_secs_f64(b)).into(),
+        };
         (
             Self,
-            PyBoolExpr(Box::new(BoolExpr::Always {
-                arg,
-                interval: (..).into(),
-            })),
+            PyBoolExpr(Box::new(BoolExpr::Always(argus_core::expr::Always { arg, interval }))),
         )
     }
 }
@@ -374,14 +406,21 @@ pub struct Eventually;
 #[pymethods]
 impl Eventually {
     #[new]
-    fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
+    #[pyo3(signature = (arg, *, interval=(None, None)))]
+    fn new(arg: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> (Self, PyBoolExpr) {
         let arg = arg.0;
+        let interval: Interval = match interval {
+            (None, None) => (..).into(),
+            (None, Some(b)) => (..Duration::from_secs_f64(b)).into(),
+            (Some(a), None) => (Duration::from_secs_f64(a)..).into(),
+            (Some(a), Some(b)) => (Duration::from_secs_f64(a)..Duration::from_secs_f64(b)).into(),
+        };
         (
             Self,
-            PyBoolExpr(Box::new(BoolExpr::Eventually {
+            PyBoolExpr(Box::new(BoolExpr::Eventually(argus_core::expr::Eventually {
                 arg,
-                interval: (..).into(),
-            })),
+                interval,
+            }))),
         )
     }
 }
@@ -392,16 +431,23 @@ pub struct Until;
 #[pymethods]
 impl Until {
     #[new]
-    fn new(lhs: PyBoolExpr, rhs: PyBoolExpr) -> (Self, PyBoolExpr) {
+    #[pyo3(signature = (lhs, rhs, *, interval=(None, None)))]
+    fn new(lhs: PyBoolExpr, rhs: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> (Self, PyBoolExpr) {
         let lhs = lhs.0;
         let rhs = rhs.0;
+        let interval: Interval = match interval {
+            (None, None) => (..).into(),
+            (None, Some(b)) => (..Duration::from_secs_f64(b)).into(),
+            (Some(a), None) => (Duration::from_secs_f64(a)..).into(),
+            (Some(a), Some(b)) => (Duration::from_secs_f64(a)..Duration::from_secs_f64(b)).into(),
+        };
         (
             Self,
-            PyBoolExpr(Box::new(BoolExpr::Until {
+            PyBoolExpr(Box::new(BoolExpr::Until(argus_core::expr::Until {
                 lhs,
                 rhs,
-                interval: (..).into(),
-            })),
+                interval,
+            }))),
         )
     }
 }

@@ -13,7 +13,7 @@ impl From<PyArgusError> for PyErr {
     fn from(value: PyArgusError) -> Self {
         use argus_core::Error::*;
         match value.0 {
-            err @ (IncompleteArgs | InvalidOperation | IdentifierRedeclaration) => {
+            err @ (IncompleteArgs | InvalidOperation | IdentifierRedeclaration | InvalidInterval { reason: _ }) => {
                 PyValueError::new_err(err.to_string())
             }
             err @ (InvalidPushToSignal
