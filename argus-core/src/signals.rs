@@ -263,7 +263,7 @@ impl<T> Signal<T> {
     /// Augment synchronization points with time points where signals intersect
     pub fn sync_with_intersection<Interp>(&self, other: &Signal<T>) -> Option<Vec<Duration>>
     where
-        T: PartialOrd + Copy,
+        T: PartialOrd + Clone,
         Interp: FindIntersectionMethod<T>,
     {
         use core::cmp::Ordering::*;
@@ -289,12 +289,12 @@ impl<T> Signal<T> {
                 if let (Less, Greater) | (Greater, Less) = (last, ord) {
                     // Find the point of intersection between the points.
                     let a = utils::Neighborhood {
-                        first: self.at(tm1).copied().map(|value| Sample { time: tm1, value }),
-                        second: self.at(*t).copied().map(|value| Sample { time: *t, value }),
+                        first: self.at(tm1).cloned().map(|value| Sample { time: tm1, value }),
+                        second: self.at(*t).cloned().map(|value| Sample { time: *t, value }),
                     };
                     let b = utils::Neighborhood {
-                        first: other.at(tm1).copied().map(|value| Sample { time: tm1, value }),
-                        second: other.at(*t).copied().map(|value| Sample { time: *t, value }),
+                        first: other.at(tm1).cloned().map(|value| Sample { time: tm1, value }),
+                        second: other.at(*t).cloned().map(|value| Sample { time: *t, value }),
                     };
                     let intersect = Interp::find_intersection(&a, &b);
                     return_points.push(intersect.time);
@@ -309,7 +309,7 @@ impl<T> Signal<T> {
     }
 }
 
-impl<T: Copy> Signal<T> {
+impl<T: Clone> Signal<T> {
     /// Interpolate the value of the signal at the given time point
     ///
     /// If there exists a sample at the given time point then `Some(value)` is returned
@@ -324,7 +324,7 @@ impl<T: Copy> Signal<T> {
     {
         match self {
             Signal::Empty => None,
-            Signal::Constant { value } => Some(*value),
+            Signal::Constant { value } => Some(value.clone()),
             Signal::Sampled { values, time_points } => {
                 assert_eq!(
                     time_points.len(),
@@ -339,7 +339,7 @@ impl<T: Copy> Signal<T> {
 
                 // We will use binary search to find the appropriate index
                 let hint_idx = match time_points.binary_search(&time) {
-                    Ok(idx) => return values.get(idx).copied(),
+                    Ok(idx) => return values.get(idx).cloned(),
                     Err(idx) => idx,
                 };
 
@@ -349,22 +349,22 @@ impl<T: Copy> Signal<T> {
                     // Sample appears before the start of the signal
                     // So, let's return just the following sample, which is the first sample
                     // (since we know that the signal is non-empty).
-                    Some(values[hint_idx])
+                    Some(values[hint_idx].clone())
                 } else if hint_idx == time_points.len() {
                     // Sample appears past the end of the signal
                     // So, let's return just the preceding sample, which is the last sample
                     // (since we know the signal is non-empty)
-                    Some(values[hint_idx - 1])
+                    Some(values[hint_idx - 1].clone())
                 } else {
                     // The sample should exist within the signal.
                     assert!(time_points.len() >= 2, "There should be at least 2 elements");
                     let first = Sample {
                         time: time_points[hint_idx - 1],
-                        value: values[hint_idx - 1],
+                        value: values[hint_idx - 1].clone(),
                     };
                     let second = Sample {
                         time: time_points[hint_idx],
-                        value: values[hint_idx],
+                        value: values[hint_idx].clone(),
                     };
                     Interp::at(&first, &second, time)
                 }

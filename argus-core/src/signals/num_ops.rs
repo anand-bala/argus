@@ -1,104 +1,186 @@
-use num_traits::Signed;
-
 use super::interpolation::Linear;
-use super::traits::SignalAbs;
-use super::{FindIntersectionMethod, InterpolationMethod};
-use crate::signals::utils::{apply1, apply2};
+use super::{FindIntersectionMethod, InterpolationMethod, SignalAbs};
 use crate::signals::Signal;
 
-impl<T> core::ops::Neg for &Signal<T>
+impl<T> core::ops::Neg for Signal<T>
 where
-    T: Signed + Copy,
+    T: core::ops::Neg<Output = T>,
 {
     type Output = Signal<T>;
 
-    /// Negate the signal at each time point
     fn neg(self) -> Self::Output {
-        apply1(self, |v| -v)
+        use Signal::*;
+        match self {
+            Empty => Signal::Empty,
+            Constant { value } => Signal::constant(value.neg()),
+            Sampled { values, time_points } => time_points.into_iter().zip(values.into_iter().map(|v| -v)).collect(),
+        }
     }
 }
 
-impl<T> core::ops::Add for &Signal<T>
+impl<T> core::ops::Neg for &Signal<T>
 where
-    T: core::ops::Add<T, Output = T> + Copy,
+    for<'a> &'a T: core::ops::Neg<Output = T>,
+{
+    type Output = Signal<T>;
+
+    fn neg(self) -> Self::Output {
+        use Signal::*;
+        match self {
+            Empty => Signal::Empty,
+            Constant { value } => Signal::constant(value.neg()),
+            Sampled { values, time_points } => time_points
+                .iter()
+                .copied()
+                .zip(values.iter().map(|v| v.neg()))
+                .collect(),
+        }
+    }
+}
+
+impl<T> core::ops::Add<&Signal<T>> for Signal<T>
+where
+    T: Clone,
+    for<'a, 'b> &'a T: core::ops::Add<&'b T, Output = T>,
     Linear: InterpolationMethod<T>,
 {
     type Output = Signal<T>;
 
     /// Add the given signal with another
-    fn add(self, rhs: Self) -> Self::Output {
-        apply2::<_, _, _, Linear>(self, rhs, |lhs, rhs| lhs + rhs)
+    fn add(self, other: &Signal<T>) -> Signal<T> {
+        self.binary_op::<_, _, Linear>(other, |lhs, rhs| lhs + rhs)
     }
 }
 
-impl<T> core::ops::Mul for &Signal<T>
+impl<T> core::ops::Add<&Signal<T>> for &Signal<T>
 where
-    T: core::ops::Mul<T, Output = T> + Copy,
+    T: Clone,
+    for<'a, 'b> &'a T: core::ops::Add<&'b T, Output = T>,
+    Linear: InterpolationMethod<T>,
+{
+    type Output = Signal<T>;
+
+    /// Add the given signal with another
+    fn add(self, other: &Signal<T>) -> Signal<T> {
+        self.binary_op::<_, _, Linear>(other, |lhs, rhs| lhs + rhs)
+    }
+}
+
+impl<T> core::ops::Mul<&Signal<T>> for Signal<T>
+where
+    for<'a, 'b> &'a T: core::ops::Mul<&'b T, Output = T>,
+    T: Clone,
     Linear: InterpolationMethod<T>,
 {
     type Output = Signal<T>;
 
     /// Multiply the given signal with another
-    fn mul(self, rhs: Self) -> Self::Output {
-        apply2::<_, _, _, Linear>(self, rhs, |lhs, rhs| lhs * rhs)
+    fn mul(self, rhs: &Signal<T>) -> Signal<T> {
+        self.binary_op::<_, _, Linear>(rhs, |lhs, rhs| lhs * rhs)
     }
 }
 
-impl<T> core::ops::Sub for &Signal<T>
+impl<T> core::ops::Mul<&Signal<T>> for &Signal<T>
 where
-    T: core::ops::Sub<T, Output = T> + Copy + PartialOrd,
+    for<'a, 'b> &'a T: core::ops::Mul<&'b T, Output = T>,
+    T: Clone,
+    Linear: InterpolationMethod<T>,
+{
+    type Output = Signal<T>;
+
+    /// Multiply the given signal with another
+    fn mul(self, rhs: &Signal<T>) -> Signal<T> {
+        self.binary_op::<_, _, Linear>(rhs, |lhs, rhs| lhs * rhs)
+    }
+}
+
+impl<T> core::ops::Sub<&Signal<T>> for &Signal<T>
+where
+    for<'a, 'b> &'a T: core::ops::Sub<&'b T, Output = T>,
+    T: Clone + PartialOrd,
     Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
 {
     type Output = Signal<T>;
 
     /// Subtract the given signal with another
-    fn sub(self, rhs: Self) -> Self::Output {
-        // This has to be manually implemented and cannot use the apply2 functions.
+    fn sub(self, other: &Signal<T>) -> Signal<T> {
+        // This has to be manually implemented and cannot use the binary_op functions.
         // This is because if we have two signals that cross each other, then there is
         // an intermediate point where the two signals are equal. This point must be
         // added to the signal appropriately.
-
-        // If either of the signals are empty, we return an empty signal.
-        if self.is_empty() || rhs.is_empty() {
-            return Signal::new();
+        use Signal::*;
+        match (self, other) {
+            // If either of the signals are empty, we return an empty signal.
+            (Empty, _) | (_, Empty) => Signal::Empty,
+            (Constant { value: v1 }, Constant { value: v2 }) => Signal::constant(v1 - v2),
+            (lhs, rhs) => {
+                // the union of the sample points in self and other
+                let sync_points = lhs.sync_with_intersection::<Linear>(rhs).unwrap();
+                sync_points
+                    .into_iter()
+                    .map(|t| {
+                        let lhs = lhs.interpolate_at::<Linear>(t).unwrap();
+                        let rhs = rhs.interpolate_at::<Linear>(t).unwrap();
+                        (t, &lhs - &rhs)
+                    })
+                    .collect()
+            }
         }
-
-        // the union of the sample points in self and other
-        let sync_points = self.sync_with_intersection::<Linear>(rhs).unwrap();
-        sync_points
-            .into_iter()
-            .map(|t| {
-                let lhs = self.interpolate_at::<Linear>(t).unwrap();
-                let rhs = rhs.interpolate_at::<Linear>(t).unwrap();
-                (t, lhs - rhs)
-            })
-            .collect()
     }
 }
 
-impl<T> core::ops::Div for &Signal<T>
+impl<T> core::ops::Sub<&Signal<T>> for Signal<T>
 where
-    T: core::ops::Div<T, Output = T> + Copy,
+    for<'a, 'b> &'a T: core::ops::Sub<&'b T, Output = T>,
+    T: Clone + PartialOrd,
+    Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
+{
+    type Output = Signal<T>;
+
+    /// Subtract the given signal with another
+    fn sub(self, other: &Signal<T>) -> Signal<T> {
+        <&Self as core::ops::Sub>::sub(&self, other)
+    }
+}
+
+impl<T> core::ops::Div<&Signal<T>> for Signal<T>
+where
+    for<'a, 'b> &'a T: core::ops::Div<&'b T, Output = T>,
+    T: Clone,
     Linear: InterpolationMethod<T>,
 {
     type Output = Signal<T>;
 
     /// Divide the given signal with another
-    fn div(self, rhs: Self) -> Self::Output {
-        apply2::<_, _, _, Linear>(self, rhs, |lhs, rhs| lhs / rhs)
+    fn div(self, rhs: &Signal<T>) -> Self {
+        self.binary_op::<_, _, Linear>(rhs, |lhs, rhs| lhs / rhs)
     }
 }
 
-impl<T> num_traits::Pow<Self> for &Signal<T>
+impl<T> core::ops::Div<&Signal<T>> for &Signal<T>
 where
-    T: num_traits::Pow<T, Output = T> + Copy,
+    for<'a, 'b> &'a T: core::ops::Div<&'b T, Output = T>,
+    T: Clone,
     Linear: InterpolationMethod<T>,
 {
     type Output = Signal<T>;
 
+    /// Divide the given signal with another
+    fn div(self, rhs: &Signal<T>) -> Signal<T> {
+        self.binary_op::<_, _, Linear>(rhs, |lhs, rhs| lhs / rhs)
+    }
+}
+
+impl<T> Signal<T>
+where
+    for<'a, 'b> &'a T: num_traits::Pow<&'b T, Output = T>,
+    T: Clone,
+    Linear: InterpolationMethod<T>,
+{
     /// Returns the values in `self` to the power of the values in `other`
-    fn pow(self, other: Self) -> Self::Output {
-        apply2::<_, _, _, Linear>(self, other, |lhs, rhs| lhs.pow(rhs))
+    pub fn pow(&self, other: &Self) -> Self {
+        use num_traits::Pow;
+        self.binary_op::<_, _, Linear>(other, |lhs, rhs| lhs.pow(rhs))
     }
 }
 
@@ -107,8 +189,8 @@ macro_rules! signal_abs_impl {
         $(
         impl SignalAbs for Signal<$ty> {
             /// Return the absolute value for each sample in the signal
-            fn abs(&self) -> Signal<$ty> {
-                apply1(self, |v| v.abs())
+            fn abs(self) -> Signal<$ty> {
+                self.unary_op(|v| v.abs())
             }
         }
         )*
@@ -119,7 +201,7 @@ signal_abs_impl!(i64, f32, f64);
 
 impl SignalAbs for Signal<u64> {
     /// Return the absolute value for each sample in the signal
-    fn abs(&self) -> Signal<u64> {
-        apply1(self, |v| v)
+    fn abs(self) -> Signal<u64> {
+        self.unary_op(|v| v)
     }
 }

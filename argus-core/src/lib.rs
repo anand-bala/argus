@@ -87,6 +87,16 @@ pub enum Error {
     },
 }
 
+impl Error {
+    /// An [`InvalidCast`](Error::InvalidCast) error from `T` to `U`.
+    pub fn invalid_cast<T, U>() -> Self {
+        Self::InvalidCast {
+            from: std::any::type_name::<T>(),
+            to: std::any::type_name::<U>(),
+        }
+    }
+}
+
 /// Alias for [`Error`](enum@Error)
 pub type ArgusError = Error;
 /// Alias for [`Result<T, ArgusError>`]

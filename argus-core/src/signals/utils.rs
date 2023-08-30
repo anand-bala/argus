@@ -24,54 +24,46 @@ pub struct Neighborhood<T> {
     pub second: Option<Sample<T>>,
 }
 
-#[inline]
-pub fn apply1<T, U, F>(signal: &Signal<T>, op: F) -> Signal<U>
-where
-    T: Copy,
-    F: Fn(T) -> U,
-    Signal<U>: std::iter::FromIterator<(Duration, U)>,
-{
-    match signal {
-        Signal::Empty => Signal::Empty,
-        Signal::Constant { value } => Signal::Constant { value: op(*value) },
-        Signal::Sampled { values, time_points } => {
-            zip(time_points.iter().copied(), values.iter().map(|v| op(*v))).collect()
+impl<T> Signal<T> {
+    pub(crate) fn unary_op<U, F>(self, op: F) -> Signal<U>
+    where
+        F: Fn(T) -> U,
+        Signal<U>: std::iter::FromIterator<(Duration, U)>,
+    {
+        use Signal::*;
+        match self {
+            Empty => Signal::Empty,
+            Constant { value } => Signal::constant(op(value)),
+            Sampled { values, time_points } => zip(time_points.into_iter(), values.into_iter().map(op)).collect(),
         }
     }
-}
 
-#[inline]
-pub fn apply2<'a, T, U, F, Interp>(lhs: &'a Signal<T>, rhs: &'a Signal<T>, op: F) -> Signal<U>
-where
-    T: Copy,
-    U: Copy,
-    F: Fn(T, T) -> U,
-    Interp: InterpolationMethod<T>,
-{
-    use Signal::*;
-    // If either of the signals are empty, we return an empty signal.
-    if lhs.is_empty() || rhs.is_empty() {
-        // Intersection with empty signal should yield an empty signal
-        return Signal::<U>::new();
-    }
-    match (lhs, rhs) {
-        // If either of the signals are empty, we return an empty signal.
-        (Empty, _) | (_, Empty) => Signal::new(),
-        (Constant { value: v1 }, Constant { value: v2 }) => Signal::constant(op(*v1, *v2)),
-        (lhs, rhs) => {
-            // We determine the range of the signal (as the output signal can only be
-            // defined in the domain where both signals are defined).
-            let time_points = lhs.sync_points(rhs).unwrap();
-            // Now, at each of the merged time points, we sample each signal and operate on
-            // them
-            time_points
-                .into_iter()
-                .map(|t| {
-                    let v1 = lhs.interpolate_at::<Interp>(*t).unwrap();
-                    let v2 = rhs.interpolate_at::<Interp>(*t).unwrap();
-                    (*t, op(v1, v2))
-                })
-                .collect()
+    pub(crate) fn binary_op<U, F, Interp>(&self, other: &Signal<T>, op: F) -> Signal<U>
+    where
+        T: Clone,
+        F: Fn(&T, &T) -> U,
+        Interp: InterpolationMethod<T>,
+    {
+        use Signal::*;
+        match (self, other) {
+            // If either of the signals are empty, we return an empty signal.
+            (Empty, _) | (_, Empty) => Signal::Empty,
+            (Constant { value: v1 }, Constant { value: v2 }) => Signal::constant(op(v1, v2)),
+            (lhs, rhs) => {
+                // We determine the range of the signal (as the output signal can only be
+                // defined in the domain where both signals are defined).
+                let time_points = lhs.sync_points(rhs).unwrap();
+                // Now, at each of the merged time points, we sample each signal and operate on
+                // them
+                time_points
+                    .into_iter()
+                    .map(|t| {
+                        let v1 = lhs.interpolate_at::<Interp>(*t).unwrap();
+                        let v2 = rhs.interpolate_at::<Interp>(*t).unwrap();
+                        (*t, op(&v1, &v2))
+                    })
+                    .collect()
+            }
         }
     }
 }

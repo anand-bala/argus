@@ -8,7 +8,6 @@ use paste::paste;
 
 use super::utils::Neighborhood;
 use super::{Sample, Signal};
-use crate::ArgusResult;
 
 /// Trait implemented by interpolation strategies
 pub trait InterpolationMethod<T> {
@@ -85,41 +84,8 @@ pub trait SignalMinMax<Rhs = Self> {
     fn max(&self, rhs: &Rhs) -> Self::Output;
 }
 
-/// Trait for converting between signal types
-pub trait SignalNumCast {
-    /// Try to convert the signal values/samples to `i8`
-    fn to_i8(&self) -> Option<Signal<i8>>;
-    /// Try to convert the signal values/samples to `i16`
-    fn to_i16(&self) -> Option<Signal<i16>>;
-    /// Try to convert the signal values/samples to `i32`
-    fn to_i32(&self) -> Option<Signal<i32>>;
-    /// Try to convert the signal values/samples to `i64`
-    fn to_i64(&self) -> Option<Signal<i64>>;
-    /// Try to convert the signal values/samples to `u8`
-    fn to_u8(&self) -> Option<Signal<u8>>;
-    /// Try to convert the signal values/samples to `u16`
-    fn to_u16(&self) -> Option<Signal<u16>>;
-    /// Try to convert the signal values/samples to `u32`
-    fn to_u32(&self) -> Option<Signal<u32>>;
-    /// Try to convert the signal values/samples to `u64`
-    fn to_u64(&self) -> Option<Signal<u64>>;
-    /// Try to convert the signal values/samples to `f32`
-    fn to_f32(&self) -> Option<Signal<f32>>;
-    /// Try to convert the signal values/samples to `f64`
-    fn to_f64(&self) -> Option<Signal<f64>>;
-}
-
-/// Trait to cast signal onto some type
-pub trait TrySignalCast<T>: Sized + SignalNumCast {
-    /// Try to cast the given signal to another numeric type.
-    ///
-    /// This returns a [`ArgusError::InvalidCast`](crate::Error::InvalidCast) if
-    /// some value in the signal isn't castable to the destination type.
-    fn try_cast(&self) -> ArgusResult<T>;
-}
-
 /// Trait for computing the absolute value of the samples in a signal
 pub trait SignalAbs {
     /// Compute the absolute value of the given signal
-    fn abs(&self) -> Self;
+    fn abs(self) -> Self;
 }

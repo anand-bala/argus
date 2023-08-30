@@ -1,12 +1,12 @@
 use std::cmp::Ordering;
 
 use super::interpolation::Linear;
-use super::traits::{SignalMinMax, SignalPartialOrd};
+use super::traits::SignalPartialOrd;
 use super::{FindIntersectionMethod, InterpolationMethod, Signal};
 
-impl<T> SignalPartialOrd<Self> for Signal<T>
+impl<T> SignalPartialOrd for Signal<T>
 where
-    T: PartialOrd + Copy,
+    T: PartialOrd + Clone,
     Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
 {
     fn signal_cmp<F>(&self, other: &Self, op: F) -> Option<Signal<bool>>
@@ -32,14 +32,13 @@ where
     }
 }
 
-impl<T> SignalMinMax<Self> for Signal<T>
+impl<T> Signal<T>
 where
-    T: PartialOrd + Copy,
+    T: PartialOrd + Clone,
     Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
 {
-    type Output = Signal<T>;
-
-    fn min(&self, other: &Self) -> Self::Output {
+    /// Compute the time-wise min of two signals
+    pub fn min(&self, other: &Self) -> Self {
         let time_points = self.sync_with_intersection::<Linear>(other).unwrap();
         time_points
             .into_iter()
@@ -55,7 +54,8 @@ where
             .collect()
     }
 
-    fn max(&self, other: &Self) -> Self::Output {
+    /// Compute the time-wise max of two signals
+    pub fn max(&self, other: &Self) -> Self {
         let time_points = self.sync_with_intersection::<Linear>(other).unwrap();
         time_points
             .into_iter()

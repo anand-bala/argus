@@ -44,10 +44,7 @@ impl<'a, T> IntoIterator for &'a Signal<T> {
     }
 }
 
-impl<T> FromIterator<(Duration, T)> for Signal<T>
-where
-    T: Copy,
-{
+impl<T> FromIterator<(Duration, T)> for Signal<T> {
     /// Takes a sequence of sample points and creates a signal.
     ///
     /// # Panics
