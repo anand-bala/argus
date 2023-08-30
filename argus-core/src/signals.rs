@@ -448,7 +448,7 @@ pub mod arbitrary {
                 ts.dedup();
                 ts.into_iter()
                     .map(Duration::from_secs)
-                    .zip(values.clone().into_iter())
+                    .zip(values.clone())
                     .collect::<Vec<_>>()
             })
         })

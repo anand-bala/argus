@@ -235,7 +235,7 @@ fn compute_timed_eventually(signal: Signal<bool>, a: Duration, b: Option<Duratio
                     )
                 }
             }
-            Signal::try_from_iter(ret_vals.into_iter())
+            Signal::try_from_iter(ret_vals)
         }
         None => {
             // Shift the signal to the left by `a` and then run the untimed eventually.

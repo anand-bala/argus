@@ -34,7 +34,7 @@ impl<T> Signal<T> {
         match self {
             Empty => Signal::Empty,
             Constant { value } => Signal::constant(op(value)),
-            Sampled { values, time_points } => zip(time_points.into_iter(), values.into_iter().map(op)).collect(),
+            Sampled { values, time_points } => zip(time_points, values.into_iter().map(op)).collect(),
         }
     }
 
