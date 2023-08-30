@@ -567,7 +567,7 @@ mod tests {
 
         let trace = MyTrace { signals };
 
-        let rob = dbg!(QuantitativeSemantics::eval(&spec, &trace).unwrap());
+        let rob = QuantitativeSemantics::eval(&spec, &trace).unwrap();
         let expected = Signal::from_iter(vec![
             (Duration::from_secs_f64(0.0), 0.0 - 1.3),
             (Duration::from_secs_f64(0.7), 0.0 - 3.0),
@@ -609,6 +609,76 @@ mod tests {
                 (Duration::from_secs_f64(1.596296296), 1.7), // interpolated at
                 (Duration::from_secs_f64(2.1), 1.7),
             ]);
+
+            assert_equal(&rob, &expected);
+        }
+    }
+
+    #[test]
+    fn unbounded_until() {
+        let mut ctx = ExprBuilder::new();
+
+        let a = ctx.int_var("a".to_owned()).unwrap();
+        let b = ctx.int_var("b".to_owned()).unwrap();
+        let lhs = ctx.make_gt(a, ctx.int_const(0));
+        let rhs = ctx.make_gt(b, ctx.int_const(0));
+        let spec = ctx.make_until(lhs, rhs);
+
+        {
+            let signals = HashMap::from_iter(vec![
+                (
+                    "a".to_owned(),
+                    Box::new(Signal::<i64>::from_iter(vec![
+                        (Duration::from_secs(0), 2),
+                        (Duration::from_secs(5), 2),
+                    ])) as Box<dyn AnySignal>,
+                ),
+                (
+                    "b".to_owned(),
+                    Box::new(Signal::<i64>::from_iter(vec![
+                        (Duration::from_secs(0), 4),
+                        (Duration::from_secs(5), 4),
+                    ])) as Box<dyn AnySignal>,
+                ),
+            ]);
+
+            let trace = MyTrace { signals };
+            let rob = QuantitativeSemantics::eval(&spec, &trace).unwrap();
+
+            let expected = Signal::from_iter(vec![(Duration::from_secs(0), 2), (Duration::from_secs(5), 2)])
+                .num_cast::<f64>()
+                .unwrap();
+
+            assert_equal(&rob, &expected);
+        }
+
+        {
+            let signals = HashMap::from_iter(vec![
+                (
+                    "a".to_owned(),
+                    Box::new(Signal::<i64>::from_iter(vec![
+                        (Duration::from_secs_f64(1.0), 1),
+                        (Duration::from_secs_f64(3.5), 7),
+                        (Duration::from_secs_f64(4.7), 3),
+                        (Duration::from_secs_f64(5.3), 5),
+                        (Duration::from_secs_f64(6.2), 1),
+                    ])) as Box<dyn AnySignal>,
+                ),
+                (
+                    "b".to_owned(),
+                    Box::new(Signal::<i64>::from_iter(vec![
+                        (Duration::from_secs(4), 2),
+                        (Duration::from_secs(6), 3),
+                    ])) as Box<dyn AnySignal>,
+                ),
+            ]);
+
+            let trace = MyTrace { signals };
+            let rob = QuantitativeSemantics::eval(&spec, &trace).unwrap();
+
+            let expected = Signal::from_iter(vec![(Duration::from_secs(4), 3), (Duration::from_secs(6), 3)])
+                .num_cast::<f64>()
+                .unwrap();
 
             assert_equal(&rob, &expected);
         }

@@ -277,9 +277,13 @@ impl<T> Signal<T> {
         // We will now loop over the sync points, compare across signals and (if
         // an intersection happens) we will have to compute the intersection point
         for t in sync_points {
-            let lhs = self.at(*t).expect("value must be present at given time");
-            let rhs = other.at(*t).expect("values must be present at given time");
-            let ord = lhs.partial_cmp(rhs).unwrap();
+            let lhs = self
+                .interpolate_at::<Interp>(*t)
+                .unwrap_or_else(|| panic!("value must be present at given time {:?}.", t));
+            let rhs = other
+                .interpolate_at::<Interp>(*t)
+                .unwrap_or_else(|| panic!("value must be present at given time {:?}.", t));
+            let ord = lhs.partial_cmp(&rhs).unwrap();
 
             // We will check for any intersections between the current sample and the
             // previous one before we push the current sample time
@@ -289,12 +293,20 @@ impl<T> Signal<T> {
                 if let (Less, Greater) | (Greater, Less) = (last, ord) {
                     // Find the point of intersection between the points.
                     let a = utils::Neighborhood {
-                        first: self.at(tm1).cloned().map(|value| Sample { time: tm1, value }),
-                        second: self.at(*t).cloned().map(|value| Sample { time: *t, value }),
+                        first: self
+                            .interpolate_at::<Interp>(tm1)
+                            .map(|value| Sample { time: tm1, value }),
+                        second: self
+                            .interpolate_at::<Interp>(*t)
+                            .map(|value| Sample { time: *t, value }),
                     };
                     let b = utils::Neighborhood {
-                        first: other.at(tm1).cloned().map(|value| Sample { time: tm1, value }),
-                        second: other.at(*t).cloned().map(|value| Sample { time: *t, value }),
+                        first: other
+                            .interpolate_at::<Interp>(tm1)
+                            .map(|value| Sample { time: tm1, value }),
+                        second: other
+                            .interpolate_at::<Interp>(*t)
+                            .map(|value| Sample { time: *t, value }),
                     };
                     let intersect = Interp::find_intersection(&a, &b);
                     return_points.push(intersect.time);

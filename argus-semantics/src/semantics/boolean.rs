@@ -124,9 +124,28 @@ fn compute_always(signal: Signal<bool>, interval: &Interval) -> ArgusResult<Sign
             reason: "interval is either empty or singleton",
         });
     }
-    let z1 = !signal;
-    let z2 = compute_eventually(z1, interval)?;
-    Ok(!z2)
+    let ret = match signal {
+        // if signal is empty or constant, return the signal itself.
+        // This works because if a signal is True everythere, then it must
+        // "always be true".
+        sig @ (Signal::Empty | Signal::Constant { value: _ }) => sig,
+        sig => {
+            use Bound::*;
+            if interval.is_singleton() {
+                // for singleton intervals, return the signal itself.
+                sig
+            } else if interval.is_untimed() {
+                compute_untimed_always(sig)?
+            } else if let (Included(a), Included(b)) = interval.into() {
+                compute_timed_always(sig, *a, Some(*b))?
+            } else if let (Included(a), Unbounded) = interval.into() {
+                compute_timed_always(sig, *a, None)?
+            } else {
+                unreachable!("interval should be created using Interval::new, and is_untimed checks this")
+            }
+        }
+    };
+    Ok(ret)
 }
 
 /// Compute timed always for the interval `[a, b]` (or, if `b` is `None`, `[a, ..]`.
@@ -147,7 +166,7 @@ fn compute_untimed_always(signal: Signal<bool>) -> ArgusResult<Signal<bool>> {
     };
     // Compute the & in a expanding window fashion from the back
     for i in (0..(time_points.len() - 1)).rev() {
-        values[i] &= values[i + 1];
+        values[i] = values[i + 1].min(values[i]);
     }
     Ok(Signal::Sampled { values, time_points })
 }
@@ -237,7 +256,7 @@ fn compute_untimed_eventually(signal: Signal<bool>) -> ArgusResult<Signal<bool>>
     };
     // Compute the | in a expanding window fashion from the back
     for i in (0..(time_points.len() - 1)).rev() {
-        values[i] |= values[i + 1];
+        values[i] = values[i + 1].max(values[i]);
     }
     Ok(Signal::Sampled { values, time_points })
 }
@@ -247,27 +266,7 @@ fn compute_until(lhs: Signal<bool>, rhs: Signal<bool>, interval: &Interval) -> A
     let ret = match (lhs, rhs) {
         // If either signals are empty, return empty
         (sig @ Signal::Empty, _) | (_, sig @ Signal::Empty) => sig,
-        (_, Signal::Constant { value: false }) => Signal::const_false(),
-        (_, Signal::Constant { value: true }) => Signal::const_true(),
-
-        (Signal::Constant { value: true }, sig) => {
-            // This is the identity for eventually
-            compute_eventually(sig, interval)?
-        }
-        (Signal::Constant { value: false }, sig) => {
-            // This is the identity for next
-            compute_next(sig)?
-        }
-        (
-            lhs @ Signal::Sampled {
-                values: _,
-                time_points: _,
-            },
-            rhs @ Signal::Sampled {
-                values: _,
-                time_points: _,
-            },
-        ) => {
+        (lhs, rhs) => {
             use Bound::*;
             if interval.is_untimed() {
                 compute_untimed_until(lhs, rhs)?
@@ -309,21 +308,39 @@ fn compute_timed_until(
             // Then compute until [a, \infty) (lhs, rhs)
             let unt_a_inf = compute_timed_until(lhs, rhs, a, None)?;
             // Then & them
-            Ok(&ev_a_b_rhs & &unt_a_inf)
+            Ok(ev_a_b_rhs.min(&unt_a_inf))
         }
         None => {
+            assert_ne!(a, Duration::ZERO, "untimed case wasn't handled for Until");
             // First compute untimed until (lhs, rhs)
             let untimed_until = compute_untimed_until(lhs, rhs)?;
             // Compute G [0, a]
-            compute_untimed_always(untimed_until)
+            compute_timed_always(untimed_until, Duration::ZERO, Some(a))
         }
     }
 }
 
 /// Compute untimed until
 fn compute_untimed_until(lhs: Signal<bool>, rhs: Signal<bool>) -> ArgusResult<Signal<bool>> {
-    let sync_points = lhs.sync_with_intersection::<Linear>(&rhs);
-    todo!()
+    let sync_points = lhs.sync_with_intersection::<Linear>(&rhs).unwrap();
+    let mut ret_samples = Vec::with_capacity(sync_points.len());
+    let expected_len = sync_points.len();
+
+    let mut next = false;
+
+    for (i, t) in sync_points.into_iter().enumerate().rev() {
+        let v1 = lhs.interpolate_at::<Linear>(t).unwrap();
+        let v2 = rhs.interpolate_at::<Linear>(t).unwrap();
+
+        let z = (v1 && v2) || (v1 && next);
+        if z == next && i < (expected_len - 2) {
+            ret_samples.pop();
+        }
+        ret_samples.push((t, z));
+        next = z;
+    }
+
+    Signal::<bool>::try_from_iter(ret_samples.into_iter().rev())
 }
 
 #[cfg(test)]

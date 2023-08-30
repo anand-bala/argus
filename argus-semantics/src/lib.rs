@@ -8,4 +8,5 @@ pub mod semantics;
 pub mod traits;
 pub mod utils;
 
+pub use semantics::{BooleanSemantics, QuantitativeSemantics};
 pub use traits::Trace;

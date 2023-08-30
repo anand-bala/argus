@@ -113,8 +113,8 @@ macro_rules! interpolate_for_num {
 
                 // We need to do stable linear interpolation
                 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0811r3.html
-                let a: f64 = cast(first.value).unwrap();
-                let b: f64 = cast(second.value).unwrap();
+                let a: f64 = cast(first.value).unwrap_or_else(|| panic!("unable to cast {:?} to f64", first.value));
+                let b: f64 = cast(second.value).unwrap_or_else(|| panic!("unable to cast {:?} to f64", second.value));
 
                 // Set t to a value in [0, 1]
                 let t = (at - t1) / (t2 - t1);
@@ -137,20 +137,20 @@ macro_rules! interpolate_for_num {
                 // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
                 use num_traits::cast;
 
-                let Sample { time: t1, value: y1 } = a.first.unwrap();
-                let Sample { time: t2, value: y2 } = a.second.unwrap();
-                let Sample { time: t3, value: y3 } = b.first.unwrap();
-                let Sample { time: t4, value: y4 } = b.second.unwrap();
+                let Sample { time: t1, value: y1 } = (a.first).unwrap();
+                let Sample { time: t2, value: y2 } = (a.second).unwrap();
+                let Sample { time: t3, value: y3 } = (b.first).unwrap();
+                let Sample { time: t4, value: y4 } = (b.second).unwrap();
 
                 let t1 = t1.as_secs_f64();
                 let t2 = t2.as_secs_f64();
                 let t3 = t3.as_secs_f64();
                 let t4 = t4.as_secs_f64();
 
-                let y1: f64 = cast(y1).unwrap();
-                let y2: f64 = cast(y2).unwrap();
-                let y3: f64 = cast(y3).unwrap();
-                let y4: f64 = cast(y4).unwrap();
+                let y1: f64 = cast(y1).unwrap_or_else(|| panic!("unable to cast {:?} to f64", y1));
+                let y2: f64 = cast(y2).unwrap_or_else(|| panic!("unable to cast {:?} to f64", y2));
+                let y3: f64 = cast(y3).unwrap_or_else(|| panic!("unable to cast {:?} to f64", y3));
+                let y4: f64 = cast(y4).unwrap_or_else(|| panic!("unable to cast {:?} to f64", y4));
 
                 let denom = ((t1 - t2) * (y3 - y4)) - ((y1 - y2) * (t3 - t4));
 
