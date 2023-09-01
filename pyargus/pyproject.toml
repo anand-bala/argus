@@ -24,7 +24,7 @@ dev = [
   "black",
 ]
 
-test = ["pytest", "pytest-cov", "hypothesis"]
+test = ["pytest", "pytest-cov", "hypothesis", "numpy"]
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
@@ -37,6 +37,7 @@ module-name = "argus._argus"
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
+testpaths = ["tests"]
 
 [tool.mypy]
 # ignore_missing_imports = true

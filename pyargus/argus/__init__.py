@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Type, Union
+from typing import List, Optional, Tuple, Type, Union
 
 from argus import _argus
 from argus._argus import DType as DType
@@ -12,8 +12,10 @@ try:
 except AttributeError:
     ...
 
+AllowedDtype = Union[bool, int, float]
 
-def declare_var(name: str, dtype: Union[DType, Type[Union[bool, int, float]]]) -> Union[VarBool, VarInt, VarUInt, VarFloat]:
+
+def declare_var(name: str, dtype: Union[DType, Type[AllowedDtype]]) -> Union[VarBool, VarInt, VarUInt, VarFloat]:
     """Declare a variable with the given name and type"""
     if isinstance(dtype, type):
         if dtype == bool:
@@ -34,7 +36,7 @@ def declare_var(name: str, dtype: Union[DType, Type[Union[bool, int, float]]]) -
     raise TypeError(f"unsupported variable type `{dtype}`")
 
 
-def literal(value: Union[bool, int, float]) -> Union[ConstBool, ConstInt, ConstUInt, ConstFloat]:
+def literal(value: AllowedDtype) -> Union[ConstBool, ConstInt, ConstUInt, ConstFloat]:
     """Create a literal expression for the given value"""
     if isinstance(value, bool):
         return ConstBool(value)
@@ -46,14 +48,18 @@ def literal(value: Union[bool, int, float]) -> Union[ConstBool, ConstInt, ConstU
 
 
 def signal(
-    dtype: Union[DType, Type[Union[bool, int, float]]],
+    dtype: Union[DType, Type[AllowedDtype]],
     *,
-    value: Optional[Union[bool, int, float]] = None,
+    data: Optional[Union[AllowedDtype, List[Tuple[float, AllowedDtype]]]] = None,
 ) -> Signal:
     """Create a signal of the given type
 
-    If a `value` isn't given the signal created is assumed to be a sampled signal, i.e., new data points can be pushed to the
-    signal. Otherwise, the signal is constant with the given value.
+    Parameters
+    ----------
+
+    data :
+        If a constant scalar is given, a constant signal is created. Otherwise, if a list of sample points are given, a sampled
+        signal is constructed. Otherwise, an empty signal is created.
     """
     if isinstance(dtype, type):
         if dtype == bool:
@@ -63,27 +69,30 @@ def signal(
         elif dtype == float:
             dtype = DType.Float
 
+    factory: Type[Union[BoolSignal, UnsignedIntSignal, IntSignal, FloatSignal]]
+    expected_type: Type[AllowedDtype]
     if dtype == DType.Bool:
-        if value is None:
-            return BoolSignal.from_samples([])
-        else:
-            assert isinstance(value, bool)
-            return BoolSignal.constant(value)
-    elif dtype == DType.Int:
-        if value is None:
-            return IntSignal.from_samples([])
-        else:
-            assert isinstance(value, int)
-            return IntSignal.constant(value)
+        factory = BoolSignal
+        expected_type = bool
     elif dtype == DType.UnsignedInt:
-        if value is None:
-            return UnsignedIntSignal.from_samples([])
-        else:
-            assert isinstance(value, int)
-            return UnsignedIntSignal.constant(value)
+        factory = UnsignedIntSignal
+        expected_type = int
+    elif dtype == DType.Int:
+        factory = IntSignal
+        expected_type = int
     elif dtype == DType.Float:
-        return FloatSignal.from_samples([])
-    raise TypeError(f"unsupported signal type `{dtype}`")
+        factory = FloatSignal
+        expected_type = float
+    else:
+        raise ValueError(f"unsupported dtype {dtype}")
+
+    if data is None:
+        return factory.from_samples([])
+    elif isinstance(data, (list, tuple)):
+        return factory.from_samples(data)  # type: ignore
+    else:
+        assert isinstance(data, expected_type)
+        return factory.constant(data)  # type: ignore
 
 
 __all__ = [

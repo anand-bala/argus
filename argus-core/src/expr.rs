@@ -1,8 +1,6 @@
 //! Expression tree for Argus specifications
 
 use std::collections::HashSet;
-use std::ops::Bound;
-use std::time::Duration;
 
 mod bool_expr;
 pub mod iter;
@@ -361,6 +359,9 @@ pub mod arbitrary {
     #![allow(clippy::arc_with_non_send_sync)]
 
     //! Helper functions to generate arbitrary expressions using [`mod@proptest`].
+    use core::ops::Bound;
+    use core::time::Duration;
+
     use proptest::prelude::*;
 
     use super::*;

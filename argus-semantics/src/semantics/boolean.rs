@@ -332,6 +332,7 @@ fn compute_untimed_until(lhs: Signal<bool>, rhs: Signal<bool>) -> ArgusResult<Si
         let v1 = lhs.interpolate_at::<Linear>(t).unwrap();
         let v2 = rhs.interpolate_at::<Linear>(t).unwrap();
 
+        #[allow(clippy::nonminimal_bool)]
         let z = (v1 && v2) || (v1 && next);
         if z == next && i < (expected_len - 2) {
             ret_samples.pop();
