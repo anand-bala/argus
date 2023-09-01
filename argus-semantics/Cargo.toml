@@ -6,9 +6,9 @@ edition = "2021"
 [dependencies]
 argus-core = { version = "0.1.0", path = "../argus-core" }
 itertools = "0.10.5"
-num-traits = "0.2.15"
-paste = "1.0.12"
+num-traits = "0.2.16"
+paste = "1.0.14"
 
 [dev-dependencies]
 argus-core = { path = "../argus-core", features = ["arbitrary"] }
-proptest = "1.1"
+proptest = "1.2"
