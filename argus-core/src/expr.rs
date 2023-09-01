@@ -356,7 +356,6 @@ impl ExprBuilder {
 
 #[cfg(any(test, feature = "arbitrary"))]
 pub mod arbitrary {
-    #![allow(clippy::arc_with_non_send_sync)]
 
     //! Helper functions to generate arbitrary expressions using [`mod@proptest`].
     use core::ops::Bound;
