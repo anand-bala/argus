@@ -13,11 +13,12 @@ classifiers = [
 dev = [
   # Type check
   "mypy",
+  "typing-extensions",
   # Lint code
-  "Flake8-pyproject",
   "ruff",
-  # Find likely bugs
+  "Flake8-pyproject",
   "flake8-bugbear",
+  "flake8-pyi",
   # Sort imports
   "isort",
   # Reformat
@@ -49,9 +50,12 @@ select = ["E", "F", "W", "N"]
 ignore = ["F403"]
 
 [tool.flake8]
-# line breaks before and after binary operators
-# ignore explicit stack level
-ignore = ["W503", "W504", "E203", "E231", "C901", "F403"]
+max-line-length = 127
+max-complexity = 10
+per-file-ignores = [
+  "*.py: B905, B907, B950, E203, E501, W503, W291, W293",
+  "*.pyi: B, E301, E302, E305, E501, E701, E704, W503",
+]
 # Ignore import not used when aliases are defined
 exclude = [
   # No need to traverse our git directory
@@ -69,8 +73,6 @@ exclude = [
   ".mypy_cache/",
   ".ruff_cache/",
 ]
-max-complexity = 10
-max-line-length = 127
 
 [tool.isort]
 profile = "black"

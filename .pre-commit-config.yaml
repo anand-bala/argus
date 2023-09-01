@@ -20,6 +20,7 @@ repos:
         description: Check the package for errors.
         entry: cargo check
         language: system
+        args: ["--workspace"]
         types: [rust]
         pass_filenames: false
       - id: clippy
@@ -27,7 +28,7 @@ repos:
         description: Lint rust sources
         entry: cargo clippy
         language: system
-        args: ["--", "-D", "warnings"]
+        args: ["--workspace", "--", "-D", "warnings"]
         types: [rust]
         pass_filenames: false
   - repo: https://github.com/psf/black
@@ -53,3 +54,14 @@ repos:
     rev: 'v1.5.1'
     hooks:
       - id: mypy
+        additional_dependencies:
+          - "typing-extensions>=4.0.0"
+  - repo: https://github.com/pycqa/flake8
+    rev: '6.1.0'
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - "Flake8-pyproject"
+          - "flake8-bugbear"
+          - "flake8-pyi"
+        args: ["--toml-config", "pyargus/pyproject.toml"]
