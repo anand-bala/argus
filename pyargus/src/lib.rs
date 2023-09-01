@@ -5,6 +5,7 @@ mod signals;
 use argus_core::ArgusError;
 use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
+use pyo3::types::{PyBool, PyFloat, PyInt, PyType};
 
 #[derive(derive_more::From)]
 struct PyArgusError(ArgusError);
@@ -27,13 +28,40 @@ impl From<PyArgusError> for PyErr {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "argus")]
 #[derive(Copy, Clone, Debug)]
 pub enum DType {
     Bool,
     Int,
     UnsignedInt,
     Float,
+}
+
+#[pymethods]
+impl DType {
+    #[classmethod]
+    fn convert(_: &PyType, dtype: &PyAny, py: Python<'_>) -> PyResult<Self> {
+        use DType::*;
+        if dtype.is_instance_of::<DType>() {
+            dtype.extract::<DType>()
+        } else if dtype.is_instance_of::<PyType>() {
+            let dtype = dtype.downcast_exact::<PyType>()?;
+            if dtype.is(PyType::new::<PyBool>(py)) {
+                Ok(Bool)
+            } else if dtype.is(PyType::new::<PyInt>(py)) {
+                Ok(Int)
+            } else if dtype.is(PyType::new::<PyFloat>(py)) {
+                Ok(Float)
+            } else {
+                Err(PyTypeError::new_err(format!("unsupported type {}", dtype)))
+            }
+        } else {
+            Err(PyTypeError::new_err(format!(
+                "unsupported dtype {}, expected a `type`",
+                dtype
+            )))
+        }
+    }
 }
 
 #[pymodule]

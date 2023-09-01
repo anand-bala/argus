@@ -7,17 +7,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString};
 
 use crate::expr::PyBoolExpr;
-use crate::signals::{BoolSignal, FloatSignal, IntSignal, PySignal, UnsignedIntSignal};
-use crate::{DType, PyArgusError};
-
-#[derive(Debug, Clone, derive_more::From, derive_more::TryInto)]
-#[try_into(owned, ref, ref_mut)]
-enum SignalKind {
-    Bool(Signal<bool>),
-    Int(Signal<i64>),
-    UnsignedInt(Signal<u64>),
-    Float(Signal<f64>),
-}
+use crate::signals::{BoolSignal, FloatSignal, PySignal, SignalKind};
+use crate::PyArgusError;
 
 #[pyclass(name = "Trace", module = "argus")]
 #[derive(Debug, Clone, Default)]
@@ -40,20 +31,7 @@ impl PyTrace {
                     key, e
                 ))
             })?;
-            let kind = val.borrow().kind;
-            let signal: SignalKind = match kind {
-                DType::Bool => val.downcast::<PyCell<BoolSignal>>().unwrap().borrow().0.clone().into(),
-                DType::Int => val.downcast::<PyCell<IntSignal>>().unwrap().borrow().0.clone().into(),
-                DType::UnsignedInt => val
-                    .downcast::<PyCell<UnsignedIntSignal>>()
-                    .unwrap()
-                    .borrow()
-                    .0
-                    .clone()
-                    .into(),
-                DType::Float => val.downcast::<PyCell<FloatSignal>>().unwrap().borrow().0.clone().into(),
-            };
-
+            let signal = val.borrow().signal.clone();
             signals.insert(key.to_string(), signal);
         }
 
@@ -85,12 +63,12 @@ impl Trace for PyTrace {
 #[pyfunction]
 fn eval_bool_semantics(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<BoolSignal>> {
     let sig = BooleanSemantics::eval(&expr.0, trace).map_err(PyArgusError::from)?;
-    Python::with_gil(|py| Py::new(py, (BoolSignal::from(sig), BoolSignal::super_type())))
+    Python::with_gil(|py| Py::new(py, (BoolSignal, BoolSignal::super_type(sig.into()))))
 }
 #[pyfunction]
 fn eval_robust_semantics(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<FloatSignal>> {
     let sig = QuantitativeSemantics::eval(&expr.0, trace).map_err(PyArgusError::from)?;
-    Python::with_gil(|py| Py::new(py, (FloatSignal::from(sig), FloatSignal::super_type())))
+    Python::with_gil(|py| Py::new(py, (FloatSignal, FloatSignal::super_type(sig.into()))))
 }
 
 pub fn init(_py: Python, m: &PyModule) -> PyResult<()> {

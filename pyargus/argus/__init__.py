@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple, Type, Union
 from argus import _argus
 from argus._argus import DType as DType
 from argus.exprs import ConstBool, ConstFloat, ConstInt, ConstUInt, VarBool, VarFloat, VarInt, VarUInt
-from argus.signals import BoolSignal, FloatSignal, IntSignal, Signal, UnsignedIntSignal
+from argus.signals import BoolSignal, FloatSignal, IntSignal, UnsignedIntSignal
 
 try:
     __doc__ = _argus.__doc__
@@ -51,26 +51,23 @@ def signal(
     dtype: Union[DType, Type[AllowedDtype]],
     *,
     data: Optional[Union[AllowedDtype, List[Tuple[float, AllowedDtype]]]] = None,
-) -> Signal:
+) -> Union[BoolSignal, UnsignedIntSignal, IntSignal, FloatSignal]:
     """Create a signal of the given type
 
     Parameters
     ----------
 
+    dtype:
+        Type of the signal
+
     data :
         If a constant scalar is given, a constant signal is created. Otherwise, if a list of sample points are given, a sampled
         signal is constructed. Otherwise, an empty signal is created.
     """
-    if isinstance(dtype, type):
-        if dtype == bool:
-            dtype = DType.Bool
-        elif dtype == int:
-            dtype = DType.Int
-        elif dtype == float:
-            dtype = DType.Float
-
     factory: Type[Union[BoolSignal, UnsignedIntSignal, IntSignal, FloatSignal]]
     expected_type: Type[AllowedDtype]
+
+    dtype = DType.convert(dtype)
     if dtype == DType.Bool:
         factory = BoolSignal
         expected_type = bool
@@ -89,10 +86,9 @@ def signal(
     if data is None:
         return factory.from_samples([])
     elif isinstance(data, (list, tuple)):
-        return factory.from_samples(data)  # type: ignore
-    else:
-        assert isinstance(data, expected_type)
-        return factory.constant(data)  # type: ignore
+        return factory.from_samples(data)  # type: ignore[arg-type]
+    assert isinstance(data, expected_type)
+    return factory.constant(data)  # type: ignore[arg-type]
 
 
 __all__ = [
