@@ -66,5 +66,5 @@ def test_correctly_create_signals(data: Tuple[List[Tuple[float, AllowedDtype]], 
         assert a < len(samples)
         assert b < len(samples)
     else:
-        assert signal.is_empty()
-        assert signal.at(0) is None
+        assert signal.is_empty()  # type: ignore[attr-defined]
+        assert signal.at(0) is None  # type: ignore[attr-defined]
