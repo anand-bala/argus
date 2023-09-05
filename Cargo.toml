@@ -3,8 +3,9 @@ members = [
   "argus",
   "argus-core",
   "argus-semantics",
-  "argus-automata",
   "argus-derive",
+  "argus-parser",
+  "argus-automata",
   "pyargus",
 ]
 
