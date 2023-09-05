@@ -136,10 +136,10 @@ macro_rules! impl_signals {
                 /// Create a new signal from some finite number of samples
                 #[classmethod]
                 fn from_samples(_: &PyType, samples: Vec<(f64, $ty)>) -> PyResult<Py<Self>> {
-                    let ret: Signal<$ty> = samples
+                    let ret: Signal::<$ty> = Signal::<$ty>::try_from_iter(samples
                         .into_iter()
-                        .map(|(t, v)| (Duration::from_secs_f64(t), v))
-                        .collect();
+                        .map(|(t, v)| (Duration::try_from_secs_f64(t).unwrap_or_else(|err| panic!("Value = {}, {}", t, err)), v))
+                    ).map_err(PyArgusError::from)?;
                     Python::with_gil(|py| {
                         Py::new(
                             py,
