@@ -3,7 +3,6 @@ from pathlib import Path
 import nox
 
 nox.options.default_venv_backend = "mamba"
-nox.options.sessions = ["check"]
 nox.options.reuse_existing_virtualenvs = True
 
 CURRENT_DIR = Path(__file__).parent.resolve()
@@ -21,10 +20,59 @@ def dev(session: nox.Session):
     session.run("pre-commit", "install")
 
 
-@nox.session
-def check(session: nox.Session):
-    session.conda_install("pre-commit")
-    session.run("pre-commit", "run", "-a")
+@nox.session(tags=["style", "fix"], python=False)
+def rustfmt(session: nox.Session):
+    if len(session.posargs) > 0:
+        session.run("cargo", "+nightly", "fmt", *session.posargs, external=True)
+    else:
+        session.run("cargo", "+nightly", "fmt", "--all", external=True)
+
+
+@nox.session(tags=["lint", "fix"], python=False)
+def cargo_check(session: nox.Session):
+    session.run("cargo", "check", "--workspace", external=True)
+    session.run("cargo", "clippy", "--workspace", external=True)
+
+
+@nox.session(tags=["style", "fix"])
+def black(session: nox.Session):
+    session.conda_install("black")
+    session.run("black", str(__file__))
+    with session.chdir(CURRENT_DIR / "pyargus"):
+        session.run("black", ".")
+
+
+@nox.session(tags=["style", "fix"])
+def isort(session: nox.Session):
+    session.conda_install("isort")
+    with session.chdir(CURRENT_DIR / "pyargus"):
+        session.run("isort", ".")
+
+
+@nox.session(tags=["lint"])
+def flake8(session: nox.Session):
+    session.conda_install(
+        "flake8",
+        "Flake8-pyproject",
+        "flake8-bugbear",
+        "flake8-pyi",
+    )
+    with session.chdir(CURRENT_DIR / "pyargus"):
+        session.run("flake8")
+
+
+@nox.session(tags=["lint", "fix"])
+def ruff(session: nox.Session):
+    session.conda_install("ruff")
+    with session.chdir(CURRENT_DIR / "pyargus"):
+        session.run("ruff", "--fix", "--exit-non-zero-on-fix", ".")
+
+
+@nox.session(tags=["lint"])
+def mypy(session: nox.Session):
+    session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis")
+    with session.chdir(CURRENT_DIR / "pyargus"):
+        session.run("mypy", ".")
 
 
 @nox.session
