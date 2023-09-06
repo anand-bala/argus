@@ -46,8 +46,12 @@ show_error_codes = true
 
 [tool.ruff]
 line-length = 127
-select = ["E", "F", "W", "N"]
-ignore = ["F403"]
+select = ["E", "F", "W", "N", "B", "ANN", "PYI"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.ruff.per-file-ignores]
+"*.py" = ["B905", "E203", "E501", "W291", "W293"]
+"*.pyi" = ["B", "E501", "E701"]
 
 [tool.flake8]
 max-line-length = 127

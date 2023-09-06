@@ -1,4 +1,4 @@
-from typing import List, Type, Union
+from typing import List, Tuple, Type, Union
 
 import pytest
 from hypothesis import Verbosity, given, note, settings
@@ -11,7 +11,9 @@ AllowedDtype = Union[bool, int, float]
 
 
 @composite
-def gen_samples(draw: st.DrawFn, *, min_size: int, max_size: int, dtype: Type[AllowedDtype]):
+def gen_samples(
+    draw: st.DrawFn, *, min_size: int, max_size: int, dtype: Type[AllowedDtype]
+) -> List[Tuple[float, AllowedDtype]]:
     """
     Generate arbitrary samples for a signal where the time stamps are strictly
     monotonically increasing
@@ -53,7 +55,6 @@ def gen_dtype() -> SearchStrategy[Type[AllowedDtype]]:
     return st.one_of(st.just(bool), st.just(int), st.just(float))
 
 
-@settings(verbosity=Verbosity.verbose)
 @given(st.data())
 def test_correctly_create_signals(data: st.DataObject) -> None:
     dtype = data.draw(gen_dtype())
