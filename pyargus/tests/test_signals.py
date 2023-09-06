@@ -29,7 +29,12 @@ def gen_samples(draw: st.DrawFn, *, min_size: int, max_size: int, dtype: Type[Al
 
     values = draw(st.lists(elements, min_size=min_size, max_size=max_size))
     xs = draw(
-        st.lists(st.integers(min_value=0, max_value=2**32 - 1), unique=True, min_size=len(values), max_size=len(values))
+        st.lists(
+            st.integers(min_value=0, max_value=2**32 - 1),
+            unique=True,
+            min_size=len(values),
+            max_size=len(values),
+        )
         .map(lambda t: map(float, sorted(set(t))))
         .map(lambda t: list(zip(t, values)))
     )
