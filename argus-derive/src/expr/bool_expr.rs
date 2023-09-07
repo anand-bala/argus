@@ -39,7 +39,6 @@ fn impl_bool_not(input: &DeriveInput) -> impl ToTokens {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
 enum BoolOp {
     And,
     Or,

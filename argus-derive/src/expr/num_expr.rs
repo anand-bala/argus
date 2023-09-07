@@ -43,28 +43,27 @@ fn impl_num_neg(input: &DeriveInput) -> impl ToTokens {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
 enum NumOp {
     Add,
     Mul,
 }
 
 impl NumOp {
-    fn get_trait_name(self) -> Ident {
+    fn get_trait_name(&self) -> Ident {
         match self {
             NumOp::Add => Ident::new("Add", Span::call_site()),
             NumOp::Mul => Ident::new("Mul", Span::call_site()),
         }
     }
 
-    fn get_trait_fn(self) -> Ident {
+    fn get_trait_fn(&self) -> Ident {
         match self {
             NumOp::Add => Ident::new("add", Span::call_site()),
             NumOp::Mul => Ident::new("mul", Span::call_site()),
         }
     }
 
-    fn get_expr_name(self) -> Ident {
+    fn get_expr_name(&self) -> Ident {
         match self {
             NumOp::Add => Ident::new("Add", Span::call_site()),
             NumOp::Mul => Ident::new("Mul", Span::call_site()),
