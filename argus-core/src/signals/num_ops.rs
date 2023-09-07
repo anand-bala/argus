@@ -1,5 +1,5 @@
 use super::interpolation::Linear;
-use super::{FindIntersectionMethod, InterpolationMethod, SignalAbs};
+use super::{InterpolationMethod, SignalAbs};
 use crate::signals::Signal;
 
 impl<T> core::ops::Neg for Signal<T>
@@ -98,7 +98,7 @@ impl<T> core::ops::Sub<&Signal<T>> for &Signal<T>
 where
     for<'a, 'b> &'a T: core::ops::Sub<&'b T, Output = T>,
     T: Clone + PartialOrd,
-    Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
+    Linear: InterpolationMethod<T>,
 {
     type Output = Signal<T>;
 
@@ -133,7 +133,7 @@ impl<T> core::ops::Sub<&Signal<T>> for Signal<T>
 where
     for<'a, 'b> &'a T: core::ops::Sub<&'b T, Output = T>,
     T: Clone + PartialOrd,
-    Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
+    Linear: InterpolationMethod<T>,
 {
     type Output = Signal<T>;
 

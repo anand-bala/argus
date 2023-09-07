@@ -1,9 +1,10 @@
 //! Interpolation methods
 
+use std::cmp::Ordering;
 use std::time::Duration;
 
 use super::utils::Neighborhood;
-use super::{FindIntersectionMethod, InterpolationMethod, Sample};
+use super::{InterpolationMethod, Sample};
 
 /// Constant interpolation.
 ///
@@ -19,6 +20,11 @@ impl<T: Clone> InterpolationMethod<T> for Constant {
         } else {
             None
         }
+    }
+
+    fn find_intersection(_a: &Neighborhood<T>, _b: &Neighborhood<T>) -> Option<Sample<T>> {
+        // The signals must be either constant or colinear. Thus, return None.
+        None
     }
 }
 
@@ -41,6 +47,12 @@ impl<T: Clone> InterpolationMethod<T> for Nearest {
             Some(b.value.clone())
         }
     }
+
+    fn find_intersection(_a: &Neighborhood<T>, _b: &Neighborhood<T>) -> Option<Sample<T>> {
+        // For the same reason as Constant interpolation, the signals must be either parallel or
+        // colinear.
+        None
+    }
 }
 
 /// Linear interpolation.
@@ -58,10 +70,8 @@ impl InterpolationMethod<bool> for Linear {
             None
         }
     }
-}
 
-impl FindIntersectionMethod<bool> for Linear {
-    fn find_intersection(a: &Neighborhood<bool>, b: &Neighborhood<bool>) -> Sample<bool> {
+    fn find_intersection(a: &Neighborhood<bool>, b: &Neighborhood<bool>) -> Option<Sample<bool>> {
         let Sample { time: ta1, value: ya1 } = a.first.unwrap();
         let Sample { time: ta2, value: ya2 } = a.second.unwrap();
         let Sample { time: tb1, value: yb1 } = b.first.unwrap();
@@ -73,27 +83,31 @@ impl FindIntersectionMethod<bool> for Linear {
         if left_cmp.is_eq() {
             // They already intersect, so we return the inner time-point
             if ta1 < tb1 {
-                Sample { time: tb1, value: yb1 }
+                Some(Sample { time: tb1, value: yb1 })
             } else {
-                Sample { time: ta1, value: ya1 }
+                Some(Sample { time: ta1, value: ya1 })
             }
         } else if right_cmp.is_eq() {
             // They intersect at the end, so we return the outer time-point, as that is
             // when they become equal.
             if ta2 < tb2 {
-                Sample { time: tb2, value: yb2 }
+                Some(Sample { time: tb2, value: yb2 })
             } else {
-                Sample { time: ta2, value: ya2 }
+                Some(Sample { time: ta2, value: ya2 })
             }
-        } else {
+        } else if let (Ordering::Less, Ordering::Greater) | (Ordering::Greater, Ordering::Less) = (left_cmp, right_cmp)
+        {
             // The switched, so the one that switched earlier will intersect with the
             // other.
             // So, we find the one that has a lower time point, i.e., the inner one.
             if ta2 < tb2 {
-                Sample { time: ta2, value: ya2 }
+                Some(Sample { time: ta2, value: ya2 })
             } else {
-                Sample { time: tb2, value: yb2 }
+                Some(Sample { time: tb2, value: yb2 })
             }
+        } else {
+            // The lines must be parallel.
+            None
         }
     }
 }
@@ -130,10 +144,8 @@ macro_rules! interpolate_for_num {
 
                 cast(val)
             }
-        }
 
-        impl FindIntersectionMethod<$ty> for Linear {
-            fn find_intersection(a: &Neighborhood<$ty>, b: &Neighborhood<$ty>) -> Sample<$ty> {
+            fn find_intersection(a: &Neighborhood<$ty>, b: &Neighborhood<$ty>) -> Option<Sample<$ty>> {
                 // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
                 use num_traits::cast;
 
@@ -153,13 +165,18 @@ macro_rules! interpolate_for_num {
                 let y4: f64 = cast(y4).unwrap_or_else(|| panic!("unable to cast {:?} to f64", y4));
 
                 let denom = ((t1 - t2) * (y3 - y4)) - ((y1 - y2) * (t3 - t4));
+                if denom.abs() <= 1e-10 {
+                    // The lines may be parallel or coincident.
+                    // We just return None
+                    return None;
+                }
 
                 let t_top = (((t1 * y2) - (y1 * t2)) * (t3 - t4)) - ((t1 - t2) * (t3 * y4 - y3 * t4));
                 let y_top = (((t1 * y2) - (y1 * t2)) * (y3 - y4)) - ((y1 - y2) * (t3 * y4 - y3 * t4));
 
                 let t = Duration::from_secs_f64(t_top / denom);
                 let y: $ty = num_traits::cast(y_top / denom).unwrap();
-                Sample { time: t, value: y }
+                Some(Sample { time: t, value: y })
             }
         }
     };

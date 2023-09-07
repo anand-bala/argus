@@ -2,12 +2,12 @@ use std::cmp::Ordering;
 
 use super::interpolation::Linear;
 use super::traits::SignalPartialOrd;
-use super::{FindIntersectionMethod, InterpolationMethod, Signal};
+use super::{InterpolationMethod, Signal};
 
 impl<T> SignalPartialOrd for Signal<T>
 where
     T: PartialOrd + Clone,
-    Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
+    Linear: InterpolationMethod<T>,
 {
     fn signal_cmp<F>(&self, other: &Self, op: F) -> Option<Signal<bool>>
     where
@@ -35,7 +35,7 @@ where
 impl<T> Signal<T>
 where
     T: PartialOrd + Clone,
-    Linear: InterpolationMethod<T> + FindIntersectionMethod<T>,
+    Linear: InterpolationMethod<T>,
 {
     /// Compute the time-wise min of two signals
     pub fn min(&self, other: &Self) -> Self {

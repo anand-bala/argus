@@ -264,7 +264,7 @@ impl<T> Signal<T> {
     pub fn sync_with_intersection<Interp>(&self, other: &Signal<T>) -> Option<Vec<Duration>>
     where
         T: PartialOrd + Clone,
-        Interp: FindIntersectionMethod<T>,
+        Interp: InterpolationMethod<T>,
     {
         use core::cmp::Ordering::*;
         let sync_points: Vec<&Duration> = self.sync_points(other)?.into_iter().collect();
@@ -308,7 +308,8 @@ impl<T> Signal<T> {
                             .interpolate_at::<Interp>(*t)
                             .map(|value| Sample { time: *t, value }),
                     };
-                    let intersect = Interp::find_intersection(&a, &b);
+                    let intersect = Interp::find_intersection(&a, &b)
+                        .unwrap_or_else(|| panic!("unable to find intersection for crossing signals"));
                     return_points.push(intersect.time);
                 }
             }

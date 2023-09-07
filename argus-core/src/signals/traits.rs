@@ -16,14 +16,10 @@ pub trait InterpolationMethod<T> {
     /// Returns `None` if it isn't possible to interpolate at the given time using the
     /// given samples.
     fn at(a: &Sample<T>, b: &Sample<T>, time: Duration) -> Option<T>;
-}
 
-/// Trait implemented by interpolation strategies that allow finding the intersection of
-/// two signal segments defined by start and end samples (see [`Neighborhood`]).
-pub trait FindIntersectionMethod<T>: InterpolationMethod<T> {
     /// Given two signals with two sample points each, find the intersection of the two
     /// lines.
-    fn find_intersection(a: &Neighborhood<T>, b: &Neighborhood<T>) -> Sample<T>;
+    fn find_intersection(a: &Neighborhood<T>, b: &Neighborhood<T>) -> Option<Sample<T>>;
 }
 
 /// Simple trait to be used as a trait object for [`Signal<T>`] types.
