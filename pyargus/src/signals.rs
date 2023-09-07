@@ -1,9 +1,9 @@
 use argus_core::signals::interpolation::Linear;
 use argus_core::signals::Signal;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyFloat, PyInt, PyType};
+use pyo3::types::PyType;
 
-use crate::PyArgusError;
+use crate::{DType, PyArgusError};
 
 #[pyclass(name = "InterpolationMethod", module = "argus")]
 #[derive(Debug, Clone, Copy, Default)]
@@ -21,22 +21,30 @@ pub enum SignalKind {
     Float(Signal<f64>),
 }
 
+impl SignalKind {
+    /// Get the kind of the signal
+    pub fn kind(&self) -> DType {
+        match self {
+            SignalKind::Bool(_) => DType::Bool,
+            SignalKind::Int(_) => DType::Int,
+            SignalKind::UnsignedInt(_) => DType::UnsignedInt,
+            SignalKind::Float(_) => DType::Float,
+        }
+    }
+}
+
 #[pyclass(name = "Signal", subclass, module = "argus")]
 #[derive(Debug, Clone)]
 pub struct PySignal {
-    pub interpolation: PyInterp,
-    pub signal: SignalKind,
+    pub(crate) interpolation: PyInterp,
+    pub(crate) signal: SignalKind,
 }
 
 #[pymethods]
 impl PySignal {
     #[getter]
-    fn kind<'py>(&self, py: Python<'py>) -> &'py PyType {
-        match self.signal {
-            SignalKind::Bool(_) => PyType::new::<PyBool>(py),
-            SignalKind::Int(_) | SignalKind::UnsignedInt(_) => PyType::new::<PyInt>(py),
-            SignalKind::Float(_) => PyType::new::<PyFloat>(py),
-        }
+    fn kind(&self) -> DType {
+        self.signal.kind()
     }
 
     fn __repr__(&self) -> String {

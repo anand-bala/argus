@@ -28,12 +28,16 @@ impl From<PyArgusError> for PyErr {
     }
 }
 
-#[pyclass(module = "argus")]
+#[pyclass(module = "argus", name = "dtype")]
 #[derive(Copy, Clone, Debug)]
 pub enum DType {
+    #[pyo3(name = "bool_")]
     Bool,
+    #[pyo3(name = "int64")]
     Int,
+    #[pyo3(name = "uint64")]
     UnsignedInt,
+    #[pyo3(name = "float64")]
     Float,
 }
 
