@@ -1,4 +1,4 @@
-from typing import ClassVar, Generic, Protocol, TypeVar, final
+from typing import ClassVar, Protocol, final
 
 from typing_extensions import Self
 
@@ -134,9 +134,7 @@ class dtype:  # noqa: N801
     def __eq__(self, other: object) -> bool: ...
     def __int__(self) -> int: ...
 
-_SignalKind = TypeVar("_SignalKind", bool, int, float, covariant=True)
-
-class Signal(Generic[_SignalKind], Protocol):
+class Signal:
     def is_empty(self) -> bool: ...
     @property
     def start_time(self) -> float | None: ...
@@ -146,16 +144,16 @@ class Signal(Generic[_SignalKind], Protocol):
     def kind(self) -> dtype: ...
 
 @final
-class BoolSignal(Signal[bool]):
+class BoolSignal(Signal):
     @classmethod
     def constant(cls, value: bool) -> Self: ...
     @classmethod
     def from_samples(cls, samples: list[tuple[float, bool]]) -> Self: ...
     def push(self, time: float, value: bool) -> None: ...
-    def at(self, time: float) -> _SignalKind | None: ...
+    def at(self, time: float) -> bool | None: ...
 
 @final
-class IntSignal(Signal[int]):
+class IntSignal(Signal):
     @classmethod
     def constant(cls, value: int) -> Self: ...
     @classmethod
@@ -164,7 +162,7 @@ class IntSignal(Signal[int]):
     def at(self, time: float) -> int | None: ...
 
 @final
-class UnsignedIntSignal(Signal[int]):
+class UnsignedIntSignal(Signal):
     @classmethod
     def constant(cls, value: int) -> Self: ...
     @classmethod
@@ -173,7 +171,7 @@ class UnsignedIntSignal(Signal[int]):
     def at(self, time: float) -> int | None: ...
 
 @final
-class FloatSignal(Signal[float]):
+class FloatSignal(Signal):
     @classmethod
     def constant(cls, value: float) -> Self: ...
     @classmethod

@@ -89,10 +89,16 @@ def ruff(session: nox.Session):
 def mypy(session: nox.Session):
     session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis", "numpy")
     session.env.update(ENV)
+
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.install("-e", ".")
         session.run("mypy", ".")
-        session.run("stubtest", "argus")
+        session.run(
+            "stubtest",
+            "argus",
+            "--allowlist",
+            str(CURRENT_DIR / "pyargus/stubtest_allow.txt"),
+        )
 
 
 @nox.session

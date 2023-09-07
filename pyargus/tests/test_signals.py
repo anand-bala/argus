@@ -95,6 +95,7 @@ def gen_dtype() -> SearchStrategy[Union[Type[AllowedDtype], dtype]]:
 def test_correct_constant_signals(data: st.DataObject) -> None:
     dtype_ = data.draw(gen_dtype())
     signal = data.draw(constant_signal(dtype_))
+    assert isinstance(signal, argus.Signal)
 
     assert not signal.is_empty()
     assert signal.start_time is None
@@ -108,6 +109,7 @@ def test_correctly_create_signals(data: st.DataObject) -> None:
 
     note(f"Samples: {gen_samples}")
     signal = argus.signal(dtype_, data=xs)
+    assert isinstance(signal, argus.Signal)
     if len(xs) > 0:
         expected_start_time = xs[0][0]
         expected_end_time = xs[-1][0]
@@ -165,18 +167,20 @@ def test_signal_create_should_fail(data: st.DataObject) -> None:
 @given(st.data())
 def test_push_to_empty_signal(data: st.DataObject) -> None:
     dtype_ = data.draw(gen_dtype())
-    sig = data.draw(empty_signal(dtype_=dtype_))
-    assert sig.is_empty()
+    signal = data.draw(empty_signal(dtype_=dtype_))
+    assert isinstance(signal, argus.Signal)
+    assert signal.is_empty()
     element = data.draw(gen_element_fn(dtype_))
     with pytest.raises(RuntimeError, match="cannot push value to non-sampled signal"):
-        sig.push(0.0, element)  # type: ignore[attr-defined]
+        signal.push(0.0, element)  # type: ignore[attr-defined]
 
 
 @given(st.data())
 def test_push_to_constant_signal(data: st.DataObject) -> None:
     dtype_ = data.draw(gen_dtype())
-    sig = data.draw(constant_signal(dtype_=dtype_))
-    assert not sig.is_empty()
+    signal = data.draw(constant_signal(dtype_=dtype_))
+    assert isinstance(signal, argus.Signal)
+    assert not signal.is_empty()
     sample = data.draw(gen_samples(min_size=1, max_size=1, dtype_=dtype_))[0]
     with pytest.raises(RuntimeError, match="cannot push value to non-sampled signal"):
-        sig.push(*sample)  # type: ignore[attr-defined]
+        signal.push(*sample)  # type: ignore[attr-defined]

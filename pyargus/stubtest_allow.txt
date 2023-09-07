@@ -1,0 +1,5 @@
+argus.signals.Protocol
+argus.signals.TypeVar.__bound__
+argus.signals.TypeVar.__constraints__
+argus.signals.TypeVar.__contravariant__
+argus.signals.TypeVar.__covariant__
