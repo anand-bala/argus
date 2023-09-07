@@ -40,6 +40,18 @@ pub struct PySignal {
     pub(crate) signal: SignalKind,
 }
 
+impl PySignal {
+    pub fn new<T>(signal: T, interpolation: PyInterp) -> Self
+    where
+        T: Into<SignalKind>,
+    {
+        Self {
+            interpolation,
+            signal: signal.into(),
+        }
+    }
+}
+
 #[pymethods]
 impl PySignal {
     #[getter]
@@ -106,23 +118,13 @@ macro_rules! impl_signals {
             #[derive(Debug, Copy, Clone)]
             pub struct [<$ty_name Signal>];
 
-            impl [<$ty_name Signal>] {
-                #[inline]
-                pub fn super_type(signal: SignalKind) -> PySignal {
-                    PySignal {
-                        interpolation: PyInterp::Linear,
-                        signal,
-                    }
-                }
-            }
-
             #[pymethods]
             impl [<$ty_name Signal>] {
                 /// Create a new empty signal
                 #[new]
                 #[pyo3(signature = ())]
                 fn new() -> (Self, PySignal) {
-                    (Self, Self::super_type(Signal::<$ty>::new().into()))
+                    (Self, PySignal::new(Signal::<$ty>::new(), PyInterp::Linear))
                 }
 
                 /// Create a new signal with constant value
@@ -130,7 +132,7 @@ macro_rules! impl_signals {
                 fn constant(_: &PyType, py: Python<'_>, value: $ty) -> PyResult<Py<Self>> {
                     Py::new(
                         py,
-                        (Self, Self::super_type(Signal::constant(value).into()))
+                        (Self, PySignal::new(Signal::constant(value), PyInterp::Linear))
                     )
                 }
 
@@ -144,7 +146,7 @@ macro_rules! impl_signals {
                     Python::with_gil(|py| {
                         Py::new(
                             py,
-                            (Self, Self::super_type(ret.into()))
+                            (Self, PySignal::new(ret, PyInterp::Linear))
                         )
                     })
                 }

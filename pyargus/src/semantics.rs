@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString};
 
 use crate::expr::PyBoolExpr;
-use crate::signals::{BoolSignal, FloatSignal, PySignal, SignalKind};
+use crate::signals::{BoolSignal, FloatSignal, PyInterp, PySignal, SignalKind};
 use crate::PyArgusError;
 
 #[pyclass(name = "Trace", module = "argus")]
@@ -63,12 +63,12 @@ impl Trace for PyTrace {
 #[pyfunction]
 fn eval_bool_semantics(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<BoolSignal>> {
     let sig = BooleanSemantics::eval(&expr.0, trace).map_err(PyArgusError::from)?;
-    Python::with_gil(|py| Py::new(py, (BoolSignal, BoolSignal::super_type(sig.into()))))
+    Python::with_gil(|py| Py::new(py, (BoolSignal, PySignal::new(sig, PyInterp::Linear))))
 }
 #[pyfunction]
 fn eval_robust_semantics(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<FloatSignal>> {
     let sig = QuantitativeSemantics::eval(&expr.0, trace).map_err(PyArgusError::from)?;
-    Python::with_gil(|py| Py::new(py, (FloatSignal, FloatSignal::super_type(sig.into()))))
+    Python::with_gil(|py| Py::new(py, (FloatSignal, PySignal::new(sig, PyInterp::Linear))))
 }
 
 pub fn init(_py: Python, m: &PyModule) -> PyResult<()> {
