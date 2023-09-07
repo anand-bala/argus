@@ -376,6 +376,7 @@ pub mod arbitrary {
             "[[:word:]]*".prop_map(|name| Box::new((FloatVar { name }).into())),
         ];
 
+        #[allow(clippy::arc_with_non_send_sync)]
         leaf.prop_recursive(
             8,   // 8 levels deep
             128, // Shoot for maximum size of 256 nodes
@@ -418,12 +419,14 @@ pub mod arbitrary {
 
     /// Generate arbitrary boolean expressions
     pub fn bool_expr() -> impl Strategy<Value = Box<BoolExpr>> {
+        #[allow(clippy::arc_with_non_send_sync)]
         let leaf = prop_oneof![
             any::<bool>().prop_map(|val| Box::new(BoolLit(val).into())),
             "[[:word:]]*".prop_map(|name| Box::new((BoolVar { name }).into())),
             cmp_expr(),
         ];
 
+        #[allow(clippy::arc_with_non_send_sync)]
         leaf.prop_recursive(
             8,   // 8 levels deep
             128, // Shoot for maximum size of 256 nodes
