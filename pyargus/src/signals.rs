@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use argus_core::signals::interpolation::Linear;
 use argus_core::signals::Signal;
 use pyo3::prelude::*;
@@ -119,11 +117,6 @@ macro_rules! impl_signals {
                     (Self, Self::super_type(Signal::<$ty>::new().into()))
                 }
 
-                #[pyo3(signature = ())]
-                fn __init__(self_: PyRef<'_, Self>) -> PyRef<'_, Self> {
-                    self_
-                }
-
                 /// Create a new signal with constant value
                 #[classmethod]
                 fn constant(_: &PyType, py: Python<'_>, value: $ty) -> PyResult<Py<Self>> {
@@ -138,7 +131,7 @@ macro_rules! impl_signals {
                 fn from_samples(_: &PyType, samples: Vec<(f64, $ty)>) -> PyResult<Py<Self>> {
                     let ret: Signal::<$ty> = Signal::<$ty>::try_from_iter(samples
                         .into_iter()
-                        .map(|(t, v)| (Duration::try_from_secs_f64(t).unwrap_or_else(|err| panic!("Value = {}, {}", t, err)), v))
+                        .map(|(t, v)| (core::time::Duration::try_from_secs_f64(t).unwrap_or_else(|err| panic!("Value = {}, {}", t, err)), v))
                     ).map_err(PyArgusError::from)?;
                     Python::with_gil(|py| {
                         Py::new(
@@ -153,7 +146,7 @@ macro_rules! impl_signals {
                 fn push(mut self_: PyRefMut<'_, Self>, time: f64, value: $ty) -> Result<(), PyArgusError> {
                     let super_: &mut PySignal = self_.as_mut();
                     let signal: &mut Signal<$ty> = (&mut super_.signal).try_into().unwrap();
-                    signal.push(Duration::from_secs_f64(time), value)?;
+                    signal.push(core::time::Duration::from_secs_f64(time), value)?;
                     Ok(())
                 }
 

@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple, Type, Union
 from argus import _argus
 from argus._argus import DType as DType
 from argus.exprs import ConstBool, ConstFloat, ConstInt, ConstUInt, VarBool, VarFloat, VarInt, VarUInt
-from argus.signals import BoolSignal, FloatSignal, IntSignal, UnsignedIntSignal
+from argus.signals import BoolSignal, FloatSignal, IntSignal, Signal, UnsignedIntSignal
 
 try:
     __doc__ = _argus.__doc__
@@ -96,4 +96,5 @@ __all__ = [
     "declare_var",
     "literal",
     "signal",
+    "Signal",
 ]

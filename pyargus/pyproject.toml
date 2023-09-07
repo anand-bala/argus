@@ -43,6 +43,7 @@ testpaths = ["tests"]
 [tool.mypy]
 # ignore_missing_imports = true
 show_error_codes = true
+plugins = ["numpy.typing.mypy_plugin"]
 
 [tool.ruff]
 line-length = 127

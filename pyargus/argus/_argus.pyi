@@ -1,4 +1,4 @@
-from typing import ClassVar, Protocol, TypeVar, final
+from typing import ClassVar, Generic, Protocol, TypeVar, final
 
 from typing_extensions import Self
 
@@ -136,7 +136,7 @@ class DType:
 
 _SignalKind = TypeVar("_SignalKind", bool, int, float, covariant=True)
 
-class Signal(Protocol[_SignalKind]):
+class Signal(Generic[_SignalKind], Protocol):
     def is_empty(self) -> bool: ...
     @property
     def start_time(self) -> float | None: ...
