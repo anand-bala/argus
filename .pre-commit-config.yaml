@@ -14,3 +14,6 @@ repos:
         entry: nox -t fix style lint
         language: system
         pass_filenames: false
+        types:
+          - rust
+          - python

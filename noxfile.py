@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import nox
+import nox.registry
 
 nox.options.default_venv_backend = "mamba"
 nox.options.reuse_existing_virtualenvs = True
@@ -71,6 +72,7 @@ def ruff(session: nox.Session):
 @nox.session(tags=["lint"])
 def mypy(session: nox.Session):
     session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis")
+    session.env.update(ENV)
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.install("-e", ".")
         session.run("mypy", ".")
@@ -130,35 +132,40 @@ def coverage(session: nox.Session):
         session.run("cargo", "+nightly", "test", external=True, silent=True)
     except Exception:
         ...
-    finally:
-        session.run(
-            "grcov",
-            ".",
-            "-s",
-            f"{CURRENT_DIR}",
-            "--binary-path",
-            f"{TARGET_DIR}/debug",
-            "--filter",
-            "covered",
-            "-t",
-            "lcov",
-            "--branch",
-            "--ignore-not-existing",
-            "--ignore",
-            f"{Path.home()}/.cargo/**",
-            "-o",
-            "rust.lcov",
-            external=True,
-        )
 
     try:
         session.run(
-            "coverage", "run", "--source", "pyargus/argus", "-m", "pytest", silent=True
+            "coverage",
+            "run",
+            "--source",
+            "pyargus/argus,pyargus/src",
+            "-m",
+            "pytest",
+            silent=True,
         )
     except Exception:
         ...
-    finally:
-        session.run("coverage", "lcov", "-o", "python.lcov")
+
+    session.run(
+        "grcov",
+        ".",
+        "-s",
+        f"{CURRENT_DIR}",
+        "--binary-path",
+        f"{TARGET_DIR}/debug",
+        "--filter",
+        "covered",
+        "-t",
+        "lcov",
+        "--branch",
+        "--ignore-not-existing",
+        "--ignore",
+        f"{Path.home()}/.cargo/**",
+        "-o",
+        "rust.lcov",
+        external=True,
+    )
+    session.run("coverage", "lcov", "-o", "python.lcov")
 
     session.run(
         "genhtml",
@@ -171,3 +178,7 @@ def coverage(session: nox.Session):
         "htmlcov/",
         *map(str, CURRENT_DIR.glob("*.lcov")),
     )
+
+
+skip = {"dev"}
+nox.options.sessions = [key for key in nox.registry.get() if key not in skip]
