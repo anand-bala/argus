@@ -15,6 +15,22 @@ ENV = dict(
 )
 
 
+@nox.session(python=False)
+def clean(session: nox.Session):
+    session.run(
+        "git",
+        "clean",
+        "-e",
+        "!.envrc",
+        "-e",
+        "!.nox/**",
+        "-e",
+        "!.nox",
+        "-dfX",
+        external=True,
+    )
+
+
 @nox.session
 def dev(session: nox.Session):
     session.conda_install("pre-commit")
@@ -180,5 +196,5 @@ def coverage(session: nox.Session):
     )
 
 
-skip = {"dev"}
+skip = {"dev", "clean", "coverage"}
 nox.options.sessions = [key for key in nox.registry.get() if key not in skip]
