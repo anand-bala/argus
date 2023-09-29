@@ -4,7 +4,7 @@ use super::{BoolExpr, ExprRef, NumExpr};
 
 /// A trait representing expressions
 #[enum_dispatch]
-pub trait Expr {
+pub trait AnyExpr {
     /// Check if the given expression is a numeric expression
     fn is_numeric(&self) -> bool;
     /// Check if the given expression is a boolean expression
@@ -17,7 +17,7 @@ pub trait Expr {
 }
 
 /// Marker trait for numeric expressions
-pub trait IsNumExpr: Expr + Into<NumExpr> {}
+pub trait IsNumExpr: AnyExpr + Into<NumExpr> {}
 
 /// Marker trait for Boolean expressions
-pub trait IsBoolExpr: Expr + Into<BoolExpr> {}
+pub trait IsBoolExpr: AnyExpr + Into<BoolExpr> {}

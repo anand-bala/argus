@@ -3,7 +3,7 @@
 use std::ops::{Bound, RangeBounds};
 use std::time::Duration;
 
-use super::{BoolExpr, Expr, NumExpr};
+use super::{AnyExpr, BoolExpr, NumExpr};
 
 /// Types of comparison operations
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -142,7 +142,7 @@ where
 // TODO(anand): Can I implement this within argus_derive?
 macro_rules! impl_bool_expr {
     ($ty:ty$(, $($arg:ident),* )? ) => {
-        impl Expr for $ty {
+        impl AnyExpr for $ty {
             fn is_numeric(&self) -> bool {
                 false
             }
@@ -157,7 +157,7 @@ macro_rules! impl_bool_expr {
         }
     };
     ($ty:ty, [$args:ident]) => {
-        impl Expr for $ty {
+        impl AnyExpr for $ty {
             fn is_numeric(&self) -> bool {
                 false
             }

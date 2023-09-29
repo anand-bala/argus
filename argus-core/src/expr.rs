@@ -17,7 +17,7 @@ use crate::{ArgusResult, Error};
 
 /// All expressions that are numeric
 #[derive(Clone, Debug, PartialEq, argus_derive::NumExpr)]
-#[enum_dispatch(Expr)]
+#[enum_dispatch(AnyExpr)]
 pub enum NumExpr {
     /// A signed integer literal
     IntLit(IntLit),
@@ -54,7 +54,7 @@ impl NumExpr {
 
 /// All expressions that are evaluated to be of type `bool`
 #[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
-#[enum_dispatch(Expr)]
+#[enum_dispatch(AnyExpr)]
 pub enum BoolExpr {
     /// A `bool` literal
     BoolLit(BoolLit),
@@ -116,6 +116,15 @@ pub enum ExprRef<'a> {
     Bool(&'a BoolExpr),
     /// A reference to a [`NumExpr`]
     Num(&'a NumExpr),
+}
+
+/// An expression (either [`BoolExpr`] or [`NumExpr`])
+#[derive(Clone, Debug, derive_more::From)]
+pub enum Expr {
+    /// A reference to a [`BoolExpr`]
+    Bool(BoolExpr),
+    /// A reference to a [`NumExpr`]
+    Num(NumExpr),
 }
 
 /// Expression builder

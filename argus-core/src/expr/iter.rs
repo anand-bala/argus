@@ -2,19 +2,19 @@
 
 use std::collections::VecDeque;
 
-use super::{Expr, ExprRef};
+use super::{AnyExpr, ExprRef};
 
-/// Iterator that starts from some root [`Expr`] and travels down to it's leaf
+/// Iterator that starts from some root [`AnyExpr`] and travels down to it's leaf
 /// expressions.
 ///
 /// This essentially implements breadth-first search over the expression tree rooted at
-/// the given [`Expr`].
+/// the given [`AnyExpr`].
 pub struct AstIter<'a> {
     queue: VecDeque<ExprRef<'a>>,
 }
 
 impl<'a> AstIter<'a> {
-    /// Create an iterator that traverses an [`Expr`] from root to leaf.
+    /// Create an iterator that traverses an [`AnyExpr`] from root to leaf.
     pub fn new(root: ExprRef<'a>) -> Self {
         let mut queue = VecDeque::new();
         queue.push_back(root);
@@ -28,7 +28,7 @@ impl<'a> Iterator for AstIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let expr_ref = self.queue.pop_front()?;
 
-        let expr: &dyn Expr = match expr_ref {
+        let expr: &dyn AnyExpr = match expr_ref {
             ExprRef::Bool(expr) => expr,
             ExprRef::Num(expr) => expr,
         };

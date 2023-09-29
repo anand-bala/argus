@@ -1,11 +1,11 @@
 //! Numeric expression types
 
-use super::{Expr, NumExpr};
+use super::{AnyExpr, NumExpr};
 
 // TODO(anand): Can I implement this within argus_derive?
 macro_rules! impl_num_expr {
     ($ty:ty$(, $($arg:ident),* )? ) => {
-        impl Expr for $ty {
+        impl AnyExpr for $ty {
             fn is_numeric(&self) -> bool {
                 true
             }
@@ -20,7 +20,7 @@ macro_rules! impl_num_expr {
         }
     };
     ($ty:ty, [$args:ident]) => {
-        impl Expr for $ty {
+        impl AnyExpr for $ty {
             fn is_numeric(&self) -> bool {
                 false
             }
