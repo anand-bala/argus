@@ -1,9 +1,10 @@
-use std::{env, fmt, fs};
+use std::fmt;
 
-use ariadne::{sources, Color, Label, Report, ReportKind};
 use chumsky::prelude::*;
 
 pub type Span = SimpleSpan<usize>;
+pub type Output<'a> = Vec<(Token<'a>, Span)>;
+pub type Error<'a> = extra::Err<Rich<'a, char, Span>>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Token<'src> {
@@ -76,7 +77,7 @@ impl<'src> fmt::Display for Token<'src> {
     }
 }
 
-pub fn lexer<'src>() -> impl Parser<'src, &'src str, Vec<(Token<'src>, Span)>, extra::Err<Rich<'src, char, Span>>> {
+pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> {
     // A parser for numbers
     let digits = text::digits(10).slice();
 
@@ -173,8 +174,6 @@ mod tests {
     #[test]
     fn simple_test() {
         use Token::*;
-        type Output<'a> = Vec<(Token<'a>, Span)>;
-        type MyErr<'a> = extra::Err<Rich<'a, char, Span>>;
         let cases = [
             ("true", vec![(Bool(true), Span::new(0, 4))]),
             ("false", vec![(Bool(false), Span::new(0, 5))]),
