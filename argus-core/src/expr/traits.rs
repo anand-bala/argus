@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use enum_dispatch::enum_dispatch;
 
 use super::{BoolExpr, ExprRef, NumExpr};
@@ -16,9 +14,6 @@ pub trait Expr {
     /// If the expression doesn't contain arguments (i.e., it is a leaf expression) then
     /// the vector is empty.
     fn args(&self) -> Vec<ExprRef<'_>>;
-
-    /// [`std::any::Any`] trampoline for expressions
-    fn as_any(&self) -> &dyn Any;
 }
 
 /// Marker trait for numeric expressions
