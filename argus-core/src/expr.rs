@@ -119,7 +119,7 @@ pub enum ExprRef<'a> {
 }
 
 /// An expression (either [`BoolExpr`] or [`NumExpr`])
-#[derive(Clone, Debug, derive_more::From)]
+#[derive(Clone, Debug, derive_more::From, derive_more::TryInto)]
 pub enum Expr {
     /// A reference to a [`BoolExpr`]
     Bool(BoolExpr),
@@ -146,220 +146,284 @@ impl ExprBuilder {
     }
 
     /// Declare a constant boolean expression
-    pub fn bool_const(&self, value: bool) -> Box<BoolExpr> {
-        Box::new(BoolLit(value).into())
+    pub fn bool_const(&self, value: bool) -> BoolExpr {
+        BoolLit(value).into()
     }
 
     /// Declare a constant integer expression
-    pub fn int_const(&self, value: i64) -> Box<NumExpr> {
-        Box::new(IntLit(value).into())
+    pub fn int_const(&self, value: i64) -> NumExpr {
+        IntLit(value).into()
     }
 
     /// Declare a constant unsigned integer expression
-    pub fn uint_const(&self, value: u64) -> Box<NumExpr> {
-        Box::new(UIntLit(value).into())
+    pub fn uint_const(&self, value: u64) -> NumExpr {
+        UIntLit(value).into()
     }
 
     /// Declare a constant floating point expression
-    pub fn float_const(&self, value: f64) -> Box<NumExpr> {
-        Box::new(FloatLit(value).into())
+    pub fn float_const(&self, value: f64) -> NumExpr {
+        FloatLit(value).into()
     }
 
     /// Declare a boolean variable
-    pub fn bool_var(&mut self, name: String) -> ArgusResult<Box<BoolExpr>> {
+    pub fn bool_var(&mut self, name: String) -> ArgusResult<BoolExpr> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new((BoolVar { name }).into()))
+            Ok((BoolVar { name }).into())
         } else {
             Err(Error::IdentifierRedeclaration)
         }
     }
 
     /// Declare a integer variable
-    pub fn int_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
+    pub fn int_var(&mut self, name: String) -> ArgusResult<NumExpr> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new((IntVar { name }).into()))
+            Ok((IntVar { name }).into())
         } else {
             Err(Error::IdentifierRedeclaration)
         }
     }
 
     /// Declare a unsigned integer variable
-    pub fn uint_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
+    pub fn uint_var(&mut self, name: String) -> ArgusResult<NumExpr> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new((UIntVar { name }).into()))
+            Ok((UIntVar { name }).into())
         } else {
             Err(Error::IdentifierRedeclaration)
         }
     }
 
     /// Declare a floating point variable
-    pub fn float_var(&mut self, name: String) -> ArgusResult<Box<NumExpr>> {
+    pub fn float_var(&mut self, name: String) -> ArgusResult<NumExpr> {
         if self.declarations.insert(name.clone()) {
-            Ok(Box::new((FloatVar { name }).into()))
+            Ok((FloatVar { name }).into())
         } else {
             Err(Error::IdentifierRedeclaration)
         }
     }
 
     /// Create a [`NumExpr::Neg`] expression
-    pub fn make_neg(&self, arg: Box<NumExpr>) -> Box<NumExpr> {
-        Box::new((Neg { arg }).into())
+    pub fn make_neg(&self, arg: Box<NumExpr>) -> NumExpr {
+        (Neg { arg }).into()
     }
 
     /// Create a [`NumExpr::Add`] expression
-    pub fn make_add<I>(&self, args: I) -> ArgusResult<Box<NumExpr>>
+    pub fn make_add<I>(&self, args: I) -> ArgusResult<NumExpr>
     where
         I: IntoIterator<Item = NumExpr>,
     {
-        let args: Vec<_> = args.into_iter().collect();
-        if args.len() < 2 {
+        let mut new_args = Vec::<NumExpr>::new();
+        for arg in args.into_iter() {
+            // Flatten the args if there is an Add
+            if let NumExpr::Add(Add { args }) = arg {
+                new_args.extend(args.into_iter());
+            } else {
+                new_args.push(arg);
+            }
+        }
+        if new_args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new((Add { args }).into()))
+            Ok((Add { args: new_args }).into())
         }
     }
 
     /// Create a [`NumExpr::Mul`] expression
-    pub fn make_mul<I>(&self, args: I) -> ArgusResult<Box<NumExpr>>
+    pub fn make_mul<I>(&self, args: I) -> ArgusResult<NumExpr>
     where
         I: IntoIterator<Item = NumExpr>,
     {
-        let args: Vec<_> = args.into_iter().collect();
-        if args.len() < 2 {
+        let mut new_args = Vec::<NumExpr>::new();
+        for arg in args.into_iter() {
+            // Flatten the args if there is a Mul
+            if let NumExpr::Mul(Mul { args }) = arg {
+                new_args.extend(args.into_iter());
+            } else {
+                new_args.push(arg);
+            }
+        }
+        if new_args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new((Mul { args }).into()))
+            Ok((Mul { args: new_args }).into())
         }
     }
 
+    /// Create a [`NumExpr::Sub`] expression
+    pub fn make_sub(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> NumExpr {
+        (Sub { lhs, rhs }).into()
+    }
+
     /// Create a [`NumExpr::Div`] expression
-    pub fn make_div(&self, dividend: Box<NumExpr>, divisor: Box<NumExpr>) -> Box<NumExpr> {
-        Box::new((Div { dividend, divisor }).into())
+    pub fn make_div(&self, dividend: Box<NumExpr>, divisor: Box<NumExpr>) -> NumExpr {
+        (Div { dividend, divisor }).into()
     }
 
     /// Create a [`BoolExpr::Cmp`] expression
-    pub fn make_cmp(&self, op: Ordering, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
-        Box::new((Cmp { op, lhs, rhs }).into())
+    pub fn make_cmp(&self, op: Ordering, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> BoolExpr {
+        (Cmp { op, lhs, rhs }).into()
     }
 
     /// Create a "less than" ([`BoolExpr::Cmp`]) expression
-    pub fn make_lt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+    pub fn make_lt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> BoolExpr {
         self.make_cmp(Ordering::Less { strict: true }, lhs, rhs)
     }
 
     /// Create a "less than or equal" ([`BoolExpr::Cmp`]) expression
-    pub fn make_le(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+    pub fn make_le(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> BoolExpr {
         self.make_cmp(Ordering::Less { strict: false }, lhs, rhs)
     }
 
     /// Create a "greater than" ([`BoolExpr::Cmp`]) expression
-    pub fn make_gt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+    pub fn make_gt(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> BoolExpr {
         self.make_cmp(Ordering::Greater { strict: true }, lhs, rhs)
     }
 
     /// Create a "greater than or equal" ([`BoolExpr::Cmp`]) expression
-    pub fn make_ge(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+    pub fn make_ge(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> BoolExpr {
         self.make_cmp(Ordering::Greater { strict: false }, lhs, rhs)
     }
 
     /// Create a "equals" ([`BoolExpr::Cmp`]) expression
-    pub fn make_eq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+    pub fn make_eq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> BoolExpr {
         self.make_cmp(Ordering::Eq, lhs, rhs)
     }
 
     /// Create a "not equals" ([`BoolExpr::Cmp`]) expression
-    pub fn make_neq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> Box<BoolExpr> {
+    pub fn make_neq(&self, lhs: Box<NumExpr>, rhs: Box<NumExpr>) -> BoolExpr {
         self.make_cmp(Ordering::NotEq, lhs, rhs)
     }
 
     /// Create a [`BoolExpr::Not`] expression.
-    pub fn make_not(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new((Not { arg }).into())
+    pub fn make_not(&self, arg: Box<BoolExpr>) -> BoolExpr {
+        (Not { arg }).into()
     }
 
     /// Create a [`BoolExpr::Or`] expression.
-    pub fn make_or<I>(&self, args: I) -> ArgusResult<Box<BoolExpr>>
+    pub fn make_or<I>(&self, args: I) -> ArgusResult<BoolExpr>
     where
         I: IntoIterator<Item = BoolExpr>,
     {
-        let args: Vec<_> = args.into_iter().collect();
-        if args.len() < 2 {
+        let mut new_args = Vec::<BoolExpr>::new();
+        for arg in args.into_iter() {
+            // Flatten the args if there is an Or
+            if let BoolExpr::Or(Or { args }) = arg {
+                new_args.extend(args.into_iter());
+            } else {
+                new_args.push(arg);
+            }
+        }
+        if new_args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new((Or { args }).into()))
+            Ok((Or { args: new_args }).into())
         }
     }
 
     /// Create a [`BoolExpr::And`] expression.
-    pub fn make_and<I>(&self, args: I) -> ArgusResult<Box<BoolExpr>>
+    pub fn make_and<I>(&self, args: I) -> ArgusResult<BoolExpr>
     where
         I: IntoIterator<Item = BoolExpr>,
     {
-        let args: Vec<_> = args.into_iter().collect();
-        if args.len() < 2 {
+        let mut new_args = Vec::<BoolExpr>::new();
+        for arg in args.into_iter() {
+            // Flatten the args if there is an And
+            if let BoolExpr::And(And { args }) = arg {
+                new_args.extend(args.into_iter());
+            } else {
+                new_args.push(arg);
+            }
+        }
+        if new_args.len() < 2 {
             Err(Error::IncompleteArgs)
         } else {
-            Ok(Box::new((And { args }).into()))
+            Ok((And { args: new_args }).into())
         }
     }
 
+    /// Create an expression equivalent to `lhs -> rhs`.
+    ///
+    /// This essentially breaks down the expression as `~lhs | rhs`.
+    #[allow(clippy::boxed_local)]
+    pub fn make_implies(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> ArgusResult<BoolExpr> {
+        let np = self.make_not(lhs);
+        self.make_or([np, *rhs])
+    }
+
+    /// Create an expression equivalent to `lhs <-> rhs`.
+    ///
+    /// This essentially breaks down the expression as `(lhs & rhs) | (~lhs & ~rhs)`.
+    pub fn make_equiv(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> ArgusResult<BoolExpr> {
+        let np = self.make_not(lhs.clone());
+        let nq = self.make_not(rhs.clone());
+
+        let npnq = self.make_and([np, nq])?;
+        let pq = self.make_and([*lhs, *rhs])?;
+
+        self.make_or([pq, npnq])
+    }
+
+    /// Create an expression equivalent to `lhs ^ rhs`.
+    ///
+    /// This essentially breaks down the expression as `~(lhs <-> rhs)`.
+    pub fn make_xor(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> ArgusResult<BoolExpr> {
+        Ok(self.make_not(Box::new(self.make_equiv(lhs, rhs)?)))
+    }
+
     /// Create a [`BoolExpr::Next`] expression.
-    pub fn make_next(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new((Next { arg }).into())
+    pub fn make_next(&self, arg: Box<BoolExpr>) -> BoolExpr {
+        (Next { arg }).into()
     }
 
     /// Create a [`BoolExpr::Oracle`] expression.
-    pub fn make_oracle(&self, steps: usize, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new((Oracle { steps, arg }).into())
+    pub fn make_oracle(&self, steps: usize, arg: Box<BoolExpr>) -> BoolExpr {
+        if steps == 1 {
+            self.make_next(arg)
+        } else {
+            (Oracle { steps, arg }).into()
+        }
     }
 
     /// Create a [`BoolExpr::Always`] expression.
-    pub fn make_always(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(
-            (Always {
-                arg,
-                interval: (..).into(),
-            })
-            .into(),
-        )
+    pub fn make_always(&self, arg: Box<BoolExpr>) -> BoolExpr {
+        (Always {
+            arg,
+            interval: (..).into(),
+        })
+        .into()
     }
 
     /// Create a [`BoolExpr::Always`] expression with an interval.
-    pub fn make_timed_always(&self, interval: Interval, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new((Always { arg, interval }).into())
+    pub fn make_timed_always(&self, interval: Interval, arg: Box<BoolExpr>) -> BoolExpr {
+        (Always { arg, interval }).into()
     }
 
     /// Create a [`BoolExpr::Eventually`] expression.
-    pub fn make_eventually(&self, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(
-            (Eventually {
-                arg,
-                interval: (..).into(),
-            })
-            .into(),
-        )
+    pub fn make_eventually(&self, arg: Box<BoolExpr>) -> BoolExpr {
+        (Eventually {
+            arg,
+            interval: (..).into(),
+        })
+        .into()
     }
 
     /// Create a [`BoolExpr::Eventually`] expression with an interval.
-    pub fn make_timed_eventually(&self, interval: Interval, arg: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new((Eventually { arg, interval }).into())
+    pub fn make_timed_eventually(&self, interval: Interval, arg: Box<BoolExpr>) -> BoolExpr {
+        (Eventually { arg, interval }).into()
     }
 
     /// Create a [`BoolExpr::Until`] expression.
-    pub fn make_until(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new(
-            (Until {
-                lhs,
-                rhs,
-                interval: (..).into(),
-            })
-            .into(),
-        )
+    pub fn make_until(&self, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> BoolExpr {
+        (Until {
+            lhs,
+            rhs,
+            interval: (..).into(),
+        })
+        .into()
     }
 
     /// Create a [`BoolExpr::Until`] expression with an interval.
-    pub fn make_timed_until(&self, interval: Interval, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> Box<BoolExpr> {
-        Box::new((Until { lhs, rhs, interval }).into())
+    pub fn make_timed_until(&self, interval: Interval, lhs: Box<BoolExpr>, rhs: Box<BoolExpr>) -> BoolExpr {
+        BoolExpr::from(Until { lhs, rhs, interval })
     }
 }
 

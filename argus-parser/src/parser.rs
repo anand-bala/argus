@@ -37,8 +37,8 @@ impl Type {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Interval<'src> {
-    a: Box<Spanned<Expr<'src>>>,
-    b: Box<Spanned<Expr<'src>>>,
+    pub a: Option<Box<Spanned<Expr<'src>>>>,
+    pub b: Option<Box<Spanned<Expr<'src>>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,38 +134,40 @@ impl<'src> Expr<'src> {
     }
 
     /// Make untyped (`Type::Unknown`) expressions into the given type.
-    /// Returns a boolean flag to denote successful transformation or not.
-    fn make_typed(&mut self, ty: Type) -> bool {
-        match self {
-            Expr::Var { name: _, kind } => {
-                *kind = ty;
-                true
-            }
-            _ => false,
+    fn make_typed(mut self, ty: Type) -> Self {
+        if let Expr::Var { name: _, kind } = &mut self {
+            *kind = ty;
         }
+        self
     }
 
-    fn unary_op(op: UnaryOps, arg: Box<Spanned<Self>>, interval: Option<Spanned<Interval<'src>>>) -> Self {
-        let mut arg = arg;
-        (*arg).0.make_typed(op.default_type());
+    fn unary_op(op: UnaryOps, arg: Spanned<Self>, interval: Option<Spanned<Interval<'src>>>) -> Self {
+        let arg = Box::new((arg.0.make_typed(op.default_type()), arg.1));
         Self::Unary { op, interval, arg }
     }
 
     fn binary_op(
         op: BinaryOps,
-        args: (Box<Spanned<Self>>, Box<Spanned<Self>>),
+        args: (Spanned<Self>, Spanned<Self>),
         interval: Option<Spanned<Interval<'src>>>,
     ) -> Self {
-        let mut args = args;
-
-        let lhs = &mut (*args.0).0;
-        let rhs = &mut (*args.1).0;
+        let (lhs, lspan) = args.0;
+        let (rhs, rspan) = args.1;
 
         let common_type = lhs.get_type().get_common_cast(rhs.get_type());
-        lhs.make_typed(common_type);
-        rhs.make_typed(common_type);
+        let common_type = if Type::Unknown == common_type {
+            op.default_type()
+        } else {
+            common_type
+        };
+        let lhs = Box::new((lhs.make_typed(common_type), lspan));
+        let rhs = Box::new((rhs.make_typed(common_type), rspan));
 
-        Self::Binary { op, interval, args }
+        Self::Binary {
+            op,
+            interval,
+            args: (lhs, rhs),
+        }
     }
 }
 
@@ -179,7 +181,7 @@ pub type Error<'tokens, 'src> = extra::Err<Rich<'tokens, Token<'src>, Span>>;
 // to understand.
 type ParserInput<'tokens, 'src> = SpannedInput<Token<'src>, Span, &'tokens [(Token<'src>, Span)]>;
 
-pub fn num_expr_parser<'tokens, 'src: 'tokens>(
+fn num_expr_parser<'tokens, 'src: 'tokens>(
 ) -> impl Parser<'tokens, ParserInput<'tokens, 'src>, Spanned<Expr<'src>>, Error<'tokens, 'src>> + Clone {
     recursive(|num_expr| {
         let var = select! { Token::Ident(name) => Expr::Var{ name, kind: Type::default()} }.labelled("variable");
@@ -210,7 +212,7 @@ pub fn num_expr_parser<'tokens, 'src: 'tokens>(
             .repeated()
             .foldr(num_atom, |op, rhs| {
                 let span = op.1.start..rhs.1.end;
-                (Expr::unary_op(op.0, Box::new(rhs), None), span.into())
+                (Expr::unary_op(op.0, rhs, None), span.into())
             });
 
         // Product ops (multiply and divide) have equal precedence
@@ -223,7 +225,7 @@ pub fn num_expr_parser<'tokens, 'src: 'tokens>(
                 .clone()
                 .foldl(op.then(neg_op).repeated(), |a, (op, b)| {
                     let span = a.1.start..b.1.end;
-                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                    (Expr::binary_op(op, (a, b), None), span.into())
                 })
                 .boxed()
         };
@@ -238,7 +240,7 @@ pub fn num_expr_parser<'tokens, 'src: 'tokens>(
                 .clone()
                 .foldl(op.then(product_op).repeated(), |a, (op, b)| {
                     let span = a.1.start..b.1.end;
-                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                    (Expr::binary_op(op, (a, b), None), span.into())
                 })
                 .boxed()
         };
@@ -251,7 +253,6 @@ pub fn parser<'tokens, 'src: 'tokens>(
 ) -> impl Parser<'tokens, ParserInput<'tokens, 'src>, Spanned<Expr<'src>>, Error<'tokens, 'src>> + Clone {
     let interval = {
         let num_literal = select! {
-            Token::Int(val) => Expr::Int(val),
             Token::UInt(val) => Expr::UInt(val),
             Token::Float(val) => Expr::Float(val),
         }
@@ -259,17 +260,17 @@ pub fn parser<'tokens, 'src: 'tokens>(
         let sep = just(Token::Comma).or(just(Token::DotDot));
 
         num_literal
+            .or_not()
             .then_ignore(sep)
-            .then(num_literal)
+            .then(num_literal.or_not())
             .delimited_by(just(Token::LBracket), just(Token::RBracket))
-            .map(|(a, b)| {
-                let span = a.1.start..b.1.end;
+            .map_with_span(|(a, b), span| {
                 (
                     Interval {
-                        a: Box::new(a),
-                        b: Box::new(b),
+                        a: a.map(Box::new),
+                        b: b.map(Box::new),
                     },
-                    span.into(),
+                    span,
                 )
             })
             .boxed()
@@ -300,7 +301,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 .then(op.then(num_expr))
                 .map(|(a, (op, b))| {
                     let span = a.1.start..b.1.end;
-                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                    (Expr::binary_op(op, (a, b), None), span.into())
                 })
                 .boxed()
         }
@@ -324,7 +325,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
             .repeated()
             .foldr(atom, |op, rhs| {
                 let span = op.1.start..rhs.1.end;
-                (Expr::unary_op(op.0, Box::new(rhs), None), span.into())
+                (Expr::unary_op(op.0, rhs, None), span.into())
             })
             .boxed();
 
@@ -339,7 +340,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 .repeated()
                 .foldr(not_op, |(op, interval), rhs| {
                     let span = op.1.start..rhs.1.end;
-                    (Expr::unary_op(op.0, Box::new(rhs), interval), span.into())
+                    (Expr::unary_op(op.0, rhs, interval), span.into())
                 })
                 .boxed()
         };
@@ -351,10 +352,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
             .foldr(unary_temporal_op, |(lhs, (op, interval)), rhs| {
                 let span = lhs.1.start..rhs.1.end;
                 assert_eq!(op, BinaryOps::Until);
-                (
-                    Expr::binary_op(op, (Box::new(lhs), Box::new(rhs)), interval),
-                    span.into(),
-                )
+                (Expr::binary_op(op, (lhs, rhs), interval), span.into())
             })
             .boxed();
 
@@ -364,7 +362,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 .clone()
                 .foldl(op.then(binary_temporal_op).repeated(), |a, (op, b)| {
                     let span = a.1.start..b.1.end;
-                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                    (Expr::binary_op(op, (a, b), None), span.into())
                 })
                 .boxed()
         };
@@ -375,7 +373,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 .clone()
                 .foldl(op.then(and_op).repeated(), |a, (op, b)| {
                     let span = a.1.start..b.1.end;
-                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                    (Expr::binary_op(op, (a, b), None), span.into())
                 })
                 .boxed()
         };
@@ -386,7 +384,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 .clone()
                 .foldl(op.then(or_op).repeated(), |a, (op, b)| {
                     let span = a.1.start..b.1.end;
-                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                    (Expr::binary_op(op, (a, b), None), span.into())
                 })
                 .boxed()
         };
@@ -399,11 +397,14 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 .clone()
                 .foldl(op.then(xor_op).repeated(), |a, (op, b)| {
                     let span = a.1.start..b.1.end;
-                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                    (Expr::binary_op(op, (a, b), None), span.into())
                 })
                 .boxed()
         };
 
-        implies_equiv_op.labelled("boolean expression").as_context()
+        implies_equiv_op
+            .map(|(expr, span)| (expr.make_typed(Type::Bool), span))
+            .labelled("boolean expression")
+            .as_context()
     })
 }

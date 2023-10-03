@@ -474,8 +474,8 @@ mod tests {
     fn addition() {
         let mut ctx = ExprBuilder::new();
 
-        let a = ctx.float_var("a".to_owned()).unwrap();
-        let b = ctx.float_var("b".to_owned()).unwrap();
+        let a = Box::new(ctx.float_var("a".to_owned()).unwrap());
+        let b = Box::new(ctx.float_var("b".to_owned()).unwrap());
         let spec = ctx.make_add([*a, *b]).unwrap();
 
         {
@@ -552,8 +552,8 @@ mod tests {
     fn less_than() {
         let mut ctx = ExprBuilder::new();
 
-        let a = ctx.float_var("a".to_owned()).unwrap();
-        let spec = ctx.make_lt(a, ctx.float_const(0.0));
+        let a = Box::new(ctx.float_var("a".to_owned()).unwrap());
+        let spec = Box::new(ctx.make_lt(a, Box::new(ctx.float_const(0.0))));
 
         let signals = HashMap::from_iter(vec![(
             "a".to_owned(),
@@ -583,8 +583,8 @@ mod tests {
     fn eventually_unbounded() {
         let mut ctx = ExprBuilder::new();
 
-        let a = ctx.float_var("a".to_owned()).unwrap();
-        let cmp = ctx.make_ge(a, ctx.float_const(0.0));
+        let a = Box::new(ctx.float_var("a".to_owned()).unwrap());
+        let cmp = Box::new(ctx.make_ge(a, Box::new(ctx.float_const(0.0))));
         let spec = ctx.make_eventually(cmp);
 
         {
@@ -618,10 +618,10 @@ mod tests {
     fn unbounded_until() {
         let mut ctx = ExprBuilder::new();
 
-        let a = ctx.int_var("a".to_owned()).unwrap();
-        let b = ctx.int_var("b".to_owned()).unwrap();
-        let lhs = ctx.make_gt(a, ctx.int_const(0));
-        let rhs = ctx.make_gt(b, ctx.int_const(0));
+        let a = Box::new(ctx.int_var("a".to_owned()).unwrap());
+        let b = Box::new(ctx.int_var("b".to_owned()).unwrap());
+        let lhs = Box::new(ctx.make_gt(a, Box::new(ctx.int_const(0))));
+        let rhs = Box::new(ctx.make_gt(b, Box::new(ctx.int_const(0))));
         let spec = ctx.make_until(lhs, rhs);
 
         {

@@ -374,8 +374,8 @@ mod tests {
     fn less_than() {
         let mut ctx = ExprBuilder::new();
 
-        let a = ctx.float_var("a".to_owned()).unwrap();
-        let spec = ctx.make_lt(a, ctx.float_const(0.0));
+        let a = Box::new(ctx.float_var("a".to_owned()).unwrap());
+        let spec = ctx.make_lt(a, Box::new(ctx.float_const(0.0)));
 
         let signals = HashMap::from_iter(vec![(
             "a".to_owned(),
@@ -405,8 +405,8 @@ mod tests {
     fn eventually_unbounded() {
         let mut ctx = ExprBuilder::new();
 
-        let a = ctx.float_var("a".to_owned()).unwrap();
-        let cmp = ctx.make_ge(a, ctx.float_const(0.0));
+        let a = Box::new(ctx.float_var("a".to_owned()).unwrap());
+        let cmp = Box::new(ctx.make_ge(a, Box::new(ctx.float_const(0.0))));
         let spec = ctx.make_eventually(cmp);
 
         {

@@ -53,13 +53,13 @@ mod tests {
     fn simple_iter() {
         let mut ctx = ExprBuilder::new();
 
-        let x = ctx.float_var("x".to_owned()).unwrap();
-        let y = ctx.float_var("y".to_owned()).unwrap();
-        let lit = ctx.float_const(2.0);
+        let x = Box::new(ctx.float_var("x".to_owned()).unwrap());
+        let y = Box::new(ctx.float_var("y".to_owned()).unwrap());
+        let lit = Box::new(ctx.float_const(2.0));
 
-        let pred1 = ctx.make_le(x.clone(), lit.clone());
-        let pred2 = ctx.make_gt(y.clone(), lit.clone());
-        let spec = ctx.make_or([*pred1.clone(), *pred2.clone()]).unwrap();
+        let pred1 = Box::new(ctx.make_le(x.clone(), lit.clone()));
+        let pred2 = Box::new(ctx.make_gt(y.clone(), lit.clone()));
+        let spec = Box::new(ctx.make_or([*pred1.clone(), *pred2.clone()]).unwrap());
 
         drop(ctx);
 
