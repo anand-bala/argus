@@ -3,15 +3,15 @@ name = "argus-parser"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
-name = "argus_parser"
-
-[[bin]]
-name = "argus_parser"
-path = "src/main.rs"
-
+[[example]]
+name = "dump_parse_tree"
+required-features = ["reporting"]
 
 [dependencies]
 argus-core = { version = "0.1.0", path = "../argus-core" }
-ariadne = "0.3.0"
+ariadne = { version = "0.3.0", optional = true }
 chumsky = { version = "1.0.0-alpha.4", features = ["default", "label"] }
+
+[features]
+
+reporting = ["dep:ariadne"]

@@ -145,13 +145,6 @@ impl<'src> Expr<'src> {
         }
     }
 
-    fn var(name: &'src str) -> Self {
-        Self::Var {
-            name,
-            kind: Type::Unknown,
-        }
-    }
-
     fn unary_op(op: UnaryOps, arg: Box<Spanned<Self>>, interval: Option<Spanned<Interval<'src>>>) -> Self {
         let mut arg = arg;
         (*arg).0.make_typed(op.default_type());
@@ -189,8 +182,7 @@ type ParserInput<'tokens, 'src> = SpannedInput<Token<'src>, Span, &'tokens [(Tok
 pub fn num_expr_parser<'tokens, 'src: 'tokens>(
 ) -> impl Parser<'tokens, ParserInput<'tokens, 'src>, Spanned<Expr<'src>>, Error<'tokens, 'src>> + Clone {
     recursive(|num_expr| {
-        let var = select! { Token::Ident(ident) => Expr::Var{ name: ident.clone(), kind: Type::default()} }
-            .labelled("variable");
+        let var = select! { Token::Ident(name) => Expr::Var{ name, kind: Type::default()} }.labelled("variable");
 
         let num_literal = select! {
             Token::Int(val) => Expr::Int(val),
@@ -223,24 +215,32 @@ pub fn num_expr_parser<'tokens, 'src: 'tokens>(
 
         // Product ops (multiply and divide) have equal precedence
         let product_op = {
-            let op = just(Token::Times)
-                .to(BinaryOps::Mul)
-                .or(just(Token::Divide).to(BinaryOps::Div));
-            neg_op.clone().foldl(op.then(neg_op).repeated(), |a, (op, b)| {
-                let span = a.1.start..b.1.end;
-                (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
-            })
+            let op = choice((
+                just(Token::Times).to(BinaryOps::Mul),
+                just(Token::Divide).to(BinaryOps::Div),
+            ));
+            neg_op
+                .clone()
+                .foldl(op.then(neg_op).repeated(), |a, (op, b)| {
+                    let span = a.1.start..b.1.end;
+                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                })
+                .boxed()
         };
 
         // Sum ops (add and subtract) have equal precedence
         let sum_op = {
-            let op = just(Token::Plus)
-                .to(BinaryOps::Add)
-                .or(just(Token::Minus).to(BinaryOps::Sub));
-            product_op.clone().foldl(op.then(product_op).repeated(), |a, (op, b)| {
-                let span = a.1.start..b.1.end;
-                (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
-            })
+            let op = choice((
+                just(Token::Plus).to(BinaryOps::Add),
+                just(Token::Minus).to(BinaryOps::Sub),
+            ));
+            product_op
+                .clone()
+                .foldl(op.then(product_op).repeated(), |a, (op, b)| {
+                    let span = a.1.start..b.1.end;
+                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                })
+                .boxed()
         };
 
         sum_op.labelled("numeric expression").as_context()
@@ -272,8 +272,9 @@ pub fn parser<'tokens, 'src: 'tokens>(
                     span.into(),
                 )
             })
+            .boxed()
     };
-    let num_expr = num_expr_parser();
+    let num_expr = num_expr_parser().boxed();
 
     recursive(|expr| {
         let literal = select! {
@@ -284,32 +285,28 @@ pub fn parser<'tokens, 'src: 'tokens>(
         let var = select! { Token::Ident(ident) => Expr::Var{ name: ident.clone(), kind: Type::default()} }
             .labelled("variable");
 
-        // Relational ops (<, <=, >, >=) have equal precedence
+        // Relational ops (<, <=, >, >=, ==, !=) have equal precedence
         let relational_op = {
-            let op = just(Token::Lt).to(BinaryOps::Lt).or(just(Token::Le)
-                .to(BinaryOps::Le)
-                .or(just(Token::Gt).to(BinaryOps::Gt).or(just(Token::Ge).to(BinaryOps::Ge))));
-            num_expr.clone().foldl(op.then(num_expr).repeated(), |a, (op, b)| {
-                let span = a.1.start..b.1.end;
-                (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
-            })
-        };
-
-        // Equality ops (==, !=) have equal precedence
-        let equality_op = {
-            let op = just(Token::Eq)
-                .to(BinaryOps::Eq)
-                .or(just(Token::Neq).to(BinaryOps::Neq));
-            relational_op
+            let op = choice((
+                just(Token::Lt).to(BinaryOps::Lt),
+                just(Token::Le).to(BinaryOps::Le),
+                just(Token::Gt).to(BinaryOps::Gt),
+                just(Token::Ge).to(BinaryOps::Ge),
+                just(Token::Eq).to(BinaryOps::Eq),
+                just(Token::Neq).to(BinaryOps::Neq),
+            ));
+            num_expr
                 .clone()
-                .foldl(op.then(relational_op).repeated(), |a, (op, b)| {
+                .then(op.then(num_expr))
+                .map(|(a, (op, b))| {
                     let span = a.1.start..b.1.end;
                     (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
                 })
+                .boxed()
         }
         .labelled("atomic predicate");
 
-        let atom = equality_op
+        let atom = relational_op
             .or(var.or(literal).map_with_span(|expr, span| (expr, span)))
             // Atoms can also just be normal expressions, but surrounded with parentheses
             .or(expr.clone().delimited_by(just(Token::LParen), just(Token::RParen)))
@@ -328,28 +325,23 @@ pub fn parser<'tokens, 'src: 'tokens>(
             .foldr(atom, |op, rhs| {
                 let span = op.1.start..rhs.1.end;
                 (Expr::unary_op(op.0, Box::new(rhs), None), span.into())
-            });
-
-        let next_op = just(Token::Next)
-            .map_with_span(|_, span: Span| (UnaryOps::Next, span))
-            .then(interval.or_not())
-            .repeated()
-            .foldr(not_op, |(op, interval), rhs| {
-                let span = op.1.start..rhs.1.end;
-                (Expr::unary_op(op.0, Box::new(rhs), interval), span.into())
-            });
+            })
+            .boxed();
 
         let unary_temporal_op = {
-            let op = just(Token::Eventually)
-                .to(UnaryOps::Eventually)
-                .or(just(Token::Always).to(UnaryOps::Always));
+            let op = choice((
+                just(Token::Next).to(UnaryOps::Next),
+                just(Token::Eventually).to(UnaryOps::Eventually),
+                just(Token::Always).to(UnaryOps::Always),
+            ));
             op.map_with_span(|op, span: Span| (op, span))
-                .then(interval.or_not())
+                .then(interval.clone().or_not())
                 .repeated()
-                .foldr(next_op, |(op, interval), rhs| {
+                .foldr(not_op, |(op, interval), rhs| {
                     let span = op.1.start..rhs.1.end;
                     (Expr::unary_op(op.0, Box::new(rhs), interval), span.into())
                 })
+                .boxed()
         };
 
         let binary_temporal_op = unary_temporal_op
@@ -363,7 +355,8 @@ pub fn parser<'tokens, 'src: 'tokens>(
                     Expr::binary_op(op, (Box::new(lhs), Box::new(rhs)), interval),
                     span.into(),
                 )
-            });
+            })
+            .boxed();
 
         let and_op = {
             let op = just(Token::And).to(BinaryOps::And);
@@ -373,34 +366,44 @@ pub fn parser<'tokens, 'src: 'tokens>(
                     let span = a.1.start..b.1.end;
                     (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
                 })
+                .boxed()
         };
 
         let or_op = {
             let op = just(Token::Or).to(BinaryOps::Or);
-            and_op.clone().foldl(op.then(and_op).repeated(), |a, (op, b)| {
-                let span = a.1.start..b.1.end;
-                (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
-            })
+            and_op
+                .clone()
+                .foldl(op.then(and_op).repeated(), |a, (op, b)| {
+                    let span = a.1.start..b.1.end;
+                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                })
+                .boxed()
         };
 
         let xor_op = {
             let op = just(Token::Xor).to(BinaryOps::Xor);
-            or_op.clone().foldl(op.then(or_op).repeated(), |a, (op, b)| {
-                let span = a.1.start..b.1.end;
-                (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
-            })
+            or_op
+                .clone()
+                .foldl(op.then(or_op).repeated(), |a, (op, b)| {
+                    let span = a.1.start..b.1.end;
+                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                })
+                .boxed()
         };
 
         let implies_equiv_op = {
             let op = just(Token::Implies)
                 .to(BinaryOps::Implies)
                 .or(just(Token::Equiv).to(BinaryOps::Equiv));
-            xor_op.clone().foldl(op.then(xor_op).repeated(), |a, (op, b)| {
-                let span = a.1.start..b.1.end;
-                (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
-            })
+            xor_op
+                .clone()
+                .foldl(op.then(xor_op).repeated(), |a, (op, b)| {
+                    let span = a.1.start..b.1.end;
+                    (Expr::binary_op(op, (Box::new(a), Box::new(b)), None), span.into())
+                })
+                .boxed()
         };
 
-        implies_equiv_op.labelled("expression").as_context()
+        implies_equiv_op.labelled("boolean expression").as_context()
     })
 }

@@ -94,16 +94,20 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     let floating_number = just('-')
         .or_not()
         .then(digits)
-        .then(frac.or_not())
-        .then(exp.or_not())
+        .then(choice((frac.then(exp).slice(), frac.slice(), exp.slice())))
+        // .then(frac.or_not())
+        // .then(exp.or_not())
         .map_slice(|s: &str| Token::Float(s.parse().unwrap()))
         .boxed();
 
     let signed_int = one_of("+-")
-        .or_not()
+        // .or_not()
         .then(digits)
+        .then(frac.not().or(exp.not()))
         .map_slice(|s: &str| Token::Int(s.parse().unwrap()));
-    let unsigned_int = digits.map_slice(|s: &str| Token::UInt(s.parse().unwrap()));
+    let unsigned_int = digits
+        .then(frac.not().or(exp.not()))
+        .map_slice(|s: &str| Token::UInt(s.parse().unwrap()));
 
     let number = choice((floating_number, signed_int, unsigned_int));
 
@@ -160,10 +164,16 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
         "false" => Token::Bool(false),
         "G" => Token::Always,
         "alw" => Token::Always,
+        "always" => Token::Always,
+        "globally" => Token::Always,
         "F" => Token::Eventually,
         "ev" => Token::Eventually,
+        "eventually" => Token::Eventually,
+        "finally" => Token::Eventually,
         "X" => Token::Next,
+        "next" => Token::Next,
         "U" => Token::Until,
+        "until" => Token::Until,
         _ => Token::Ident(ident),
     });
 

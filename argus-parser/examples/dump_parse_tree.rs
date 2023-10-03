@@ -1,14 +1,14 @@
-use std::{env, fs};
+use std::env;
 
-use argus_parser::lexer;
-// use crate::parser::{parser, Error as ParseError};
+use argus_parser::{lexer, parser};
 use ariadne::{sources, Color, Label, Report, ReportKind};
+use chumsky::prelude::Input;
 use chumsky::Parser;
 
 fn main() {
     let src = env::args().nth(1).expect("Expected expression");
 
-    let (tokens, mut errs) = lexer().parse(src.as_str()).into_output_errors();
+    let (tokens, errs) = lexer().parse(src.as_str()).into_output_errors();
 
     println!("*** Outputting tokens ***");
     if let Some(tokens) = &tokens {
@@ -33,7 +33,7 @@ fn main() {
 
     errs.into_iter()
         .map(|e| e.map_token(|c| c.to_string()))
-        // .chain(parse_errs.into_iter().map(|e| e.map_token(|tok| tok.to_string())))
+        .chain(parse_errs.into_iter().map(|e| e.map_token(|tok| tok.to_string())))
         .for_each(|e| {
             Report::build(ReportKind::Error, src.clone(), e.span().start)
                 .with_message(e.to_string())
