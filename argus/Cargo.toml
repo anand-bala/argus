@@ -2,10 +2,12 @@
 name = "argus"
 version = "0.1.0"
 
-authors = ["Anand Balakrishnan"]
-license = "BSD-3-Clause"
-
-edition = "2021"
-rust-version = "1.66"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
+argus-core = { version = "0.1.0", path = "../argus-core" }
+argus-parser = { version = "0.1.0", path = "../argus-parser" }
+argus-semantics = { version = "0.1.0", path = "../argus-semantics" }

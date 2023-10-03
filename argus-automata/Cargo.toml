@@ -1,9 +1,11 @@
 [package]
 name = "argus-automata"
 version = "0.0.0"
-edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 petgraph = "0.6.4"

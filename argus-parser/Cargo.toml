@@ -1,7 +1,11 @@
 [package]
 name = "argus-parser"
 version = "0.1.0"
-edition = "2021"
+
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [[example]]
 name = "dump_parse_tree"
@@ -17,5 +21,5 @@ ariadne = { version = "0.3.0", optional = true }
 chumsky = { version = "1.0.0-alpha.4", features = ["default", "label"] }
 
 [features]
-
+default = []
 reporting = ["dep:ariadne"]

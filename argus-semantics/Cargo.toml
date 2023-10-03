@@ -1,7 +1,11 @@
 [package]
 name = "argus-semantics"
 version = "0.1.0"
-edition = "2021"
+
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 argus-core = { version = "0.1.0", path = "../argus-core" }
