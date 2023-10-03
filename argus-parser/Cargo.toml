@@ -3,7 +3,15 @@ name = "argus-parser"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "argus_parser"
+
+[[bin]]
+name = "argus_parser"
+path = "src/main.rs"
+
+
 [dependencies]
 argus-core = { version = "0.1.0", path = "../argus-core" }
 ariadne = "0.3.0"
-chumsky = "1.0.0-alpha.4"
+chumsky = { version = "1.0.0-alpha.4", features = ["default", "label"] }

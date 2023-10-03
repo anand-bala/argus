@@ -6,7 +6,7 @@ pub type Span = SimpleSpan<usize>;
 pub type Output<'a> = Vec<(Token<'a>, Span)>;
 pub type Error<'a> = extra::Err<Rich<'a, char, Span>>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token<'src> {
     Semicolon,
     LBracket,
@@ -14,8 +14,11 @@ pub enum Token<'src> {
     LParen,
     RParen,
     Comma,
+    DotDot,
     Bool(bool),
-    Num(&'src str),
+    Int(i64),
+    UInt(u64),
+    Float(f64),
     Ident(&'src str),
     Minus,
     Plus,
@@ -49,8 +52,11 @@ impl<'src> fmt::Display for Token<'src> {
             Token::LParen => write!(f, "("),
             Token::RParen => write!(f, ")"),
             Token::Comma => write!(f, ","),
+            Token::DotDot => write!(f, ".."),
             Token::Bool(val) => write!(f, "{}", val),
-            Token::Num(val) => write!(f, "{}", val),
+            Token::Int(val) => write!(f, "{}", val),
+            Token::UInt(val) => write!(f, "{}", val),
+            Token::Float(val) => write!(f, "{}", val),
             Token::Ident(ident) => write!(f, "{}", ident),
             Token::Minus => write!(f, "-"),
             Token::Plus => write!(f, "+"),
@@ -85,13 +91,21 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
 
     let exp = just('e').or(just('E')).then(one_of("+-").or_not()).then(digits);
 
-    let number = just('-')
+    let floating_number = just('-')
         .or_not()
-        .then(text::int(10))
+        .then(digits)
         .then(frac.or_not())
         .then(exp.or_not())
-        .map_slice(Token::Num)
+        .map_slice(|s: &str| Token::Float(s.parse().unwrap()))
         .boxed();
+
+    let signed_int = one_of("+-")
+        .or_not()
+        .then(digits)
+        .map_slice(|s: &str| Token::Int(s.parse().unwrap()));
+    let unsigned_int = digits.map_slice(|s: &str| Token::UInt(s.parse().unwrap()));
+
+    let number = choice((floating_number, signed_int, unsigned_int));
 
     // A parser for control characters (delimiters, semicolons, etc.)
     let ctrl = choice((
@@ -101,6 +115,7 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
         just("(").to(Token::LParen),
         just(")").to(Token::RParen),
         just(",").to(Token::Comma),
+        just("..").to(Token::DotDot),
     ));
 
     // Lexer for operator symbols
