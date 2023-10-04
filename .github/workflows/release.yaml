@@ -46,8 +46,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install pyargus[test] --find-links dist --force-reinstall
-          pip install pytest
+          pip install pyargus --find-links dist --force-reinstall
+          pip install pytest pytest-cov hypothesis
           cd pyargus && pytest
       - name: pytest
         if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
@@ -59,10 +59,10 @@ jobs:
           install: |
             apt-get update
             apt-get install -y --no-install-recommends python3 python3-pip
-            pip3 install -U pip pytest
+            pip3 install -U pip pytest pytest-cov hypothesis
           run: |
             set -e
-            pip3 install pyargus[test] --find-links dist --force-reinstall
+            pip3 install pyargus --find-links dist --force-reinstall
             cd pyargus && pytest
 
   windows:
@@ -92,8 +92,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install pyargus[test] --find-links dist --force-reinstall
-          pip install pytest
+          pip install pyargus --find-links dist --force-reinstall
+          pip install pytest pytest-cov hypothesis
           cd pyargus && pytest
 
   macos:
@@ -122,8 +122,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install pyargus[test] --find-links dist --force-reinstall
-          pip install pytest
+          pip install pyargus --find-links dist --force-reinstall
+          pip install pytest pytest-cov hypothesis
           cd pyargus && pytest
 
   sdist:
