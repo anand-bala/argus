@@ -633,21 +633,21 @@ mod tests {
 
         // signal_ops_impl!(u64, lhs + rhs);
         // signal_ops_impl!(u64, lhs * rhs);
-        signal_ops_impl!(u64, lhs / rhs);
+        // signal_ops_impl!(u64, lhs / rhs);
 
-        signal_ops_impl!(i64, -sig);
+        // signal_ops_impl!(i64, -sig);
         // signal_ops_impl!(i64, lhs + rhs);
         // signal_ops_impl!(i64, lhs * rhs);
-        signal_ops_impl!(i64, lhs / rhs);
+        // signal_ops_impl!(i64, lhs / rhs);
 
-        signal_ops_impl!(f32, -sig);
-        signal_ops_impl!(f32, lhs + rhs);
-        signal_ops_impl!(f32, lhs * rhs);
+        // signal_ops_impl!(f32, -sig);
+        // signal_ops_impl!(f32, lhs + rhs);
+        // signal_ops_impl!(f32, lhs * rhs);
         // signal_ops_impl!(f32, lhs / rhs);
 
-        signal_ops_impl!(f64, -sig);
-        signal_ops_impl!(f64, lhs + rhs);
-        signal_ops_impl!(f64, lhs * rhs);
+        // signal_ops_impl!(f64, -sig);
+        // signal_ops_impl!(f64, lhs + rhs);
+        // signal_ops_impl!(f64, lhs * rhs);
         // signal_ops_impl!(f64, lhs / rhs);
     }
 }

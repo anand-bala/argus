@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
+use argus::signals::interpolation::{Constant, Linear};
 use argus::{AnySignal, BooleanSemantics, QuantitativeSemantics, Signal, Trace};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
@@ -60,14 +62,26 @@ impl Trace for PyTrace {
 }
 
 #[pyfunction]
-fn eval_bool_semantics(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<BoolSignal>> {
-    let sig = BooleanSemantics::eval(&expr.0, trace).map_err(PyArgusError::from)?;
-    Python::with_gil(|py| Py::new(py, (BoolSignal, PySignal::new(sig, PyInterp::Linear))))
+#[pyo3(signature = (expr, trace, *, interpolation_method = "linear"))]
+fn eval_bool_semantics(expr: &PyBoolExpr, trace: &PyTrace, interpolation_method: &str) -> PyResult<Py<BoolSignal>> {
+    let interp = PyInterp::from_str(interpolation_method)?;
+    let sig = match interp {
+        PyInterp::Linear => BooleanSemantics::eval::<Linear, Linear>(&expr.0, trace).map_err(PyArgusError::from)?,
+        PyInterp::Constant => {
+            BooleanSemantics::eval::<Constant, Constant>(&expr.0, trace).map_err(PyArgusError::from)?
+        }
+    };
+    Python::with_gil(|py| Py::new(py, (BoolSignal, PySignal::new(sig, interp))))
 }
 #[pyfunction]
-fn eval_robust_semantics(expr: &PyBoolExpr, trace: &PyTrace) -> PyResult<Py<FloatSignal>> {
-    let sig = QuantitativeSemantics::eval(&expr.0, trace).map_err(PyArgusError::from)?;
-    Python::with_gil(|py| Py::new(py, (FloatSignal, PySignal::new(sig, PyInterp::Linear))))
+#[pyo3(signature = (expr, trace, *, interpolation_method = "linear"))]
+fn eval_robust_semantics(expr: &PyBoolExpr, trace: &PyTrace, interpolation_method: &str) -> PyResult<Py<FloatSignal>> {
+    let interp = PyInterp::from_str(interpolation_method)?;
+    let sig = match interp {
+        PyInterp::Linear => QuantitativeSemantics::eval::<Linear>(&expr.0, trace).map_err(PyArgusError::from)?,
+        PyInterp::Constant => QuantitativeSemantics::eval::<Constant>(&expr.0, trace).map_err(PyArgusError::from)?,
+    };
+    Python::with_gil(|py| Py::new(py, (FloatSignal, PySignal::new(sig, interp))))
 }
 
 pub fn init(_py: Python, m: &PyModule) -> PyResult<()> {

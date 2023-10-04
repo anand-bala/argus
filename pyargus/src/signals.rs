@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use argus::signals::interpolation::{Constant, Linear};
 use argus::signals::Signal;
 use pyo3::exceptions::PyValueError;
@@ -12,6 +14,21 @@ pub enum PyInterp {
     #[default]
     Linear,
     Constant,
+}
+
+impl FromStr for PyInterp {
+    type Err = PyErr;
+
+    fn from_str(method: &str) -> Result<Self, Self::Err> {
+        match method {
+            "linear" => Ok(PyInterp::Linear),
+            "constant" => Ok(PyInterp::Constant),
+            _ => Err(PyValueError::new_err(format!(
+                "unsupported interpolation method `{}`",
+                method
+            ))),
+        }
+    }
 }
 
 #[derive(Debug, Clone, derive_more::From, derive_more::TryInto)]
@@ -126,11 +143,7 @@ macro_rules! impl_signals {
                 #[new]
                 #[pyo3(signature = (*, interpolation_method = "linear"))]
                 fn new(interpolation_method: &str) -> PyResult<(Self, PySignal)> {
-                    let interp = match interpolation_method {
-                        "linear" => PyInterp::Linear,
-                        "constant" => PyInterp::Constant,
-                        _ => return Err(PyValueError::new_err(format!("unsupported interpolation method `{}`", interpolation_method))),
-                    };
+                    let interp = PyInterp::from_str(interpolation_method)?;
                     Ok((Self, PySignal::new(Signal::<$ty>::new(), interp)))
                 }
 
@@ -138,11 +151,7 @@ macro_rules! impl_signals {
                 #[classmethod]
                 #[pyo3(signature = (value, *, interpolation_method = "linear"))]
                 fn constant(_: &PyType, py: Python<'_>, value: $ty, interpolation_method: &str) -> PyResult<Py<Self>> {
-                    let interp = match interpolation_method {
-                        "linear" => PyInterp::Linear,
-                        "constant" => PyInterp::Constant,
-                        _ => return Err(PyValueError::new_err(format!("unsupported interpolation method `{}`", interpolation_method))),
-                    };
+                    let interp = PyInterp::from_str(interpolation_method)?;
                     Py::new(
                         py,
                         (Self, PySignal::new(Signal::constant(value), interp))
@@ -158,11 +167,7 @@ macro_rules! impl_signals {
                         .map(|(t, v)| (core::time::Duration::try_from_secs_f64(t).unwrap_or_else(|err| panic!("Value = {}, {}", t, err)), v))
                     ).map_err(PyArgusError::from)?;
 
-                    let interp = match interpolation_method {
-                        "linear" => PyInterp::Linear,
-                        "constant" => PyInterp::Constant,
-                        _ => return Err(PyValueError::new_err(format!("unsupported interpolation method `{}`", interpolation_method))),
-                    };
+                    let interp = PyInterp::from_str(interpolation_method)?;
                     Python::with_gil(|py| {
                         Py::new(
                             py,

@@ -4,7 +4,7 @@ use std::time::Duration;
 use argus_core::expr::*;
 use argus_core::prelude::*;
 use argus_core::signals::interpolation::Linear;
-use argus_core::signals::SignalPartialOrd;
+use argus_core::signals::{InterpolationMethod, SignalPartialOrd};
 
 use crate::semantics::QuantitativeSemantics;
 use crate::traits::Trace;
@@ -13,7 +13,11 @@ use crate::utils::lemire_minmax::MonoWedge;
 pub struct BooleanSemantics;
 
 impl BooleanSemantics {
-    pub fn eval(expr: &BoolExpr, trace: &impl Trace) -> ArgusResult<Signal<bool>> {
+    pub fn eval<BoolI, NumI>(expr: &BoolExpr, trace: &impl Trace) -> ArgusResult<Signal<bool>>
+    where
+        BoolI: InterpolationMethod<bool>,
+        NumI: InterpolationMethod<f64>,
+    {
         let ret = match expr {
             BoolExpr::BoolLit(val) => Signal::constant(val.0),
             BoolExpr::BoolVar(BoolVar { name }) => trace
@@ -22,8 +26,8 @@ impl BooleanSemantics {
                 .clone(),
             BoolExpr::Cmp(Cmp { op, lhs, rhs }) => {
                 use argus_core::expr::Ordering::*;
-                let lhs = QuantitativeSemantics::eval_num_expr::<f64>(lhs, trace)?;
-                let rhs = QuantitativeSemantics::eval_num_expr::<f64>(rhs, trace)?;
+                let lhs = QuantitativeSemantics::eval_num_expr::<f64, NumI>(lhs, trace)?;
+                let rhs = QuantitativeSemantics::eval_num_expr::<f64, NumI>(rhs, trace)?;
 
                 match op {
                     Eq => lhs.signal_eq(&rhs).unwrap(),
@@ -35,46 +39,48 @@ impl BooleanSemantics {
                 }
             }
             BoolExpr::Not(Not { arg }) => {
-                let arg = Self::eval(arg, trace)?;
+                let arg = Self::eval::<BoolI, NumI>(arg, trace)?;
                 !&arg
             }
             BoolExpr::And(And { args }) => {
                 assert!(args.len() >= 2);
-                args.iter()
-                    .map(|arg| Self::eval(arg, trace))
-                    .try_fold(Signal::const_true(), |acc, item| {
+                args.iter().map(|arg| Self::eval::<BoolI, NumI>(arg, trace)).try_fold(
+                    Signal::const_true(),
+                    |acc, item| {
                         let item = item?;
-                        Ok(acc.and(&item))
-                    })?
+                        Ok(acc.and::<BoolI>(&item))
+                    },
+                )?
             }
             BoolExpr::Or(Or { args }) => {
                 assert!(args.len() >= 2);
-                args.iter()
-                    .map(|arg| Self::eval(arg, trace))
-                    .try_fold(Signal::const_true(), |acc, item| {
+                args.iter().map(|arg| Self::eval::<BoolI, NumI>(arg, trace)).try_fold(
+                    Signal::const_true(),
+                    |acc, item| {
                         let item = item?;
-                        Ok(acc.or(&item))
-                    })?
+                        Ok(acc.or::<BoolI>(&item))
+                    },
+                )?
             }
             BoolExpr::Next(Next { arg }) => {
-                let arg = Self::eval(arg, trace)?;
+                let arg = Self::eval::<BoolI, NumI>(arg, trace)?;
                 compute_next(arg)?
             }
             BoolExpr::Oracle(Oracle { steps, arg }) => {
-                let arg = Self::eval(arg, trace)?;
+                let arg = Self::eval::<BoolI, NumI>(arg, trace)?;
                 compute_oracle(arg, *steps)?
             }
             BoolExpr::Always(Always { arg, interval }) => {
-                let arg = Self::eval(arg, trace)?;
+                let arg = Self::eval::<BoolI, NumI>(arg, trace)?;
                 compute_always(arg, interval)?
             }
             BoolExpr::Eventually(Eventually { arg, interval }) => {
-                let arg = Self::eval(arg, trace)?;
+                let arg = Self::eval::<BoolI, NumI>(arg, trace)?;
                 compute_eventually(arg, interval)?
             }
             BoolExpr::Until(Until { lhs, rhs, interval }) => {
-                let lhs = Self::eval(lhs, trace)?;
-                let rhs = Self::eval(rhs, trace)?;
+                let lhs = Self::eval::<BoolI, NumI>(lhs, trace)?;
+                let rhs = Self::eval::<BoolI, NumI>(rhs, trace)?;
                 compute_until(lhs, rhs, interval)?
             }
         };
@@ -389,7 +395,7 @@ mod tests {
 
         let trace = MyTrace { signals };
 
-        let rob = BooleanSemantics::eval(&spec, &trace).unwrap();
+        let rob = BooleanSemantics::eval::<Linear, Linear>(&spec, &trace).unwrap();
         let expected = Signal::from_iter(vec![
             (Duration::from_secs_f64(0.0), false),
             (Duration::from_secs_f64(0.7), false),
@@ -421,7 +427,7 @@ mod tests {
             )]);
 
             let trace = MyTrace { signals };
-            let rob = BooleanSemantics::eval(&spec, &trace).unwrap();
+            let rob = BooleanSemantics::eval::<Linear, Linear>(&spec, &trace).unwrap();
 
             let Signal::Sampled { values, time_points: _ } = rob else {
                 panic!("boolean semantics should remain sampled");
@@ -441,7 +447,7 @@ mod tests {
             )]);
 
             let trace = MyTrace { signals };
-            let rob = BooleanSemantics::eval(&spec, &trace).unwrap();
+            let rob = BooleanSemantics::eval::<Linear, Linear>(&spec, &trace).unwrap();
             println!("{:#?}", rob);
 
             let Signal::Sampled { values, time_points: _ } = rob else {

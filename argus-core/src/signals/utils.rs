@@ -6,7 +6,6 @@
 
 use core::ops::{Bound, RangeBounds};
 use core::time::Duration;
-use std::iter::zip;
 
 use super::{InterpolationMethod, Sample, Signal};
 
@@ -25,16 +24,16 @@ pub struct Neighborhood<T> {
 }
 
 impl<T> Signal<T> {
-    pub(crate) fn unary_op<U, F>(self, op: F) -> Signal<U>
+    pub(crate) fn unary_op<U, F>(&self, op: F) -> Signal<U>
     where
-        F: Fn(T) -> U,
+        F: Fn(&T) -> U,
         Signal<U>: std::iter::FromIterator<(Duration, U)>,
     {
         use Signal::*;
         match self {
             Empty => Signal::Empty,
             Constant { value } => Signal::constant(op(value)),
-            Sampled { values, time_points } => zip(time_points, values.into_iter().map(op)).collect(),
+            signal => signal.into_iter().map(|(&t, v)| (t, op(v))).collect(),
         }
     }
 
