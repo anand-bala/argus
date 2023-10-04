@@ -43,10 +43,10 @@ impl<T> Signal<T> {
     pub fn sub<U, I>(&self, other: &Signal<T>) -> Signal<U>
     where
         for<'t> &'t T: core::ops::Sub<Output = U>,
-        T: Clone,
+        T: Clone + PartialOrd,
         I: InterpolationMethod<T>,
     {
-        self.binary_op::<_, _, I>(other, |u, v| u - v)
+        self.binary_op_with_intersection::<_, _, I>(other, |u, v| u - v)
     }
 
     /// Perform sample-wise division of the two signals.
@@ -86,7 +86,7 @@ impl<T> Signal<T> {
         T: Clone + PartialOrd,
         I: InterpolationMethod<T>,
     {
-        self.binary_op::<_, _, I>(other, |u, v| if u < v { v - u } else { u - v })
+        self.binary_op_with_intersection::<_, _, I>(other, |u, v| if u < v { v - u } else { u - v })
     }
 }
 

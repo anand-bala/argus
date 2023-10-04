@@ -3,7 +3,6 @@ use std::time::Duration;
 
 use argus_core::expr::*;
 use argus_core::prelude::*;
-use argus_core::signals::interpolation::Linear;
 use argus_core::signals::{InterpolationMethod, SignalPartialOrd};
 
 use crate::semantics::QuantitativeSemantics;
@@ -30,12 +29,12 @@ impl BooleanSemantics {
                 let rhs = QuantitativeSemantics::eval_num_expr::<f64, NumI>(rhs, trace)?;
 
                 match op {
-                    Eq => lhs.signal_eq(&rhs).unwrap(),
-                    NotEq => lhs.signal_ne(&rhs).unwrap(),
-                    Less { strict } if *strict => lhs.signal_lt(&rhs).unwrap(),
-                    Less { strict: _ } => lhs.signal_le(&rhs).unwrap(),
-                    Greater { strict } if *strict => lhs.signal_gt(&rhs).unwrap(),
-                    Greater { strict: _ } => lhs.signal_ge(&rhs).unwrap(),
+                    Eq => lhs.signal_eq::<NumI>(&rhs).unwrap(),
+                    NotEq => lhs.signal_ne::<NumI>(&rhs).unwrap(),
+                    Less { strict } if *strict => lhs.signal_lt::<NumI>(&rhs).unwrap(),
+                    Less { strict: _ } => lhs.signal_le::<NumI>(&rhs).unwrap(),
+                    Greater { strict } if *strict => lhs.signal_gt::<NumI>(&rhs).unwrap(),
+                    Greater { strict: _ } => lhs.signal_ge::<NumI>(&rhs).unwrap(),
                 }
             }
             BoolExpr::Not(Not { arg }) => {
@@ -72,16 +71,16 @@ impl BooleanSemantics {
             }
             BoolExpr::Always(Always { arg, interval }) => {
                 let arg = Self::eval::<BoolI, NumI>(arg, trace)?;
-                compute_always(arg, interval)?
+                compute_always::<BoolI>(arg, interval)?
             }
             BoolExpr::Eventually(Eventually { arg, interval }) => {
                 let arg = Self::eval::<BoolI, NumI>(arg, trace)?;
-                compute_eventually(arg, interval)?
+                compute_eventually::<BoolI>(arg, interval)?
             }
             BoolExpr::Until(Until { lhs, rhs, interval }) => {
                 let lhs = Self::eval::<BoolI, NumI>(lhs, trace)?;
                 let rhs = Self::eval::<BoolI, NumI>(rhs, trace)?;
-                compute_until(lhs, rhs, interval)?
+                compute_until::<BoolI>(lhs, rhs, interval)?
             }
         };
         Ok(ret)
@@ -124,7 +123,10 @@ fn compute_oracle(arg: Signal<bool>, steps: usize) -> ArgusResult<Signal<bool>> 
 }
 
 /// Compute always for a signal
-fn compute_always(signal: Signal<bool>, interval: &Interval) -> ArgusResult<Signal<bool>> {
+fn compute_always<I: InterpolationMethod<bool>>(
+    signal: Signal<bool>,
+    interval: &Interval,
+) -> ArgusResult<Signal<bool>> {
     if interval.is_empty() || interval.is_singleton() {
         return Err(ArgusError::InvalidInterval {
             reason: "interval is either empty or singleton",
@@ -143,9 +145,9 @@ fn compute_always(signal: Signal<bool>, interval: &Interval) -> ArgusResult<Sign
             } else if interval.is_untimed() {
                 compute_untimed_always(sig)?
             } else if let (Included(a), Included(b)) = interval.into() {
-                compute_timed_always(sig, *a, Some(*b))?
+                compute_timed_always::<I>(sig, *a, Some(*b))?
             } else if let (Included(a), Unbounded) = interval.into() {
-                compute_timed_always(sig, *a, None)?
+                compute_timed_always::<I>(sig, *a, None)?
             } else {
                 unreachable!("interval should be created using Interval::new, and is_untimed checks this")
             }
@@ -155,9 +157,13 @@ fn compute_always(signal: Signal<bool>, interval: &Interval) -> ArgusResult<Sign
 }
 
 /// Compute timed always for the interval `[a, b]` (or, if `b` is `None`, `[a, ..]`.
-fn compute_timed_always(signal: Signal<bool>, a: Duration, b: Option<Duration>) -> ArgusResult<Signal<bool>> {
+fn compute_timed_always<I: InterpolationMethod<bool>>(
+    signal: Signal<bool>,
+    a: Duration,
+    b: Option<Duration>,
+) -> ArgusResult<Signal<bool>> {
     let z1 = !signal;
-    let z2 = compute_timed_eventually(z1, a, b)?;
+    let z2 = compute_timed_eventually::<I>(z1, a, b)?;
     Ok(!z2)
 }
 
@@ -178,7 +184,10 @@ fn compute_untimed_always(signal: Signal<bool>) -> ArgusResult<Signal<bool>> {
 }
 
 /// Compute eventually for a signal
-fn compute_eventually(signal: Signal<bool>, interval: &Interval) -> ArgusResult<Signal<bool>> {
+fn compute_eventually<I: InterpolationMethod<bool>>(
+    signal: Signal<bool>,
+    interval: &Interval,
+) -> ArgusResult<Signal<bool>> {
     if interval.is_empty() || interval.is_singleton() {
         return Err(ArgusError::InvalidInterval {
             reason: "interval is either empty or singleton",
@@ -197,9 +206,9 @@ fn compute_eventually(signal: Signal<bool>, interval: &Interval) -> ArgusResult<
             } else if interval.is_untimed() {
                 compute_untimed_eventually(sig)?
             } else if let (Included(a), Included(b)) = interval.into() {
-                compute_timed_eventually(sig, *a, Some(*b))?
+                compute_timed_eventually::<I>(sig, *a, Some(*b))?
             } else if let (Included(a), Unbounded) = interval.into() {
-                compute_timed_eventually(sig, *a, None)?
+                compute_timed_eventually::<I>(sig, *a, None)?
             } else {
                 unreachable!("interval should be created using Interval::new, and is_untimed checks this")
             }
@@ -209,7 +218,11 @@ fn compute_eventually(signal: Signal<bool>, interval: &Interval) -> ArgusResult<
 }
 
 /// Compute timed eventually for the interval `[a, b]` (or, if `b` is `None`, `[a,..]`.
-fn compute_timed_eventually(signal: Signal<bool>, a: Duration, b: Option<Duration>) -> ArgusResult<Signal<bool>> {
+fn compute_timed_eventually<I: InterpolationMethod<bool>>(
+    signal: Signal<bool>,
+    a: Duration,
+    b: Option<Duration>,
+) -> ArgusResult<Signal<bool>> {
     match b {
         Some(b) => {
             // We want to compute the windowed max/or of the signal.
@@ -245,7 +258,7 @@ fn compute_timed_eventually(signal: Signal<bool>, a: Duration, b: Option<Duratio
         }
         None => {
             // Shift the signal to the left by `a` and then run the untimed eventually.
-            let shifted = signal.shift_left(a);
+            let shifted = signal.shift_left::<I>(a);
             compute_untimed_eventually(shifted)
         }
     }
@@ -268,18 +281,22 @@ fn compute_untimed_eventually(signal: Signal<bool>) -> ArgusResult<Signal<bool>>
 }
 
 /// Compute until
-fn compute_until(lhs: Signal<bool>, rhs: Signal<bool>, interval: &Interval) -> ArgusResult<Signal<bool>> {
+fn compute_until<I: InterpolationMethod<bool>>(
+    lhs: Signal<bool>,
+    rhs: Signal<bool>,
+    interval: &Interval,
+) -> ArgusResult<Signal<bool>> {
     let ret = match (lhs, rhs) {
         // If either signals are empty, return empty
         (sig @ Signal::Empty, _) | (_, sig @ Signal::Empty) => sig,
         (lhs, rhs) => {
             use Bound::*;
             if interval.is_untimed() {
-                compute_untimed_until(lhs, rhs)?
+                compute_untimed_until::<I>(lhs, rhs)?
             } else if let (Included(a), Included(b)) = interval.into() {
-                compute_timed_until(lhs, rhs, *a, Some(*b))?
+                compute_timed_until::<I>(lhs, rhs, *a, Some(*b))?
             } else if let (Included(a), Unbounded) = interval.into() {
-                compute_timed_until(lhs, rhs, *a, None)?
+                compute_timed_until::<I>(lhs, rhs, *a, None)?
             } else {
                 unreachable!("interval should be created using Interval::new, and is_untimed checks this")
             }
@@ -301,7 +318,7 @@ fn compute_until(lhs: Signal<bool>, rhs: Signal<bool>, interval: &Interval) -> A
 /// $$
 ///
 /// [1]: <> (A. Donzé, T. Ferrère, and O. Maler, "Efficient Robust Monitoring for STL.")
-fn compute_timed_until(
+fn compute_timed_until<I: InterpolationMethod<bool>>(
     lhs: Signal<bool>,
     rhs: Signal<bool>,
     a: Duration,
@@ -310,33 +327,36 @@ fn compute_timed_until(
     match b {
         Some(b) => {
             // First compute eventually [a, b]
-            let ev_a_b_rhs = compute_timed_eventually(rhs.clone(), a, Some(b))?;
+            let ev_a_b_rhs = compute_timed_eventually::<I>(rhs.clone(), a, Some(b))?;
             // Then compute until [a, \infty) (lhs, rhs)
-            let unt_a_inf = compute_timed_until(lhs, rhs, a, None)?;
+            let unt_a_inf = compute_timed_until::<I>(lhs, rhs, a, None)?;
             // Then & them
-            Ok(ev_a_b_rhs.min(&unt_a_inf))
+            Ok(ev_a_b_rhs.and::<I>(&unt_a_inf))
         }
         None => {
             assert_ne!(a, Duration::ZERO, "untimed case wasn't handled for Until");
             // First compute untimed until (lhs, rhs)
-            let untimed_until = compute_untimed_until(lhs, rhs)?;
+            let untimed_until = compute_untimed_until::<I>(lhs, rhs)?;
             // Compute G [0, a]
-            compute_timed_always(untimed_until, Duration::ZERO, Some(a))
+            compute_timed_always::<I>(untimed_until, Duration::ZERO, Some(a))
         }
     }
 }
 
 /// Compute untimed until
-fn compute_untimed_until(lhs: Signal<bool>, rhs: Signal<bool>) -> ArgusResult<Signal<bool>> {
-    let sync_points = lhs.sync_with_intersection::<Linear>(&rhs).unwrap();
+fn compute_untimed_until<I: InterpolationMethod<bool>>(
+    lhs: Signal<bool>,
+    rhs: Signal<bool>,
+) -> ArgusResult<Signal<bool>> {
+    let sync_points = lhs.sync_with_intersection::<I>(&rhs).unwrap();
     let mut ret_samples = Vec::with_capacity(sync_points.len());
     let expected_len = sync_points.len();
 
     let mut next = false;
 
     for (i, t) in sync_points.into_iter().enumerate().rev() {
-        let v1 = lhs.interpolate_at::<Linear>(t).unwrap();
-        let v2 = rhs.interpolate_at::<Linear>(t).unwrap();
+        let v1 = lhs.interpolate_at::<I>(t).unwrap();
+        let v2 = rhs.interpolate_at::<I>(t).unwrap();
 
         #[allow(clippy::nonminimal_bool)]
         let z = (v1 && v2) || (v1 && next);
@@ -355,6 +375,7 @@ mod tests {
     use std::collections::HashMap;
 
     use argus_core::expr::ExprBuilder;
+    use argus_core::signals::interpolation::Linear;
     use argus_core::signals::AnySignal;
     use itertools::assert_equal;
 

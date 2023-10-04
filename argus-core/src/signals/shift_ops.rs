@@ -3,19 +3,17 @@ use core::time::Duration;
 
 use itertools::Itertools;
 
-use super::interpolation::Linear;
 use super::{InterpolationMethod, Signal};
 
 impl<T> Signal<T>
 where
     T: Copy,
-    Linear: InterpolationMethod<T>,
 {
     /// Shift all samples in the signal by `delta` amount to the left.
     ///
     /// This essentially filters out all samples with time points greater than `delta`,
     /// and subtracts `delta` from the rest of the time points.
-    pub fn shift_left(&self, delta: Duration) -> Self {
+    pub fn shift_left<I: InterpolationMethod<T>>(&self, delta: Duration) -> Self {
         match self {
             Signal::Sampled { values, time_points } => {
                 // We want to skip any time points < delta, and subtract the rest.
@@ -34,7 +32,7 @@ where
                 if idx > 0 && first_t != &delta {
                     // The shifted signal will not start at 0, and we have a previous
                     // index to interpolate from.
-                    let v = self.interpolate_at::<Linear>(delta).unwrap();
+                    let v = self.interpolate_at::<I>(delta).unwrap();
                     new_samples.push((Duration::ZERO, v));
                 }
                 // Shift the rest of the samples

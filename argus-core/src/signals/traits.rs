@@ -42,23 +42,27 @@ macro_rules! impl_signal_cmp {
     ($cmp:ident) => {
         paste! {
             /// Compute the time-wise comparison of two signals
-            fn [<signal_ $cmp>](&self, other: &Rhs) -> Option<Signal<bool>> {
-                self.signal_cmp(other, |ord| ord.[<is_ $cmp>]())
+            fn [<signal_ $cmp>]<I>(&self, other: &Rhs) -> Option<Signal<bool>>
+            where
+                I: InterpolationMethod<T>
+            {
+                self.signal_cmp::<_, I>(other, |ord| ord.[<is_ $cmp>]())
             }
         }
     };
 }
 
 /// A time-wise partial ordering defined for signals
-pub trait SignalPartialOrd<Rhs = Self> {
+pub trait SignalPartialOrd<T, Rhs = Self> {
     /// Compare two signals within each of their domains (using [`PartialOrd`]) and
     /// apply the given function `op` to the ordering to create a signal.
     ///
     /// This function returns `None` if the comparison isn't possible, namely, when
     /// either of the signals are empty.
-    fn signal_cmp<F>(&self, other: &Rhs, op: F) -> Option<Signal<bool>>
+    fn signal_cmp<F, I>(&self, other: &Rhs, op: F) -> Option<Signal<bool>>
     where
-        F: Fn(Ordering) -> bool;
+        F: Fn(Ordering) -> bool,
+        I: InterpolationMethod<T>;
 
     impl_signal_cmp!(lt);
     impl_signal_cmp!(le);
