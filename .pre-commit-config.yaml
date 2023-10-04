@@ -8,12 +8,19 @@ repos:
       - id: check-added-large-files
   - repo: local
     hooks:
-      - id: nox
-        name: nox
-        description: Run nox fixers and linters.
-        entry: nox -t fix style lint --no-install
+      - id: nox (python)
+        name: nox (python)
+        description: Run nox fixers and linters for Python
+        entry: nox -t python
         language: system
         pass_filenames: false
-        types_or:
-          - rust
+        types:
           - python
+      - id: nox (rust)
+        name: nox (rust)
+        description: Run nox fixers and linters for Rust
+        entry: nox -t rust
+        language: system
+        pass_filenames: false
+        types:
+          - rust

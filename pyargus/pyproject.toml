@@ -25,7 +25,7 @@ dev = [
   "black",
 ]
 
-test = ["pytest", "pytest-cov", "hypothesis", "numpy"]
+test = ["pytest", "pytest-cov", "hypothesis"]
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
@@ -44,7 +44,6 @@ testpaths = ["tests"]
 packages = ["argus"]
 # ignore_missing_imports = true
 show_error_codes = true
-plugins = ["numpy.typing.mypy_plugin"]
 
 [tool.ruff]
 line-length = 127

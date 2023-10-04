@@ -37,7 +37,7 @@ def dev(session: nox.Session):
     session.run("pre-commit", "install")
 
 
-@nox.session(tags=["style", "fix"], python=False)
+@nox.session(tags=["style", "fix", "rust"], python=False)
 def rustfmt(session: nox.Session):
     if len(session.posargs) > 0:
         session.run("cargo", "+nightly", "fmt", *session.posargs, external=True)
@@ -45,13 +45,13 @@ def rustfmt(session: nox.Session):
         session.run("cargo", "+nightly", "fmt", "--all", external=True)
 
 
-@nox.session(tags=["lint", "fix"], python=False)
+@nox.session(tags=["lint", "fix", "rust"], python=False)
 def cargo_check(session: nox.Session):
     session.run("cargo", "check", "--workspace", external=True)
     session.run("cargo", "clippy", "--workspace", external=True)
 
 
-@nox.session(tags=["style", "fix"])
+@nox.session(tags=["style", "fix", "python"])
 def black(session: nox.Session):
     session.conda_install("black")
     session.run("black", str(__file__))
@@ -59,14 +59,14 @@ def black(session: nox.Session):
         session.run("black", ".")
 
 
-@nox.session(tags=["style", "fix"])
+@nox.session(tags=["style", "fix", "python"])
 def isort(session: nox.Session):
     session.conda_install("isort")
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.run("isort", ".")
 
 
-@nox.session(tags=["lint"])
+@nox.session(tags=["lint", "python"])
 def flake8(session: nox.Session):
     session.conda_install(
         "flake8",
@@ -78,16 +78,16 @@ def flake8(session: nox.Session):
         session.run("flake8")
 
 
-@nox.session(tags=["lint", "fix"])
+@nox.session(tags=["lint", "fix", "python"])
 def ruff(session: nox.Session):
     session.conda_install("ruff")
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.run("ruff", "--fix", "--exit-non-zero-on-fix", ".")
 
 
-@nox.session(tags=["lint"])
+@nox.session(tags=["lint", "python"])
 def mypy(session: nox.Session):
-    session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis", "numpy")
+    session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis")
     session.env.update(ENV)
 
     with session.chdir(CURRENT_DIR / "pyargus"):
