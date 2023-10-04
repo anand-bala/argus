@@ -1,5 +1,5 @@
-use argus_core::signals::interpolation::Linear;
-use argus_core::signals::Signal;
+use argus::signals::interpolation::Linear;
+use argus::signals::Signal;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 

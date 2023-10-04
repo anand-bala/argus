@@ -2,7 +2,7 @@ mod expr;
 mod semantics;
 mod signals;
 
-use argus_core::ArgusError;
+use argus::Error as ArgusError;
 use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyFloat, PyInt, PyType};
@@ -12,7 +12,7 @@ struct PyArgusError(ArgusError);
 
 impl From<PyArgusError> for PyErr {
     fn from(value: PyArgusError) -> Self {
-        use argus_core::Error::*;
+        use argus::Error::*;
         match value.0 {
             err @ (IncompleteArgs | InvalidOperation | IdentifierRedeclaration | InvalidInterval { reason: _ }) => {
                 PyValueError::new_err(err.to_string())

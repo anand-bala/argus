@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use argus_core::signals::{AnySignal, Signal};
-use argus_semantics::{BooleanSemantics, QuantitativeSemantics, Trace};
+use argus::{AnySignal, BooleanSemantics, QuantitativeSemantics, Signal, Trace};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString};
