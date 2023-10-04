@@ -151,6 +151,13 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
         just("=").to(Token::Assign),
     ));
 
+    let temporal_op = choice((
+        just("\u{25cb}").to(Token::Next),       // ○
+        just("\u{25ef}").to(Token::Next),       // ◯
+        just("\u{25c7}").to(Token::Eventually), // ◇
+        just("\u{25a1}").to(Token::Always),     // □
+    ));
+
     // A parser for strings
     // Strings in our grammar are identifiers too
     let quoted_ident = just('"')
@@ -178,7 +185,7 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     });
 
     // A single token can be one of the above
-    let token = choice((op, ctrl, quoted_ident, ident, number));
+    let token = choice((op, temporal_op, ctrl, quoted_ident, ident, number)).boxed();
 
     let comment = just("//").then(any().and_is(just('\n').not()).repeated()).padded();
 

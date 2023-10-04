@@ -23,7 +23,7 @@ fn main() {
                             .with_color(Color::Yellow)
                     }))
                     .finish()
-                    .print(sources([(src.clone(), src.clone())]))
+                    .eprint(sources([(src.clone(), src.clone())]))
                     .unwrap()
             });
         }

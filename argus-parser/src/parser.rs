@@ -51,7 +51,7 @@ pub enum UnaryOps {
 }
 
 impl UnaryOps {
-    fn default_type(&self) -> Type {
+    fn default_args_type(&self) -> Type {
         match self {
             UnaryOps::Neg => Type::Float,
             _ => Type::Bool,
@@ -80,9 +80,18 @@ pub enum BinaryOps {
 }
 
 impl BinaryOps {
-    fn default_type(&self) -> Type {
+    fn default_args_type(&self) -> Type {
         match self {
-            BinaryOps::Add | BinaryOps::Sub | BinaryOps::Mul | BinaryOps::Div => Type::Float,
+            BinaryOps::Add
+            | BinaryOps::Sub
+            | BinaryOps::Mul
+            | BinaryOps::Div
+            | BinaryOps::Lt
+            | BinaryOps::Le
+            | BinaryOps::Gt
+            | BinaryOps::Ge
+            | BinaryOps::Eq
+            | BinaryOps::Neq => Type::Float,
             _ => Type::Bool,
         }
     }
@@ -124,12 +133,12 @@ impl<'src> Expr<'src> {
                 op,
                 interval: _,
                 arg: _,
-            } => op.default_type(),
+            } => op.default_args_type(),
             Expr::Binary {
                 op,
                 interval: _,
                 args: _,
-            } => op.default_type(),
+            } => op.default_args_type(),
         }
     }
 
@@ -142,7 +151,7 @@ impl<'src> Expr<'src> {
     }
 
     fn unary_op(op: UnaryOps, arg: Spanned<Self>, interval: Option<Spanned<Interval<'src>>>) -> Self {
-        let arg = Box::new((arg.0.make_typed(op.default_type()), arg.1));
+        let arg = Box::new((arg.0.make_typed(op.default_args_type()), arg.1));
         Self::Unary { op, interval, arg }
     }
 
@@ -156,7 +165,7 @@ impl<'src> Expr<'src> {
 
         let common_type = lhs.get_type().get_common_cast(rhs.get_type());
         let common_type = if Type::Unknown == common_type {
-            op.default_type()
+            op.default_args_type()
         } else {
             common_type
         };
