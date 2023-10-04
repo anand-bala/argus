@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install pyargus --find-links dist --force-reinstall
+          pip install pyargus[test] --find-links dist --force-reinstall
           pip install pytest
           cd pyargus && pytest
       - name: pytest
@@ -62,14 +62,14 @@ jobs:
             pip3 install -U pip pytest
           run: |
             set -e
-            pip3 install pyargus --find-links dist --force-reinstall
+            pip3 install pyargus[test] --find-links dist --force-reinstall
             cd pyargus && pytest
 
   windows:
     runs-on: windows-latest
     strategy:
       matrix:
-        target: [x64, x86]
+        target: [x64]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -92,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install pyargus --find-links dist --force-reinstall
+          pip install pyargus[test] --find-links dist --force-reinstall
           pip install pytest
           cd pyargus && pytest
 
@@ -122,7 +122,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install pyargus --find-links dist --force-reinstall
+          pip install pyargus[test] --find-links dist --force-reinstall
           pip install pytest
           cd pyargus && pytest
 
