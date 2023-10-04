@@ -107,7 +107,9 @@ def tests(session: nox.Session):
     session.env.update(ENV)
     session.install("-e", "./pyargus")
     try:
-        session.run("cargo", "test", external=True)
+        session.run(
+            "cargo", "test", "--workspace", "--exclude", "pyargus", external=True
+        )
     except Exception:
         ...
     try:
@@ -151,7 +153,16 @@ def coverage(session: nox.Session):
     )
     try:
         COVERAGE_DIR.mkdir(exist_ok=True)
-        session.run("cargo", "+nightly", "test", external=True, silent=True)
+        session.run(
+            "cargo",
+            "+nightly",
+            "test",
+            "--workspace",
+            "--exclude",
+            "pyargus",
+            external=True,
+            silent=True,
+        )
     except Exception:
         ...
 
