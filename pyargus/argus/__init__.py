@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple, Type, Union
 
-from argus import _argus
-from argus._argus import dtype
-from argus.exprs import ConstBool, ConstFloat, ConstInt, ConstUInt, VarBool, VarFloat, VarInt, VarUInt
-from argus.signals import BoolSignal, FloatSignal, IntSignal, Signal, UnsignedIntSignal
+from . import _argus
+from ._argus import dtype
+from .exprs import ConstBool, ConstFloat, ConstInt, ConstUInt, VarBool, VarFloat, VarInt, VarUInt
+from .signals import BoolSignal, FloatSignal, IntSignal, Signal, UnsignedIntSignal
 
 try:
     __doc__ = _argus.__doc__

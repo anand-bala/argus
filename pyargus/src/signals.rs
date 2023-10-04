@@ -1,5 +1,6 @@
-use argus::signals::interpolation::Linear;
+use argus::signals::interpolation::{Constant, Linear};
 use argus::signals::Signal;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 
@@ -10,6 +11,7 @@ use crate::{DType, PyArgusError};
 pub enum PyInterp {
     #[default]
     Linear,
+    Constant,
 }
 
 #[derive(Debug, Clone, derive_more::From, derive_more::TryInto)]
@@ -122,31 +124,49 @@ macro_rules! impl_signals {
             impl [<$ty_name Signal>] {
                 /// Create a new empty signal
                 #[new]
-                #[pyo3(signature = ())]
-                fn new() -> (Self, PySignal) {
-                    (Self, PySignal::new(Signal::<$ty>::new(), PyInterp::Linear))
+                #[pyo3(signature = (*, interpolation_method = "linear"))]
+                fn new(interpolation_method: &str) -> PyResult<(Self, PySignal)> {
+                    let interp = match interpolation_method {
+                        "linear" => PyInterp::Linear,
+                        "constant" => PyInterp::Constant,
+                        _ => return Err(PyValueError::new_err(format!("unsupported interpolation method `{}`", interpolation_method))),
+                    };
+                    Ok((Self, PySignal::new(Signal::<$ty>::new(), interp)))
                 }
 
                 /// Create a new signal with constant value
                 #[classmethod]
-                fn constant(_: &PyType, py: Python<'_>, value: $ty) -> PyResult<Py<Self>> {
+                #[pyo3(signature = (value, *, interpolation_method = "linear"))]
+                fn constant(_: &PyType, py: Python<'_>, value: $ty, interpolation_method: &str) -> PyResult<Py<Self>> {
+                    let interp = match interpolation_method {
+                        "linear" => PyInterp::Linear,
+                        "constant" => PyInterp::Constant,
+                        _ => return Err(PyValueError::new_err(format!("unsupported interpolation method `{}`", interpolation_method))),
+                    };
                     Py::new(
                         py,
-                        (Self, PySignal::new(Signal::constant(value), PyInterp::Linear))
+                        (Self, PySignal::new(Signal::constant(value), interp))
                     )
                 }
 
                 /// Create a new signal from some finite number of samples
                 #[classmethod]
-                fn from_samples(_: &PyType, samples: Vec<(f64, $ty)>) -> PyResult<Py<Self>> {
+                #[pyo3(signature = (samples, *, interpolation_method = "linear"))]
+                fn from_samples(_: &PyType, samples: Vec<(f64, $ty)>, interpolation_method: &str) -> PyResult<Py<Self>> {
                     let ret: Signal::<$ty> = Signal::<$ty>::try_from_iter(samples
                         .into_iter()
                         .map(|(t, v)| (core::time::Duration::try_from_secs_f64(t).unwrap_or_else(|err| panic!("Value = {}, {}", t, err)), v))
                     ).map_err(PyArgusError::from)?;
+
+                    let interp = match interpolation_method {
+                        "linear" => PyInterp::Linear,
+                        "constant" => PyInterp::Constant,
+                        _ => return Err(PyValueError::new_err(format!("unsupported interpolation method `{}`", interpolation_method))),
+                    };
                     Python::with_gil(|py| {
                         Py::new(
                             py,
-                            (Self, PySignal::new(ret, PyInterp::Linear))
+                            (Self, PySignal::new(ret, interp))
                         )
                     })
                 }
@@ -171,6 +191,7 @@ macro_rules! impl_signals {
                     let time = core::time::Duration::from_secs_f64(time);
                     match super_.interpolation {
                         PyInterp::Linear => signal.interpolate_at::<Linear>(time),
+                        PyInterp::Constant => signal.interpolate_at::<Constant>(time),
                     }
                 }
 
