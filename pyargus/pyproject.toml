@@ -8,12 +8,13 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
+dependencies = ["typing-extensions"]
+
 [project.optional-dependencies]
 
 dev = [
   # Type check
   "mypy",
-  "typing-extensions",
   # Lint code
   "ruff",
   "Flake8-pyproject",
