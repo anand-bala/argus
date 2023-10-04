@@ -4,13 +4,60 @@ use argus::expr::*;
 use pyo3::prelude::*;
 use pyo3::pyclass::CompareOp;
 
+/// A base expression
+///
+/// This is an abstract base class that provides an interface for all specific
+#[pyclass(name = "Expr", subclass, module = "argus")]
+#[derive(Debug, Clone)]
+pub struct PyExpr;
+
+impl PyExpr {
+    pub fn from_expr(py: Python, expr: Expr) -> PyResult<PyObject> {
+        match expr {
+            Expr::Bool(e) => PyBoolExpr::from_expr(py, e),
+            Expr::Num(e) => PyNumExpr::from_expr(py, e),
+        }
+    }
+}
+
 /// A base numeric expression
 ///
 /// This is an abstract base class that provides an interface for all numeric
 /// expressions supported in Argus (literals, arithmetic, and so on).
-#[pyclass(name = "NumExpr", subclass, module = "argus")]
+#[pyclass(name = "NumExpr", subclass, extends = PyExpr, module = "argus")]
 #[derive(Debug, Clone, derive_more::From)]
 pub struct PyNumExpr(pub Box<NumExpr>);
+
+macro_rules! make_expr {
+    ($py:expr, $expr:expr, $subclass:expr) => {
+        PyCell::new(
+            $py,
+            PyClassInitializer::from(PyExpr)
+                .add_subclass(Self(Box::new($expr)))
+                .add_subclass($subclass),
+        )
+        .map(|obj| obj.to_object($py))
+    };
+}
+
+impl PyNumExpr {
+    pub fn from_expr(py: Python, expr: NumExpr) -> PyResult<PyObject> {
+        match expr {
+            NumExpr::IntLit(_) => make_expr!(py, expr, ConstInt),
+            NumExpr::UIntLit(_) => make_expr!(py, expr, ConstUInt),
+            NumExpr::FloatLit(_) => make_expr!(py, expr, ConstFloat),
+            NumExpr::IntVar(_) => make_expr!(py, expr, VarInt),
+            NumExpr::UIntVar(_) => make_expr!(py, expr, VarUInt),
+            NumExpr::FloatVar(_) => make_expr!(py, expr, VarFloat),
+            NumExpr::Neg(_) => make_expr!(py, expr, Negate),
+            NumExpr::Add(_) => make_expr!(py, expr, Add),
+            NumExpr::Sub(_) => make_expr!(py, expr, Sub),
+            NumExpr::Mul(_) => make_expr!(py, expr, Mul),
+            NumExpr::Div(_) => make_expr!(py, expr, Div),
+            NumExpr::Abs(_) => make_expr!(py, expr, Abs),
+        }
+    }
+}
 
 #[pymethods]
 impl PyNumExpr {
@@ -61,8 +108,10 @@ pub struct ConstInt;
 #[pymethods]
 impl ConstInt {
     #[new]
-    fn new(val: i64) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::IntLit(argus::expr::IntLit(val))).into())
+    fn new(val: i64) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::IntLit(argus::expr::IntLit(val))).into())
+            .add_subclass(Self)
     }
 }
 
@@ -78,8 +127,10 @@ pub struct ConstUInt;
 #[pymethods]
 impl ConstUInt {
     #[new]
-    fn new(val: u64) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::UIntLit(argus::expr::UIntLit(val))).into())
+    fn new(val: u64) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::UIntLit(argus::expr::UIntLit(val))).into())
+            .add_subclass(Self)
     }
 }
 
@@ -90,8 +141,10 @@ pub struct ConstFloat;
 #[pymethods]
 impl ConstFloat {
     #[new]
-    fn new(val: f64) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::FloatLit(argus::expr::FloatLit(val))).into())
+    fn new(val: f64) -> PyClassInitializer<ConstFloat> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::FloatLit(argus::expr::FloatLit(val))).into())
+            .add_subclass(Self)
     }
 }
 
@@ -102,8 +155,10 @@ pub struct VarInt;
 #[pymethods]
 impl VarInt {
     #[new]
-    fn new(name: String) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::IntVar(argus::expr::IntVar { name })).into())
+    fn new(name: String) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::IntVar(argus::expr::IntVar { name })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -114,8 +169,10 @@ pub struct VarUInt;
 #[pymethods]
 impl VarUInt {
     #[new]
-    fn new(name: String) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::UIntVar(argus::expr::UIntVar { name })).into())
+    fn new(name: String) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::UIntVar(argus::expr::UIntVar { name })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -126,8 +183,10 @@ pub struct VarFloat;
 #[pymethods]
 impl VarFloat {
     #[new]
-    fn new(name: String) -> (Self, PyNumExpr) {
-        (Self, Box::new(NumExpr::FloatVar(argus::expr::FloatVar { name })).into())
+    fn new(name: String) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::FloatVar(argus::expr::FloatVar { name })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -138,9 +197,11 @@ pub struct Negate;
 #[pymethods]
 impl Negate {
     #[new]
-    fn new(arg: PyNumExpr) -> (Self, PyNumExpr) {
+    fn new(arg: PyNumExpr) -> PyClassInitializer<Self> {
         let arg = arg.0;
-        (Self, Box::new(NumExpr::Neg(argus::expr::Neg { arg })).into())
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::Neg(argus::expr::Neg { arg })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -153,9 +214,11 @@ pub struct Add;
 #[pymethods]
 impl Add {
     #[new]
-    fn new(args: Vec<PyNumExpr>) -> (Self, PyNumExpr) {
+    fn new(args: Vec<PyNumExpr>) -> PyClassInitializer<Self> {
         let args: Vec<NumExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, Box::new(NumExpr::Add(argus::expr::Add { args })).into())
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::Add(argus::expr::Add { args })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -165,10 +228,12 @@ pub struct Sub;
 #[pymethods]
 impl Sub {
     #[new]
-    fn new(lhs: PyNumExpr, rhs: PyNumExpr) -> (Self, PyNumExpr) {
+    fn new(lhs: PyNumExpr, rhs: PyNumExpr) -> PyClassInitializer<Self> {
         let lhs = lhs.0;
         let rhs = rhs.0;
-        (Self, Box::new(NumExpr::Sub(argus::expr::Sub { lhs, rhs })).into())
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::Sub(argus::expr::Sub { lhs, rhs })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -178,9 +243,11 @@ pub struct Mul;
 #[pymethods]
 impl Mul {
     #[new]
-    fn new(args: Vec<PyNumExpr>) -> (Self, PyNumExpr) {
+    fn new(args: Vec<PyNumExpr>) -> PyClassInitializer<Self> {
         let args: Vec<NumExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, Box::new(NumExpr::Mul(argus::expr::Mul { args })).into())
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::Mul(argus::expr::Mul { args })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -190,13 +257,12 @@ pub struct Div;
 #[pymethods]
 impl Div {
     #[new]
-    fn new(dividend: PyNumExpr, divisor: PyNumExpr) -> (Self, PyNumExpr) {
+    fn new(dividend: PyNumExpr, divisor: PyNumExpr) -> PyClassInitializer<Self> {
         let dividend = dividend.0;
         let divisor = divisor.0;
-        (
-            Self,
-            Box::new(NumExpr::Div(argus::expr::Div { dividend, divisor })).into(),
-        )
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::Div(argus::expr::Div { dividend, divisor })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -206,15 +272,35 @@ pub struct Abs;
 #[pymethods]
 impl Abs {
     #[new]
-    fn new(arg: PyNumExpr) -> (Self, PyNumExpr) {
+    fn new(arg: PyNumExpr) -> PyClassInitializer<Self> {
         let arg = arg.0;
-        (Self, Box::new(NumExpr::Abs(argus::expr::Abs { arg })).into())
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(NumExpr::Abs(argus::expr::Abs { arg })).into())
+            .add_subclass(Self)
     }
 }
 
-#[pyclass(name = "BoolExpr", subclass, module = "argus")]
+#[pyclass(name = "BoolExpr", subclass, extends=PyExpr, module = "argus")]
 #[derive(Debug, Clone, derive_more::From)]
 pub struct PyBoolExpr(pub Box<BoolExpr>);
+
+impl PyBoolExpr {
+    pub fn from_expr(py: Python, expr: BoolExpr) -> PyResult<PyObject> {
+        match expr {
+            BoolExpr::BoolLit(_) => make_expr!(py, expr, ConstBool),
+            BoolExpr::BoolVar(_) => make_expr!(py, expr, VarBool),
+            BoolExpr::Cmp(_) => make_expr!(py, expr, Cmp),
+            BoolExpr::Not(_) => make_expr!(py, expr, Not),
+            BoolExpr::And(_) => make_expr!(py, expr, And),
+            BoolExpr::Or(_) => make_expr!(py, expr, Or),
+            BoolExpr::Next(_) => make_expr!(py, expr, Next),
+            BoolExpr::Oracle(_) => make_expr!(py, expr, Oracle),
+            BoolExpr::Always(_) => make_expr!(py, expr, Always),
+            BoolExpr::Eventually(_) => make_expr!(py, expr, Eventually),
+            BoolExpr::Until(_) => make_expr!(py, expr, Until),
+        }
+    }
+}
 
 #[pymethods]
 impl PyBoolExpr {
@@ -241,8 +327,10 @@ pub struct ConstBool;
 #[pymethods]
 impl ConstBool {
     #[new]
-    fn new(val: bool) -> (Self, PyBoolExpr) {
-        (Self, Box::new(BoolExpr::BoolLit(argus::expr::BoolLit(val))).into())
+    fn new(val: bool) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(BoolExpr::BoolLit(argus::expr::BoolLit(val))).into())
+            .add_subclass(Self)
     }
 }
 
@@ -252,8 +340,10 @@ pub struct VarBool;
 #[pymethods]
 impl VarBool {
     #[new]
-    fn new(name: String) -> (Self, PyBoolExpr) {
-        (Self, Box::new(BoolExpr::BoolVar(argus::expr::BoolVar { name })).into())
+    fn new(name: String) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(BoolExpr::BoolVar(argus::expr::BoolVar { name })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -265,11 +355,13 @@ pub struct Cmp;
 pub struct PyOrdering(Ordering);
 
 impl Cmp {
-    fn new(op: PyOrdering, lhs: PyNumExpr, rhs: PyNumExpr) -> (Self, PyBoolExpr) {
+    fn new(op: PyOrdering, lhs: PyNumExpr, rhs: PyNumExpr) -> PyClassInitializer<Self> {
         let op = op.0;
         let lhs = lhs.0;
         let rhs = rhs.0;
-        (Self, Box::new(BoolExpr::Cmp(argus::expr::Cmp { op, lhs, rhs })).into())
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(Box::new(BoolExpr::Cmp(argus::expr::Cmp { op, lhs, rhs })).into())
+            .add_subclass(Self)
     }
 }
 
@@ -312,9 +404,11 @@ pub struct Not;
 #[pymethods]
 impl Not {
     #[new]
-    fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
+    fn new(arg: PyBoolExpr) -> PyClassInitializer<Self> {
         let arg = arg.0;
-        (Self, PyBoolExpr(Box::new(BoolExpr::Not(argus::expr::Not { arg }))))
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::Not(argus::expr::Not { arg }))))
+            .add_subclass(Self)
     }
 }
 
@@ -324,9 +418,11 @@ pub struct And;
 #[pymethods]
 impl And {
     #[new]
-    fn new(args: Vec<PyBoolExpr>) -> (Self, PyBoolExpr) {
+    fn new(args: Vec<PyBoolExpr>) -> PyClassInitializer<Self> {
         let args: Vec<BoolExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, PyBoolExpr(Box::new(BoolExpr::And(argus::expr::And { args }))))
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::And(argus::expr::And { args }))))
+            .add_subclass(Self)
     }
 }
 
@@ -336,9 +432,11 @@ pub struct Or;
 #[pymethods]
 impl Or {
     #[new]
-    fn new(args: Vec<PyBoolExpr>) -> (Self, PyBoolExpr) {
+    fn new(args: Vec<PyBoolExpr>) -> PyClassInitializer<Self> {
         let args: Vec<BoolExpr> = args.into_iter().map(|arg| *arg.0).collect();
-        (Self, PyBoolExpr(Box::new(BoolExpr::Or(argus::expr::Or { args }))))
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::Or(argus::expr::Or { args }))))
+            .add_subclass(Self)
     }
 }
 
@@ -348,9 +446,28 @@ pub struct Next;
 #[pymethods]
 impl Next {
     #[new]
-    fn new(arg: PyBoolExpr) -> (Self, PyBoolExpr) {
+    fn new(arg: PyBoolExpr) -> PyClassInitializer<Self> {
         let arg = arg.0;
-        (Self, PyBoolExpr(Box::new(BoolExpr::Next(argus::expr::Next { arg }))))
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::Next(argus::expr::Next { arg }))))
+            .add_subclass(Self)
+    }
+}
+
+#[pyclass(extends=PyBoolExpr, module = "argus")]
+pub struct Oracle;
+
+#[pymethods]
+impl Oracle {
+    #[new]
+    fn new(arg: PyBoolExpr, steps: usize) -> PyClassInitializer<Self> {
+        let arg = arg.0;
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::Oracle(argus::expr::Oracle {
+                arg,
+                steps,
+            }))))
+            .add_subclass(Self)
     }
 }
 
@@ -361,7 +478,7 @@ pub struct Always;
 impl Always {
     #[new]
     #[pyo3(signature = (arg, *, interval=(None, None)))]
-    fn new(arg: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> (Self, PyBoolExpr) {
+    fn new(arg: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> PyClassInitializer<Self> {
         let arg = arg.0;
         let interval: Interval = match interval {
             (None, None) => (..).into(),
@@ -369,10 +486,12 @@ impl Always {
             (Some(a), None) => (Duration::from_secs_f64(a)..).into(),
             (Some(a), Some(b)) => (Duration::from_secs_f64(a)..Duration::from_secs_f64(b)).into(),
         };
-        (
-            Self,
-            PyBoolExpr(Box::new(BoolExpr::Always(argus::expr::Always { arg, interval }))),
-        )
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::Always(argus::expr::Always {
+                arg,
+                interval,
+            }))))
+            .add_subclass(Self)
     }
 }
 
@@ -383,7 +502,7 @@ pub struct Eventually;
 impl Eventually {
     #[new]
     #[pyo3(signature = (arg, *, interval=(None, None)))]
-    fn new(arg: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> (Self, PyBoolExpr) {
+    fn new(arg: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> PyClassInitializer<Self> {
         let arg = arg.0;
         let interval: Interval = match interval {
             (None, None) => (..).into(),
@@ -391,13 +510,12 @@ impl Eventually {
             (Some(a), None) => (Duration::from_secs_f64(a)..).into(),
             (Some(a), Some(b)) => (Duration::from_secs_f64(a)..Duration::from_secs_f64(b)).into(),
         };
-        (
-            Self,
-            PyBoolExpr(Box::new(BoolExpr::Eventually(argus::expr::Eventually {
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::Eventually(argus::expr::Eventually {
                 arg,
                 interval,
-            }))),
-        )
+            }))))
+            .add_subclass(Self)
     }
 }
 
@@ -408,7 +526,7 @@ pub struct Until;
 impl Until {
     #[new]
     #[pyo3(signature = (lhs, rhs, *, interval=(None, None)))]
-    fn new(lhs: PyBoolExpr, rhs: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> (Self, PyBoolExpr) {
+    fn new(lhs: PyBoolExpr, rhs: PyBoolExpr, interval: (Option<f64>, Option<f64>)) -> PyClassInitializer<Self> {
         let lhs = lhs.0;
         let rhs = rhs.0;
         let interval: Interval = match interval {
@@ -417,14 +535,19 @@ impl Until {
             (Some(a), None) => (Duration::from_secs_f64(a)..).into(),
             (Some(a), Some(b)) => (Duration::from_secs_f64(a)..Duration::from_secs_f64(b)).into(),
         };
-        (
-            Self,
-            PyBoolExpr(Box::new(BoolExpr::Until(argus::expr::Until { lhs, rhs, interval }))),
-        )
+        PyClassInitializer::from(PyExpr)
+            .add_subclass(PyBoolExpr(Box::new(BoolExpr::Until(argus::expr::Until {
+                lhs,
+                rhs,
+                interval,
+            }))))
+            .add_subclass(Self)
     }
 }
 
 pub fn init(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<PyExpr>()?;
+
     m.add_class::<PyNumExpr>()?;
     m.add_class::<ConstInt>()?;
     m.add_class::<ConstUInt>()?;

@@ -3,6 +3,8 @@ mod semantics;
 mod signals;
 
 use argus::Error as ArgusError;
+use ariadne::Source;
+use expr::PyExpr;
 use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyFloat, PyInt, PyType};
@@ -68,12 +70,47 @@ impl DType {
     }
 }
 
+/// Parse a string expression into a concrete Argus expression.
+#[pyfunction]
+fn parse_expr(expr_str: &str) -> PyResult<PyObject> {
+    use ariadne::{Color, Label, Report, ReportKind};
+
+    match argus::parse_str(expr_str) {
+        Ok(expr) => Python::with_gil(|py| PyExpr::from_expr(py, expr)),
+        Err(errs) => {
+            let mut buf = Vec::new();
+            {
+                errs.into_iter().for_each(|e| {
+                    Report::build(ReportKind::Error, (), e.span().start)
+                        .with_message(e.to_string())
+                        .with_label(
+                            Label::new(e.span().into_range())
+                                .with_message(e.reason().to_string())
+                                .with_color(Color::Red),
+                        )
+                        .with_labels(e.contexts().map(|(label, span)| {
+                            Label::new(span.into_range())
+                                .with_message(format!("while parsing this {}", label))
+                                .with_color(Color::Yellow)
+                        }))
+                        .finish()
+                        .write(Source::from(expr_str.to_owned()), &mut buf)
+                        .unwrap()
+                });
+            }
+            let output = std::str::from_utf8(buf.as_slice())?.to_owned();
+            Err(PyValueError::new_err(output))
+        }
+    }
+}
+
 #[pymodule]
 #[pyo3(name = "_argus")]
 fn pyargus(py: Python, m: &PyModule) -> PyResult<()> {
     pyo3_log::init();
 
     m.add_class::<DType>()?;
+    m.add_function(wrap_pyfunction!(parse_expr, m)?)?;
 
     expr::init(py, m)?;
     signals::init(py, m)?;

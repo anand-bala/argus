@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple, Type, Union
 
 from . import _argus
-from ._argus import dtype
+from ._argus import dtype, parse_expr
 from .exprs import ConstBool, ConstFloat, ConstInt, ConstUInt, VarBool, VarFloat, VarInt, VarUInt
 from .signals import BoolSignal, FloatSignal, IntSignal, Signal, UnsignedIntSignal
 
@@ -87,6 +87,7 @@ def signal(
 
 __all__ = [
     "dtype",
+    "parse_expr",
     "declare_var",
     "literal",
     "signal",

@@ -119,7 +119,8 @@ pub enum ExprRef<'a> {
 }
 
 /// An expression (either [`BoolExpr`] or [`NumExpr`])
-#[derive(Clone, Debug, derive_more::From, derive_more::TryInto)]
+#[derive(Clone, Debug)]
+#[enum_dispatch(AnyExpr)]
 pub enum Expr {
     /// A reference to a [`BoolExpr`]
     Bool(BoolExpr),

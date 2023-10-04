@@ -10,6 +10,7 @@ from argus._argus import (
     ConstUInt,
     Div,
     Eventually,
+    Expr,
     Mul,
     Negate,
     Next,
@@ -46,4 +47,7 @@ __all__ = [
     "VarFloat",
     "VarInt",
     "VarUInt",
+    "Expr",
+    "BoolExpr",
+    "NumExpr",
 ]
