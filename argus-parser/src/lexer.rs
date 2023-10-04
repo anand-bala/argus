@@ -169,6 +169,8 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     let ident = text::ident().map(|ident: &str| match ident {
         "true" => Token::Bool(true),
         "false" => Token::Bool(false),
+        "TRUE" => Token::Bool(true),
+        "FALSE" => Token::Bool(false),
         "G" => Token::Always,
         "alw" => Token::Always,
         "always" => Token::Always,
