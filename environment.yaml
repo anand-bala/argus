@@ -1,4 +1,3 @@
-name: argus
 channels:
   - conda-forge
   - nodefaults
