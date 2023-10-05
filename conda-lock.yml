@@ -15,10 +15,10 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: 9a22b20ffe44657806edf2f4b2446d89806ae48f1367d38836a6af9e17eff980
-    osx-arm64: 84f07df5be8e947c12e9fb5033e6719699cc071cec7f4391512a8edc1df44613
-    osx-64: c0cca571c8aff51fb1e07a2913a524ff5243dcd7ce2d030a05ac2714e65db40e
-    win-64: 6da4cdadecddc012a47c9713a8296e8c945fd7cb3b785bfb91c5c4fe77ebac90
+    linux-64: a130991e36987eef4ac8d5cb2dc2a7e73feb337a46af6faa7a379792aabc0eec
+    osx-arm64: ce40c6fe58c063ac87cc75464c4313daf35fbacec329c3413de1d7fc8471f8e4
+    osx-64: bc731555b891f276c183ed327d8c275a76dd728be6721bc5bbda8660f0577c5f
+    win-64: 3fb797e3d085d8613237bb1744cab736eb33f9e484243c23ec25e734ea5d00d3
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -626,8 +626,8 @@ package:
   hash:
     md5: 40e5cb18165466773619e5c963f00a7b
     sha256: 3f0f0fadc6084960ec8cc00a32a03529c562ffea3b527eb73b1653183daad389
-  category: main
-  optional: false
+  category: dev
+  optional: true
 - name: setuptools
   version: 68.2.2
   manager: conda
@@ -763,6 +763,19 @@ package:
     sha256: e7e91e3fa26abe502be690371893f205d87a82c225668ea6e9a1ba26870388ee
   category: main
   optional: false
+- name: astunparse
+  version: 1.6.3
+  manager: conda
+  platform: linux-64
+  dependencies:
+    python: '>=3.6'
+    six: '>=1.6.1,<2.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/astunparse-1.6.3-pyhd8ed1ab_0.tar.bz2
+  hash:
+    md5: 000b6f68a0bfaba800ced7500c11780f
+    sha256: e5173d1ed038038e24c0623f0219dc587ee8663cf7efa737e7075128edbc6c60
+  category: dev
+  optional: true
 - name: backports.functools_lru_cache
   version: 1.6.5
   manager: conda
@@ -963,6 +976,22 @@ package:
   hash:
     md5: 384462e63262a527bda564fa2d9126c0
     sha256: d6e1dddd0c372218ef15912383d351ac8c73465cbf16238017f0269813cafe2d
+  category: dev
+  optional: true
+- name: pdoc
+  version: 14.1.0
+  manager: conda
+  platform: linux-64
+  dependencies:
+    astunparse: ''
+    jinja2: '>=2.11.0'
+    markupsafe: ''
+    pygments: '>=2.12.0'
+    python: '>=3.7'
+  url: https://conda.anaconda.org/conda-forge/noarch/pdoc-14.1.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 3f7b4045a801d3db3f467a302c516fe7
+    sha256: 8b9cd73dd3f527cf36a5b4bad7640b1f3f8f15cb63577807288363a356ff5924
   category: dev
   optional: true
 - name: platformdirs
@@ -1654,8 +1683,8 @@ package:
   hash:
     md5: 40e5cb18165466773619e5c963f00a7b
     sha256: 3f0f0fadc6084960ec8cc00a32a03529c562ffea3b527eb73b1653183daad389
-  category: main
-  optional: false
+  category: dev
+  optional: true
 - name: setuptools
   version: 68.2.2
   manager: conda
@@ -1790,6 +1819,19 @@ package:
     sha256: e7e91e3fa26abe502be690371893f205d87a82c225668ea6e9a1ba26870388ee
   category: main
   optional: false
+- name: astunparse
+  version: 1.6.3
+  manager: conda
+  platform: osx-64
+  dependencies:
+    python: '>=3.6'
+    six: '>=1.6.1,<2.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/astunparse-1.6.3-pyhd8ed1ab_0.tar.bz2
+  hash:
+    md5: 000b6f68a0bfaba800ced7500c11780f
+    sha256: e5173d1ed038038e24c0623f0219dc587ee8663cf7efa737e7075128edbc6c60
+  category: dev
+  optional: true
 - name: backports.functools_lru_cache
   version: 1.6.5
   manager: conda
@@ -1989,6 +2031,22 @@ package:
     sha256: d6e1dddd0c372218ef15912383d351ac8c73465cbf16238017f0269813cafe2d
   category: dev
   optional: true
+- name: pdoc
+  version: 14.1.0
+  manager: conda
+  platform: osx-64
+  dependencies:
+    markupsafe: ''
+    astunparse: ''
+    python: '>=3.7'
+    jinja2: '>=2.11.0'
+    pygments: '>=2.12.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/pdoc-14.1.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 3f7b4045a801d3db3f467a302c516fe7
+    sha256: 8b9cd73dd3f527cf36a5b4bad7640b1f3f8f15cb63577807288363a356ff5924
+  category: dev
+  optional: true
 - name: platformdirs
   version: 3.11.0
   manager: conda
@@ -2050,14 +2108,14 @@ package:
   manager: conda
   platform: osx-64
   dependencies:
-    python: '>=3.6'
-    dataclasses: '>=0.6'
     click: '>=8.0.0'
-    tomli: '>=1.1.0'
+    dataclasses: '>=0.6'
     mypy_extensions: '>=0.4.3'
-    typed-ast: '>=1.4.2'
-    platformdirs: '>=2'
     pathspec: '>=0.9,<1'
+    platformdirs: '>=2'
+    python: '>=3.6'
+    tomli: '>=1.1.0'
+    typed-ast: '>=1.4.2'
     typing_extensions: '>=3.10,!=3.10.0.1'
   url: https://conda.anaconda.org/conda-forge/noarch/black-22.6.0-pyhd8ed1ab_0.tar.bz2
   hash:
@@ -2655,8 +2713,8 @@ package:
   hash:
     md5: 40e5cb18165466773619e5c963f00a7b
     sha256: 3f0f0fadc6084960ec8cc00a32a03529c562ffea3b527eb73b1653183daad389
-  category: main
-  optional: false
+  category: dev
+  optional: true
 - name: setuptools
   version: 68.2.2
   manager: conda
@@ -2679,8 +2737,8 @@ package:
   hash:
     md5: e5f25f8dbc060e9a8d912e432202afc2
     sha256: a85c38227b446f42c5b90d9b642f2c0567880c15d72492d8da074a59c8f91dd6
-  category: main
-  optional: false
+  category: dev
+  optional: true
 - name: sortedcontainers
   version: 2.4.0
   manager: conda
@@ -2778,6 +2836,19 @@ package:
     sha256: e7e91e3fa26abe502be690371893f205d87a82c225668ea6e9a1ba26870388ee
   category: main
   optional: false
+- name: astunparse
+  version: 1.6.3
+  manager: conda
+  platform: osx-arm64
+  dependencies:
+    python: '>=3.6'
+    six: '>=1.6.1,<2.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/astunparse-1.6.3-pyhd8ed1ab_0.tar.bz2
+  hash:
+    md5: 000b6f68a0bfaba800ced7500c11780f
+    sha256: e5173d1ed038038e24c0623f0219dc587ee8663cf7efa737e7075128edbc6c60
+  category: dev
+  optional: true
 - name: backports.functools_lru_cache
   version: 1.6.5
   manager: conda
@@ -2987,6 +3058,22 @@ package:
   hash:
     md5: eb09e30f586f5d8f8e8b784824be7017
     sha256: 3721a25eddddf46e562cfe04aa36c7c6417ae7056cd0c9d0a42d0349ce3bbcc8
+  category: dev
+  optional: true
+- name: pdoc
+  version: 14.1.0
+  manager: conda
+  platform: osx-arm64
+  dependencies:
+    markupsafe: ''
+    astunparse: ''
+    python: '>=3.7'
+    jinja2: '>=2.11.0'
+    pygments: '>=2.12.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/pdoc-14.1.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 3f7b4045a801d3db3f467a302c516fe7
+    sha256: 8b9cd73dd3f527cf36a5b4bad7640b1f3f8f15cb63577807288363a356ff5924
   category: dev
   optional: true
 - name: platformdirs
@@ -3744,8 +3831,8 @@ package:
   hash:
     md5: 40e5cb18165466773619e5c963f00a7b
     sha256: 3f0f0fadc6084960ec8cc00a32a03529c562ffea3b527eb73b1653183daad389
-  category: main
-  optional: false
+  category: dev
+  optional: true
 - name: setuptools
   version: 68.2.2
   manager: conda
@@ -3883,6 +3970,19 @@ package:
     sha256: e7e91e3fa26abe502be690371893f205d87a82c225668ea6e9a1ba26870388ee
   category: main
   optional: false
+- name: astunparse
+  version: 1.6.3
+  manager: conda
+  platform: win-64
+  dependencies:
+    python: '>=3.6'
+    six: '>=1.6.1,<2.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/astunparse-1.6.3-pyhd8ed1ab_0.tar.bz2
+  hash:
+    md5: 000b6f68a0bfaba800ced7500c11780f
+    sha256: e5173d1ed038038e24c0623f0219dc587ee8663cf7efa737e7075128edbc6c60
+  category: dev
+  optional: true
 - name: backports.functools_lru_cache
   version: 1.6.5
   manager: conda
@@ -4104,6 +4204,22 @@ package:
     sha256: 2650892805b2851f4bd1b81d93e05616b2de6813e6edf2526aeaee3df7cab247
   category: dev
   optional: true
+- name: pdoc
+  version: 14.1.0
+  manager: conda
+  platform: win-64
+  dependencies:
+    markupsafe: ''
+    astunparse: ''
+    python: '>=3.7'
+    jinja2: '>=2.11.0'
+    pygments: '>=2.12.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/pdoc-14.1.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 3f7b4045a801d3db3f467a302c516fe7
+    sha256: 8b9cd73dd3f527cf36a5b4bad7640b1f3f8f15cb63577807288363a356ff5924
+  category: dev
+  optional: true
 - name: platformdirs
   version: 3.11.0
   manager: conda
@@ -4165,14 +4281,14 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    python: '>=3.6'
-    dataclasses: '>=0.6'
     click: '>=8.0.0'
-    tomli: '>=1.1.0'
+    dataclasses: '>=0.6'
     mypy_extensions: '>=0.4.3'
-    typed-ast: '>=1.4.2'
-    platformdirs: '>=2'
     pathspec: '>=0.9,<1'
+    platformdirs: '>=2'
+    python: '>=3.6'
+    tomli: '>=1.1.0'
+    typed-ast: '>=1.4.2'
     typing_extensions: '>=3.10,!=3.10.0.1'
   url: https://conda.anaconda.org/conda-forge/noarch/black-22.6.0-pyhd8ed1ab_0.tar.bz2
   hash:

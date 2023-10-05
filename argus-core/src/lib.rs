@@ -63,8 +63,7 @@ pub enum Error {
     #[error("invalid operation on signal")]
     InvalidOperation,
 
-    /// Attempting to index a signal not present in a trace (see
-    /// [`mod@argus_semantics::Trace`].
+    /// Attempting to index a signal not present in a trace.
     #[error("name not in signal trace")]
     SignalNotPresent,
 
