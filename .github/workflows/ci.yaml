@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: 'read'
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: ci
+          create-args: >-
+            python==${{ matrix.python-version }} pytest hypothesis
+          init-shell: >-
+            bash powershell
+          cache-environment: true
+          post-cleanup: 'all'
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --release
+      - name: Rust Tests
+        run: cargo test --release
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
+          manylinux: auto
+      - name: Python Tests
+        if: matrix.target == 'x86_64'
+        shell: bash
+        run: |
+          set -e
+          pip install pyargus --find-links dist --force-reinstall
+          cd pyargus && pytest
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x64]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: ci
+          create-args: >-
+            python==${{ matrix.python-version }} pytest hypothesis
+          init-shell: >-
+            bash powershell
+          cache-environment: true
+          post-cleanup: 'all'
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --release
+      - name: Rust Tests
+        run: cargo test --release
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
+          manylinux: auto
+      - name: Python Tests
+        if: matrix.target == 'x86_64'
+        shell: bash
+        run: |
+          set -e
+          pip install pyargus --find-links dist --force-reinstall
+          cd pyargus && pytest
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: ci
+          create-args: >-
+            python==${{ matrix.python-version }} pytest hypothesis
+          init-shell: >-
+            bash powershell
+          cache-environment: true
+          post-cleanup: 'all'
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --release
+      - name: Rust Tests
+        run: cargo test --release
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
+          manylinux: auto
+      - name: Python Tests
+        if: matrix.target == 'x86_64'
+        shell: bash
+        run: |
+          set -e
+          pip install pyargus --find-links dist --force-reinstall
+          cd pyargus && pytest
