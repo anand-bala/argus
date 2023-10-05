@@ -135,6 +135,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: wheels
+          path: dist
       - uses: softprops/action-gh-release@v1
         with:
           files: 'dist/*'
