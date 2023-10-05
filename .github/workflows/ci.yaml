@@ -34,8 +34,7 @@ jobs:
           environment-name: ci
           create-args: >-
             python==${{ matrix.python-version }} pytest hypothesis
-          init-shell: >-
-            bash powershell
+          init-shell: bash
           cache-environment: true
           post-cleanup: 'all'
       - name: Install Rust toolchain
@@ -52,9 +51,8 @@ jobs:
           manylinux: auto
       - name: Python Tests
         if: matrix.target == 'x86_64'
-        shell: bash
+        shell: bash -el {0}
         run: |
-          set -e
           pip install pyargus --find-links dist --force-reinstall
           cd pyargus && pytest
 
@@ -80,8 +78,7 @@ jobs:
           environment-name: ci
           create-args: >-
             python==${{ matrix.python-version }} pytest hypothesis
-          init-shell: >-
-            bash powershell
+          init-shell: powershell
           cache-environment: true
           post-cleanup: 'all'
       - name: Install Rust toolchain
@@ -97,10 +94,8 @@ jobs:
           args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
           manylinux: auto
       - name: Python Tests
-        if: matrix.target == 'x86_64'
-        shell: bash
+        shell: pwsh
         run: |
-          set -e
           pip install pyargus --find-links dist --force-reinstall
           cd pyargus && pytest
 
@@ -126,12 +121,13 @@ jobs:
           environment-name: ci
           create-args: >-
             python==${{ matrix.python-version }} pytest hypothesis
-          init-shell: >-
-            bash powershell
+          init-shell: bash
           cache-environment: true
           post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}-apple-darwin
       - name: Build
         run: cargo build --release
       - name: Rust Tests
@@ -144,8 +140,7 @@ jobs:
           manylinux: auto
       - name: Python Tests
         if: matrix.target == 'x86_64'
-        shell: bash
+        shell: bash -el {0}
         run: |
-          set -e
           pip install pyargus --find-links dist --force-reinstall
           cd pyargus && pytest
