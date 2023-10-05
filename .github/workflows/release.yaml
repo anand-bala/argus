@@ -78,7 +78,7 @@ jobs:
         run: |
           set -e
           pip install ./pyargus[test]
-          pip install pyargus --find-links dist --force-reinstall
+          # pip install pyargus --find-links dist --force-reinstall
           cd pyargus && pytest
 
   macos:
