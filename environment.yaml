@@ -6,6 +6,7 @@ channels:
 dependencies:
   - python>=3.8
   - maturin
+  - patchelf
   - nox
   - mypy
   - black
@@ -13,7 +14,12 @@ dependencies:
   - pytest
   - pytest-cov
   - hypothesis
-  - pdoc
   - pip
+  - sphinx
+  - pydata-sphinx-theme
+  - sphinx-copybutton
+  - myst-parser
+  - pip:
+      - sphinx-autoapi
 
 category: dev

@@ -37,6 +37,20 @@ def dev(session: nox.Session):
     session.run("pre-commit", "install")
 
 
+@nox.session
+def docs(session: nox.Session):
+    session.conda_install(
+        "sphinx",
+        "pydata-sphinx-theme",
+        "sphinx-copybutton",
+        "myst-parser",
+    )
+    session.install("sphinx-autoapi")
+    with session.chdir(CURRENT_DIR / "pyargus"):
+        session.install("-e", ".")
+    session.run("sphinx-build", "-b", "html", "docs", "docs/_build/html")
+
+
 @nox.session(tags=["style", "fix", "rust"], python=False)
 def rustfmt(session: nox.Session):
     if len(session.posargs) > 0:
