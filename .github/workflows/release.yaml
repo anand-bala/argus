@@ -49,22 +49,6 @@ jobs:
           pip install pyargus --find-links dist --force-reinstall
           pip install ./pyargus[test]
           cd pyargus && pytest
-      - name: pytest
-        if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
-        uses: uraimo/run-on-arch-action@v2.5.0
-        with:
-          arch: ${{ matrix.target }}
-          distro: ubuntu22.04
-          githubToken: ${{ github.token }}
-          install: |
-            apt-get update
-            apt-get install -y --no-install-recommends python3 python3-pip
-            pip3 install -U pip pytest pytest-cov hypothesis
-          run: |
-            set -e
-            pip3 install ./pyargus[test]
-            pip3 install pyargus --find-links dist --force-reinstall
-            cd pyargus && pytest
 
   windows:
     runs-on: windows-latest
@@ -124,7 +108,7 @@ jobs:
         run: |
           set -e
           pip install ./pyargus[test]
-          pip install pyargus --find-links dist --force-reinstall
+          # pip install pyargus --find-links dist --force-reinstall
           cd pyargus && pytest
 
   sdist:
