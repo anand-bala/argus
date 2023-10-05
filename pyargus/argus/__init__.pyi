@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Union
-
 from typing_extensions import TypeAlias
 
 from argus._argus import Abs as Abs
@@ -39,16 +35,4 @@ from argus._argus import eval_bool_semantics as eval_bool_semantics
 from argus._argus import eval_robust_semantics as eval_robust_semantics
 from argus._argus import parse_expr as parse_expr
 
-from . import _argus
-
-AllowedDtype: TypeAlias = Union[bool, int, float]
-
-try:
-    __doc__ = _argus.__doc__
-except AttributeError:
-    ...
-
-try:
-    __version__ = _argus.__version__
-except AttributeError:
-    ...
+AllowedDtype: TypeAlias = bool | int | float

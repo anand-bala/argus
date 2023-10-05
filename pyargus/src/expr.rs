@@ -115,11 +115,11 @@ impl ConstInt {
     }
 }
 
-/// Create a constant _unsigned_ integer expression
+/// Create a constant *unsigned* integer expression
 ///
 /// # Warning
 ///
-/// Negating an unsigned integer during evaluation _may_ lead to the evaluation method
+/// Negating an unsigned integer during evaluation *may* lead to the evaluation method
 /// panicking.
 #[pyclass(extends=PyNumExpr, module = "argus")]
 pub struct ConstUInt;
@@ -162,7 +162,7 @@ impl VarInt {
     }
 }
 
-/// Create an _unsigned_ integer variable
+/// Create an *unsigned* integer variable
 #[pyclass(extends=PyNumExpr, module = "argus")]
 pub struct VarUInt;
 

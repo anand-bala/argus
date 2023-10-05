@@ -1,6 +1,6 @@
 [project]
 name = "pyargus"
-version = "0.1.0"
+version = "0.1.1"
 requires-python = ">=3.8"
 classifiers = [
   "Programming Language :: Rust",
@@ -38,7 +38,7 @@ features = ["pyo3/extension-module"]
 module-name = "argus._argus"
 
 [tool.pytest.ini_options]
-addopts = ["--import-mode=importlib"]
+addopts = "--import-mode=importlib --doctest-glob=../docs/*.rst --doctest-glob=../docs/**/*.rst"
 testpaths = ["tests"]
 
 [tool.mypy]
@@ -59,6 +59,8 @@ ignore = ["ANN101", "ANN102"]
 max-line-length = 127
 max-complexity = 10
 per-file-ignores = [
+  "__init__.py: F401",
+  "__init__.pyi: F401",
   "*.py: B905, B907, B950, E203, E501, W503, W291, W293",
   "*.pyi: B, E301, E302, E305, E501, E701, E704, W503",
 ]

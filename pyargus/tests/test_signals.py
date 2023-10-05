@@ -1,7 +1,8 @@
+import typing
 from typing import List, Tuple, Type, Union
 
 import pytest
-from hypothesis import assume, given, note
+from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy, composite
 
@@ -53,7 +54,7 @@ def gen_samples(
     return xs
 
 
-def empty_signal(*, dtype_: Union[Type[AllowedDtype], dtype]) -> SearchStrategy[argus.Signal]:
+def empty_signal(dtype_: Union[Type[AllowedDtype], dtype]) -> SearchStrategy[argus.Signal]:
     new_dtype: dtype = dtype.convert(dtype_)
     sig: argus.Signal
     if new_dtype == dtype.bool_:
@@ -74,7 +75,30 @@ def empty_signal(*, dtype_: Union[Type[AllowedDtype], dtype]) -> SearchStrategy[
 
 
 def constant_signal(dtype_: Union[Type[AllowedDtype], dtype]) -> SearchStrategy[argus.Signal]:
-    return gen_element_fn(dtype_).map(lambda val: argus.signal(dtype_, data=val))
+    element = gen_element_fn(dtype_)
+    dtype_ = dtype.convert(dtype_)
+    if dtype_ == dtype.bool_:
+        return element.map(lambda val: argus.BoolSignal.constant(typing.cast(bool, val)))
+    if dtype_ == dtype.uint64:
+        return element.map(lambda val: argus.UnsignedIntSignal.constant(typing.cast(int, val)))
+    if dtype_ == dtype.int64:
+        return element.map(lambda val: argus.IntSignal.constant(typing.cast(int, val)))
+    if dtype_ == dtype.float64:
+        return element.map(lambda val: argus.FloatSignal.constant(typing.cast(float, val)))
+    raise ValueError("unsupported data type for signal")
+
+
+def sampled_signal(xs: List[Tuple[float, AllowedDtype]], dtype_: Union[Type[AllowedDtype], dtype]) -> argus.Signal:
+    dtype_ = dtype.convert(dtype_)
+    if dtype_ == dtype.bool_:
+        return argus.BoolSignal.from_samples(typing.cast(List[Tuple[float, bool]], xs))
+    if dtype_ == dtype.uint64:
+        return argus.UnsignedIntSignal.from_samples(typing.cast(List[Tuple[float, int]], xs))
+    if dtype_ == dtype.int64:
+        return argus.IntSignal.from_samples(typing.cast(List[Tuple[float, int]], xs))
+    if dtype_ == dtype.float64:
+        return argus.FloatSignal.from_samples(typing.cast(List[Tuple[float, float]], xs))
+    raise ValueError("unsupported data type for signal")
 
 
 @composite
@@ -106,9 +130,7 @@ def test_correct_constant_signals(data: st.DataObject) -> None:
 def test_correctly_create_signals(data: st.DataObject) -> None:
     dtype_ = data.draw(gen_dtype())
     xs = data.draw(gen_samples(min_size=0, max_size=100, dtype_=dtype_))
-
-    note(f"Samples: {gen_samples}")
-    signal = argus.signal(dtype_, data=xs)
+    signal = sampled_signal(xs, dtype_)
     assert isinstance(signal, argus.Signal)
     if len(xs) > 0:
         expected_start_time = xs[0][0]
@@ -161,7 +183,7 @@ def test_signal_create_should_fail(data: st.DataObject) -> None:
     xs[b], xs[a] = xs[a], xs[b]
 
     with pytest.raises(RuntimeError, match=r"trying to create a non-monotonically signal.+"):
-        _ = argus.signal(dtype_, data=xs)
+        _ = sampled_signal(xs, dtype_)
 
 
 @given(st.data())
@@ -171,8 +193,9 @@ def test_push_to_empty_signal(data: st.DataObject) -> None:
     assert isinstance(signal, argus.Signal)
     assert signal.is_empty()
     element = data.draw(gen_element_fn(dtype_))
-    with pytest.raises(RuntimeError, match="cannot push value to non-sampled signal"):
-        signal.push(0.0, element)  # type: ignore[attr-defined]
+
+    signal.push(0.0, element)
+    assert signal.at(0.0) == element
 
 
 @given(st.data())

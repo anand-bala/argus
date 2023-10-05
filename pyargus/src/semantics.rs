@@ -3,14 +3,19 @@ use std::str::FromStr;
 
 use argus::signals::interpolation::{Constant, Linear};
 use argus::{AnySignal, BooleanSemantics, QuantitativeSemantics, Signal, Trace};
-use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyString};
 
 use crate::expr::PyBoolExpr;
 use crate::signals::{BoolSignal, FloatSignal, PyInterp, PySignal, SignalKind};
 use crate::PyArgusError;
 
+/// A signal trace to pass evaluate.
+///
+/// To evaluate the robustness of a set of signals, we need to construct a `Trace`
+/// containing the signals.
+///
+/// :param signals: A dictionary mapping signal names to `argus.Signal` types.
+/// :type signals: dict[str, argus.Signal]
 #[pyclass(name = "Trace", module = "argus")]
 #[derive(Debug, Clone, Default)]
 pub struct PyTrace {
@@ -20,21 +25,8 @@ pub struct PyTrace {
 #[pymethods]
 impl PyTrace {
     #[new]
-    fn new(dict: &PyDict) -> PyResult<Self> {
-        let mut signals = HashMap::with_capacity(dict.len());
-        for (key, val) in dict {
-            let key: &PyString = key
-                .downcast()
-                .map_err(|e| PyTypeError::new_err(format!("expected dictionary with string keys for trace ({})", e)))?;
-            let val: &PyCell<PySignal> = val.downcast().map_err(|e| {
-                PyTypeError::new_err(format!(
-                    "expected `argus.Signal` value for key `{}` in trace ({})",
-                    key, e
-                ))
-            })?;
-            let signal = val.borrow().signal.clone();
-            signals.insert(key.to_string(), signal);
-        }
+    fn new(signals: HashMap<String, PySignal>) -> PyResult<Self> {
+        let signals = signals.into_iter().map(|(k, v)| (k, v.signal)).collect();
 
         Ok(Self { signals })
     }

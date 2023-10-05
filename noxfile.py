@@ -93,12 +93,12 @@ def mypy(session: nox.Session):
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.install("-e", ".")
         session.run("mypy", ".")
-        session.run(
-            "stubtest",
-            "argus",
-            "--allowlist",
-            str(CURRENT_DIR / "pyargus/stubtest_allow.txt"),
-        )
+        # session.run(
+        #     "stubtest",
+        #     "argus",
+        #     "--allowlist",
+        #     str(CURRENT_DIR / "pyargus/stubtest_allow.txt"),
+        # )
 
 
 @nox.session

@@ -2,15 +2,14 @@ use std::str::FromStr;
 
 use argus::signals::interpolation::{Constant, Linear};
 use argus::signals::Signal;
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 
 use crate::{DType, PyArgusError};
 
-#[pyclass(name = "InterpolationMethod", module = "argus")]
 #[derive(Debug, Clone, Copy, Default)]
-pub enum PyInterp {
+pub(crate) enum PyInterp {
     #[default]
     Linear,
     Constant,
@@ -60,7 +59,7 @@ pub struct PySignal {
 }
 
 impl PySignal {
-    pub fn new<T>(signal: T, interpolation: PyInterp) -> Self
+    pub(crate) fn new<T>(signal: T, interpolation: PyInterp) -> Self
     where
         T: Into<SignalKind>,
     {
@@ -128,6 +127,60 @@ impl PySignal {
             _ => None,
         }
     }
+
+    /// Create a new empty signal
+    #[new]
+    #[pyo3(signature = (*, interpolation_method = "linear"))]
+    fn init(interpolation_method: &str) -> PyResult<Self> {
+        _ = interpolation_method;
+        Err(PyNotImplementedError::new_err(
+            "cannot directly construct an abstract Signal",
+        ))
+    }
+
+    /// Create a new signal with constant value
+    #[classmethod]
+    #[pyo3(signature = (value, *, interpolation_method = "linear"))]
+    fn constant(_: &PyType, _py: Python<'_>, value: &PyAny, interpolation_method: &str) -> PyResult<Py<Self>> {
+        _ = value;
+        _ = interpolation_method;
+        Err(PyNotImplementedError::new_err(
+            "cannot directly construct an abstract Signal",
+        ))
+    }
+
+    /// Create a new signal from some finite number of samples
+    #[classmethod]
+    #[pyo3(signature = (samples, *, interpolation_method = "linear"))]
+    fn from_samples(_: &PyType, samples: Vec<(f64, &PyAny)>, interpolation_method: &str) -> PyResult<Py<Self>> {
+        _ = samples;
+        _ = interpolation_method;
+        Err(PyNotImplementedError::new_err(
+            "cannot directly construct an abstract Signal",
+        ))
+    }
+
+    /// Push a new sample into the given signal.
+    #[pyo3(signature = (time, value))]
+    fn push(_: PyRefMut<'_, Self>, time: f64, value: &PyAny) -> PyResult<()> {
+        _ = time;
+        _ = value;
+        Err(PyNotImplementedError::new_err(
+            "cannot push samples to an abstract Signal",
+        ))
+    }
+
+    /// Get the value of the signal at the given time point.
+    ///
+    /// If there exists a sample, then the value is returned, otherwise the value is
+    /// interpolated. If the time point lies outside of the domain of the signal, then
+    /// `None` is returned.
+    fn at(_self_: PyRef<'_, Self>, time: f64) -> PyResult<Option<&PyAny>> {
+        _ = time;
+        Err(PyNotImplementedError::new_err(
+            "cannot query for samples in an abstract Signal",
+        ))
+    }
 }
 
 macro_rules! impl_signals {
@@ -142,7 +195,7 @@ macro_rules! impl_signals {
                 /// Create a new empty signal
                 #[new]
                 #[pyo3(signature = (*, interpolation_method = "linear"))]
-                fn new(interpolation_method: &str) -> PyResult<(Self, PySignal)> {
+                fn init(interpolation_method: &str) -> PyResult<(Self, PySignal)> {
                     let interp = PyInterp::from_str(interpolation_method)?;
                     Ok((Self, PySignal::new(Signal::<$ty>::new(), interp)))
                 }
@@ -181,6 +234,14 @@ macro_rules! impl_signals {
                 fn push(mut self_: PyRefMut<'_, Self>, time: f64, value: $ty) -> Result<(), PyArgusError> {
                     let super_: &mut PySignal = self_.as_mut();
                     let signal: &mut Signal<$ty> = (&mut super_.signal).try_into().unwrap();
+                    // if it is an empty signal, make it sampled. Otherwise, throw an error.
+                    let signal: &mut Signal<$ty> = match signal {
+                        Signal::Empty => {
+                            super_.signal = Signal::<$ty>::new_with_capacity(1).into();
+                            (&mut super_.signal).try_into().unwrap()
+                        }
+                        _ => signal,
+                    };
                     signal.push(core::time::Duration::from_secs_f64(time), value)?;
                     Ok(())
                 }

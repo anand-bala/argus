@@ -109,6 +109,9 @@ fn parse_expr(expr_str: &str) -> PyResult<PyObject> {
 fn pyargus(py: Python, m: &PyModule) -> PyResult<()> {
     pyo3_log::init();
 
+    let version = env!("CARGO_PKG_VERSION");
+
+    m.add("__version__", version)?;
     m.add_class::<DType>()?;
     m.add_function(wrap_pyfunction!(parse_expr, m)?)?;
 
