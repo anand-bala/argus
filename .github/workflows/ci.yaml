@@ -41,7 +41,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-py${{ matrix.python-version }}-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build
         shell: bash -el {0}
         run: cargo build --release
@@ -85,7 +85,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-py${{ matrix.python-version }}-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build
         shell: pwsh
         run: cargo build --release
@@ -130,7 +130,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-py${{ matrix.python-version }}-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build
         shell: bash -el {0}
         run: cargo build --release

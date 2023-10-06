@@ -11,12 +11,11 @@ jobs:
     strategy:
       matrix:
         target: [x86_64, aarch64]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.10'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Generate lockfile
@@ -29,7 +28,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-py3.10-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -48,12 +47,11 @@ jobs:
     strategy:
       matrix:
         target: [x64]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.10'
           architecture: ${{ matrix.target }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -67,7 +65,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-py3.10-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -85,12 +83,11 @@ jobs:
     strategy:
       matrix:
         target: [x86_64, aarch64]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.10'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -105,7 +102,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-py3.10-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
