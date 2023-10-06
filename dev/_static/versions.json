@@ -1,11 +1,15 @@
 [
-    {
-        "name": "dev",
-        "version": "dev",
-        "url": "https://anand-bala.github.io/argus/dev/"
-    },
-    {
-        "version": "v0.1.1",
-        "url": "https://anand-bala.github.io/argus/v0.1.1/"
-    },
+  {
+    "name": "dev",
+    "version": "dev",
+    "url": "https://anand-bala.github.io/argus/dev/"
+  },
+  {
+    "version": "v0.1.1",
+    "url": "https://anand-bala.github.io/argus/v0.1.1/"
+  },
+  {
+    "version": "v0.1.2",
+    "url": "https://anand-bala.github.io/argus/v0.1.2/"
+  }
 ]
