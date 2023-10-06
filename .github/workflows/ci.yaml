@@ -53,7 +53,7 @@ jobs:
         if: matrix.target == 'x86_64'
         shell: bash -el {0}
         run: |
-          pip install pyargus --find-links dist --force-reinstall
+          pip install dist/*.whl --force-reinstall
           cd pyargus && pytest
 
   windows:
@@ -96,7 +96,7 @@ jobs:
       - name: Python Tests
         shell: pwsh
         run: |
-          pip install pyargus --find-links dist --force-reinstall
+          pip install dist/*.whl --force-reinstall
           cd pyargus && pytest
 
   macos:
@@ -139,8 +139,7 @@ jobs:
           args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
           manylinux: auto
       - name: Python Tests
-        if: matrix.target == 'x86_64'
         shell: bash -el {0}
         run: |
-          pip install pyargus --find-links dist --force-reinstall
+          pip install dist/*.whl --force-reinstall
           cd pyargus && pytest

@@ -119,7 +119,7 @@ def mypy(session: nox.Session):
 def tests(session: nox.Session):
     session.conda_install("pytest", "hypothesis")
     session.env.update(ENV)
-    session.install("-e", "./pyargus")
+    session.install("./pyargus")
     try:
         session.run(
             "cargo", "test", "--workspace", "--exclude", "pyargus", external=True
