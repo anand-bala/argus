@@ -10,25 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64, aarch64]
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - armv7
+        python-version:
+          - '3.10'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Generate lockfile
-        run: cargo generate-lockfile
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.target }}-py3.10-cargo-${{ hashFiles('Cargo.lock') }}
+          python-version: ${{ matrix.python-version }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -46,32 +40,23 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        target: [x64]
+        target:
+          - x86_64-pc-windows-gnu
+          - x86_64-pc-windows-msvc
+        python-version:
+          - '3.10'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-          architecture: ${{ matrix.target }}
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Generate lockfile
-        run: cargo generate-lockfile
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.target }}-py3.10-cargo-${{ hashFiles('Cargo.lock') }}
+          python-version: ${{ matrix.python-version }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter --manifest-path pyargus/Cargo.toml
           sccache: 'true'
+          manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -82,33 +67,23 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        target: [x86_64, aarch64]
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+        python-version:
+          - '3.10'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}-apple-darwin
-      - name: Generate lockfile
-        run: cargo generate-lockfile
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.target }}-py3.10-cargo-${{ hashFiles('Cargo.lock') }}
+          python-version: ${{ matrix.python-version }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter --manifest-path pyargus/Cargo.toml
           sccache: 'true'
+          manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -133,12 +108,14 @@ jobs:
   test-release:
     name: Release (test.pypi.org)
     runs-on: ubuntu-latest
+    environment: "Test PyPI"
     # if: "startsWith(github.ref, 'refs/tags/')"
     needs: [linux, windows, macos, sdist]
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: wheels
+          path: dist
       - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
         env:
@@ -146,4 +123,4 @@ jobs:
           MATURIN_REPOSITORY_URL: "https://test.pypi.org"
         with:
           command: upload
-          args: --non-interactive --skip-existing *
+          args: --non-interactive --skip-existing dist/*
