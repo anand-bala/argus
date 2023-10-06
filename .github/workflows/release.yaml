@@ -105,7 +105,7 @@ jobs:
           name: wheels
           path: dist
 
-  test-release:
+  pypi-test-release:
     name: Release (test.pypi.org)
     runs-on: ubuntu-latest
     environment:
@@ -126,4 +126,25 @@ jobs:
           MATURIN_REPOSITORY_URL: "https://test.pypi.org/legacy/"
         with:
           command: upload
-          args: --non-interactive dist/*
+          args: --non-interactive --skip-existing dist/*
+
+  pypi-release:
+    name: Release (pypi.org)
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-release
+      url: https://pypi.org/p/argus-temporal-logic
+    permissions:
+      id-token: write # IMPORTANT: mandatory for trusted publishing
+    needs: [linux, windows, macos, sdist]
+    steps:
+      - name: Download all dists
+        uses: actions/download-artifact@v3
+        with:
+          name: wheels
+          path: dist/
+      - name: Publish distribution 📦 to PyPI
+        uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*
