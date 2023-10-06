@@ -48,7 +48,7 @@ jobs:
         run: cargo test --release
       - name: Build wheels
         shell: bash -el {0}
-        run: maturin develop --release -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
+        run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Python Tests
         if: matrix.target == 'x86_64'
         shell: bash -el {0}
@@ -90,7 +90,7 @@ jobs:
         run: cargo test --release
       - name: Build wheels
         shell: pwsh
-        run: maturin develop --release -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
+        run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Python Tests
         shell: pwsh
         run: pytest pyargus
@@ -133,7 +133,7 @@ jobs:
         run: cargo test --release
       - name: Build wheels
         shell: bash -el {0}
-        run: maturin develop --release -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
+        run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Python Tests
         shell: bash -el {0}
         run: pytest pyargus
