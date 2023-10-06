@@ -111,3 +111,22 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/_build/
           destination_dir: ${{ github.ref_name }}
+      - uses: actions/checkout@v4
+        with:
+          ref: 'gh-pages'
+      - name: Install tree
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y tree
+      - run: |
+          tree -H '.' \
+              -L 1 \
+              --noreport \
+              --dirsfirst \
+              --charset utf-8 \
+              --ignore-case \
+              --timefmt '%d-%b-%Y %H:%M' \
+              -I "index.html" \
+              -T 'Argus Python Documentation versions' \
+              -s -D \
+              -o index.html
