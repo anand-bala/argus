@@ -5,6 +5,8 @@ on:
     branches:
       - dev
       - main
+    tags:
+      - '*'
   pull_request:
   workflow_dispatch:
 
