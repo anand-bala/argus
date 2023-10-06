@@ -85,3 +85,29 @@ jobs:
           mypy .
       - name: Python Tests
         run: pytest pyargus
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: ci
+          environment-file: environment.yaml
+          init-shell: bash
+          cache-environment: true
+          post-cleanup: 'all'
+      - name: Build Python package
+        run: maturin develop --release --manifest-path pyargus/Cargo.toml
+      - name: Build HTML docs
+        run: sphinx-build -b html docs docs/_build/${{ github.ref_name }}
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/')
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/build/
+          destination_dir: ${{ github.ref_name }}
