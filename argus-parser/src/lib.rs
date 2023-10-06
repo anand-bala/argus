@@ -13,7 +13,7 @@ pub use parser::{parser, Expr, Interval};
 pub fn parse_str(src: &str) -> Result<argus_core::Expr, Vec<Rich<'_, String>>> {
     use chumsky::prelude::{Input, Parser};
 
-    let (tokens, lex_errors) = lexer().parse(src.clone()).into_output_errors();
+    let (tokens, lex_errors) = lexer().parse(src).into_output_errors();
 
     let (parsed, parse_errors) = if let Some(tokens) = &tokens {
         parser()

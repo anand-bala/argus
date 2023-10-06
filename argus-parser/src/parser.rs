@@ -292,8 +292,8 @@ pub fn parser<'tokens, 'src: 'tokens>(
         }
         .labelled("boolean literal");
 
-        let var = select! { Token::Ident(ident) => Expr::Var{ name: ident.clone(), kind: Type::default()} }
-            .labelled("variable");
+        let var =
+            select! { Token::Ident(ident) => Expr::Var{ name: ident, kind: Type::default()} }.labelled("variable");
 
         // Relational ops (<, <=, >, >=, ==, !=) have equal precedence
         let relational_op = {
