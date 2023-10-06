@@ -115,14 +115,12 @@ jobs:
       id-token: write # IMPORTANT: mandatory for trusted publishing
     needs: [linux, windows, macos, sdist]
     steps:
-      - uses: actions/download-artifact@v3
+      - name: Download all dists
+        uses: actions/download-artifact@v3
         with:
           name: wheels
-          path: dist
-      - name: Publish to PyPI
-        uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_REPOSITORY_URL: "https://test.pypi.org"
+          path: dist/
+      - name: Publish distribution 📦 to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          command: upload
-          args: --non-interactive dist/*
+          repository-url: https://test.pypi.org/legacy/

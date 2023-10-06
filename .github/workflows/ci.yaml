@@ -8,16 +8,20 @@ on:
   pull_request:
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: bash -leo pipefail {0}
+
 permissions:
   contents: 'read'
 
 jobs:
-  linux:
-    runs-on: ubuntu-latest
+  testing:
     strategy:
       matrix:
-        target: [x86_64, aarch64]
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: mamba-org/setup-micromamba@v1
@@ -31,80 +35,21 @@ jobs:
           post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Generate lockfile
-        run: cargo generate-lockfile
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.target }}-py${{ matrix.python-version }}-cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build
-        shell: bash -el {0}
         run: cargo build --release
       - name: Rust Tests
-        shell: bash -el {0}
         run: cargo test --release
       - name: Build wheels
-        shell: bash -el {0}
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Python Tests
-        if: matrix.target == 'x86_64'
-        shell: bash -el {0}
         run: pytest pyargus
 
-  windows:
-    runs-on: windows-latest
+  linting:
     strategy:
       matrix:
-        target: [x64]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-    steps:
-      - uses: actions/checkout@v3
-      - uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-name: ci
-          environment-file: environment.yaml
-          create-args: >-
-            python==${{ matrix.python-version }}
-          init-shell: powershell
-          cache-environment: true
-          post-cleanup: 'all'
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Generate lockfile
-        run: cargo generate-lockfile
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.target }}-py${{ matrix.python-version }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - name: Build
-        shell: pwsh
-        run: cargo build --release
-      - name: Rust Tests
-        shell: pwsh
-        run: cargo test --release
-      - name: Build wheels
-        shell: pwsh
-        run: maturin develop --release --manifest-path pyargus/Cargo.toml
-      - name: Python Tests
-        shell: pwsh
-        run: pytest pyargus
-
-  macos:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        target: [x86_64, aarch64]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        python-version: ['3.10']
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: mamba-org/setup-micromamba@v1
@@ -119,27 +64,22 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}-apple-darwin
-      - name: Generate lockfile
-        run: cargo generate-lockfile
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-${{ matrix.target }}-py${{ matrix.python-version }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - name: Build
-        shell: bash -el {0}
-        run: cargo build --release
-      - name: Rust Tests
-        shell: bash -el {0}
-        run: cargo test --release
-      - name: Build wheels
-        shell: bash -el {0}
+          toolchain: nightly
+          components: "clippy"
+      - name: Rust lints
+        run: |
+          cargo +nightly fmt --all --check
+          cargo +nightly check --workspace
+          cargo +nightly clippy --workspace
+      - name: Build Python package
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
+      - name: Python checks
+        working-directory: pyargus
+        run: |
+          black .
+          isort .
+          flake8
+          ruff check .
+          mypy .
       - name: Python Tests
-        shell: bash -el {0}
         run: pytest pyargus
