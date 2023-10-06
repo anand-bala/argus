@@ -7,6 +7,10 @@ dependencies:
   - maturin
   - nox
   - mypy
+  - ruff
+  - Flake8-pyproject
+  - flake8-bugbear
+  - flake8-pyi
   - black
   - isort
   - pytest
