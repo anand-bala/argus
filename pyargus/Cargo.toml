@@ -10,6 +10,7 @@ rust-version.workspace = true
 [lib]
 name = "pyargus"
 crate-type = ["cdylib"]
+test = false
 
 [dependencies]
 argus = { version = "0.1.0", path = "../argus" }
