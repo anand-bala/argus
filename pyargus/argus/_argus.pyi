@@ -2,6 +2,8 @@ from typing import ClassVar, Literal, TypeAlias, TypeVar, final
 
 from typing_extensions import Generic, Self
 
+__version__: str
+
 def parse_expr(expr_str: str) -> Expr: ...
 
 class Expr: ...

@@ -36,3 +36,5 @@ from argus._argus import eval_robust_semantics as eval_robust_semantics
 from argus._argus import parse_expr as parse_expr
 
 AllowedDtype: TypeAlias = bool | int | float
+
+__version__: str
