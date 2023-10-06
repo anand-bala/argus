@@ -29,27 +29,30 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - uses: actions/setup-python@v4
+      - uses: mamba-org/setup-micromamba@v1
         with:
-          python-version: ${{ matrix.python-version }}
+          environment-name: ci
+          environment-file: environment.yaml
+          create-args: >-
+            python==${{ matrix.python-version }}
+          init-shell: bash
+          cache-environment: true
+          post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Build
+        shell: bash -el {0}
         run: cargo build --release
       - name: Rust Tests
+        shell: bash -el {0}
         run: cargo test --release
       - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.target }}
-          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
-          manylinux: auto
+        shell: bash -el {0}
+        run: maturin develop --release -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
       - name: Python Tests
         if: matrix.target == 'x86_64'
-        run: |
-          pip install pytest hypothesis
-          pip install pyargus --no-index --find-links dist --force-reinstall
-          pytest pyargus
+        shell: bash -el {0}
+        run: pytest pyargus
 
   windows:
     runs-on: windows-latest
@@ -68,27 +71,29 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - uses: actions/setup-python@v4
+      - uses: mamba-org/setup-micromamba@v1
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.target }}
+          environment-name: ci
+          environment-file: environment.yaml
+          create-args: >-
+            python==${{ matrix.python-version }}
+          init-shell: powershell
+          cache-environment: true
+          post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Build
+        shell: pwsh
         run: cargo build --release
       - name: Rust Tests
+        shell: pwsh
         run: cargo test --release
       - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.target }}
-          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
-          manylinux: auto
+        shell: pwsh
+        run: maturin develop --release -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
       - name: Python Tests
-        run: |
-          pip install pytest hypothesis
-          pip install pyargus --no-index --find-links dist --force-reinstall
-          pytest pyargus
+        shell: pwsh
+        run: pytest pyargus
 
   macos:
     runs-on: macos-latest
@@ -107,25 +112,28 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - uses: actions/setup-python@v4
+      - uses: mamba-org/setup-micromamba@v1
         with:
-          python-version: ${{ matrix.python-version }}
+          environment-name: ci
+          environment-file: environment.yaml
+          create-args: >-
+            python==${{ matrix.python-version }}
+          init-shell: bash
+          cache-environment: true
+          post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}-apple-darwin
       - name: Build
+        shell: bash -el {0}
         run: cargo build --release
       - name: Rust Tests
+        shell: bash -el {0}
         run: cargo test --release
       - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.target }}
-          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
-          manylinux: auto
+        shell: bash -el {0}
+        run: maturin develop --release -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
       - name: Python Tests
-        run: |
-          pip install pytest hypothesis
-          pip install pyargus --no-index --find-links dist --force-reinstall
-          pytest pyargus
+        shell: bash -el {0}
+        run: pytest pyargus
