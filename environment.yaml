@@ -18,6 +18,7 @@ dependencies:
   - pydata-sphinx-theme
   - sphinx-copybutton
   - myst-parser
+  - cffi
   - pip:
       - sphinx-autoapi
 

@@ -29,14 +29,9 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: actions/setup-python@v4
         with:
-          environment-name: ci
-          create-args: >-
-            python==${{ matrix.python-version }} pytest hypothesis
-          init-shell: bash
-          cache-environment: true
-          post-cleanup: 'all'
+          python-version: ${{ matrix.python-version }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Build
@@ -47,14 +42,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
+          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
           manylinux: auto
       - name: Python Tests
         if: matrix.target == 'x86_64'
-        shell: bash -el {0}
         run: |
-          pip install dist/*.whl --force-reinstall
-          cd pyargus && pytest
+          pip install pytest hypothesis
+          pip install pyargus --no-index --find-links dist --force-reinstall
+          pytest pyargus
 
   windows:
     runs-on: windows-latest
@@ -73,14 +68,10 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: actions/setup-python@v4
         with:
-          environment-name: ci
-          create-args: >-
-            python==${{ matrix.python-version }} pytest hypothesis
-          init-shell: powershell
-          cache-environment: true
-          post-cleanup: 'all'
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.target }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Build
@@ -91,13 +82,13 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
+          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
           manylinux: auto
       - name: Python Tests
-        shell: pwsh
         run: |
-          pip install dist/*.whl --force-reinstall
-          cd pyargus && pytest
+          pip install pytest hypothesis
+          pip install pyargus --no-index --find-links dist --force-reinstall
+          pytest pyargus
 
   macos:
     runs-on: macos-latest
@@ -116,14 +107,9 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: actions/setup-python@v4
         with:
-          environment-name: ci
-          create-args: >-
-            python==${{ matrix.python-version }} pytest hypothesis
-          init-shell: bash
-          cache-environment: true
-          post-cleanup: 'all'
+          python-version: ${{ matrix.python-version }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -136,10 +122,10 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml --zig
+          args: --release --out dist -i ${{ matrix.python-version }} --manifest-path pyargus/Cargo.toml
           manylinux: auto
       - name: Python Tests
-        shell: bash -el {0}
         run: |
-          pip install dist/*.whl --force-reinstall
-          cd pyargus && pytest
+          pip install pytest hypothesis
+          pip install pyargus --no-index --find-links dist --force-reinstall
+          pytest pyargus
