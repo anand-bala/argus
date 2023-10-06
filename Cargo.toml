@@ -1,13 +1,5 @@
 [workspace]
-members = [
-  "argus",
-  "argus-core",
-  "argus-semantics",
-  "argus-derive",
-  "argus-parser",
-  "argus-automata",
-  "pyargus",
-]
+members = ["argus", "argus-derive", "argus-automata", "pyargus"]
 
 resolver = "2"
 

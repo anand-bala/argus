@@ -1,17 +1,18 @@
 use std::ops::Bound;
 use std::time::Duration;
 
-use argus_core::expr::*;
-use argus_core::prelude::*;
-use argus_core::signals::{InterpolationMethod, SignalPartialOrd};
-
+use super::utils::lemire_minmax::MonoWedge;
+use super::Trace;
+use crate::core::expr::*;
+use crate::core::signals::{InterpolationMethod, SignalPartialOrd};
 use crate::semantics::QuantitativeSemantics;
-use crate::traits::Trace;
-use crate::utils::lemire_minmax::MonoWedge;
+use crate::{ArgusError, ArgusResult, Signal};
 
+/// Boolean semantics for Signal Temporal Logic expressionsd define by an [`Expr`].
 pub struct BooleanSemantics;
 
 impl BooleanSemantics {
+    /// Evaluates a [Boolean expression](BoolExpr) given a [`Trace`].
     pub fn eval<BoolI, NumI>(expr: &BoolExpr, trace: &impl Trace) -> ArgusResult<Signal<bool>>
     where
         BoolI: InterpolationMethod<bool>,
@@ -24,7 +25,7 @@ impl BooleanSemantics {
                 .ok_or(ArgusError::SignalNotPresent)?
                 .clone(),
             BoolExpr::Cmp(Cmp { op, lhs, rhs }) => {
-                use argus_core::expr::Ordering::*;
+                use crate::core::expr::Ordering::*;
                 let lhs = QuantitativeSemantics::eval_num_expr::<f64, NumI>(lhs, trace)?;
                 let rhs = QuantitativeSemantics::eval_num_expr::<f64, NumI>(rhs, trace)?;
 
@@ -374,12 +375,12 @@ fn compute_untimed_until<I: InterpolationMethod<bool>>(
 mod tests {
     use std::collections::HashMap;
 
-    use argus_core::expr::ExprBuilder;
-    use argus_core::signals::interpolation::Linear;
-    use argus_core::signals::AnySignal;
     use itertools::assert_equal;
 
     use super::*;
+    use crate::core::expr::ExprBuilder;
+    use crate::core::signals::interpolation::Linear;
+    use crate::core::signals::AnySignal;
 
     #[derive(Default)]
     struct MyTrace {

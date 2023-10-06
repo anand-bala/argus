@@ -1,17 +1,19 @@
 use std::ops::Bound;
 use std::time::Duration;
 
-use argus_core::expr::*;
-use argus_core::prelude::*;
-use argus_core::signals::{InterpolationMethod, SignalAbs};
 use num_traits::{Num, NumCast};
 
-use crate::traits::Trace;
-use crate::utils::lemire_minmax::MonoWedge;
+use super::utils::lemire_minmax::MonoWedge;
+use super::Trace;
+use crate::core::expr::*;
+use crate::core::signals::{InterpolationMethod, SignalAbs};
+use crate::{ArgusError, ArgusResult, Signal};
 
+/// Quantitative semantics for Signal Temporal Logic expressionsd define by an [`Expr`].
 pub struct QuantitativeSemantics;
 
 impl QuantitativeSemantics {
+    /// Evaluates a [Boolean expression](BoolExpr) given a [`Trace`].
     pub fn eval<I>(expr: &BoolExpr, trace: &impl Trace) -> ArgusResult<Signal<f64>>
     where
         I: InterpolationMethod<f64>,
@@ -23,7 +25,7 @@ impl QuantitativeSemantics {
                 .ok_or(ArgusError::SignalNotPresent)
                 .map(top_or_bot)?,
             BoolExpr::Cmp(Cmp { op, lhs, rhs }) => {
-                use argus_core::expr::Ordering::*;
+                use crate::core::expr::Ordering::*;
                 let lhs = Self::eval_num_expr::<f64, I>(lhs, trace)?;
                 let rhs = Self::eval_num_expr::<f64, I>(rhs, trace)?;
 
@@ -80,6 +82,7 @@ impl QuantitativeSemantics {
         Ok(ret)
     }
 
+    /// Evaluates a [numeric expression](NumExpr) given a [`Trace`].
     pub fn eval_num_expr<T, I>(root: &NumExpr, trace: &impl Trace) -> ArgusResult<Signal<T>>
     where
         T: Num + NumCast + Clone + PartialOrd,
@@ -434,12 +437,12 @@ mod tests {
     use std::iter::zip;
     use std::time::Duration;
 
-    use argus_core::expr::ExprBuilder;
-    use argus_core::signals::interpolation::{Constant, Linear};
-    use argus_core::signals::AnySignal;
     use itertools::assert_equal;
 
     use super::*;
+    use crate::core::expr::ExprBuilder;
+    use crate::core::signals::interpolation::{Constant, Linear};
+    use crate::core::signals::AnySignal;
 
     const FLOAT_EPS: f64 = 1.0e-8;
 

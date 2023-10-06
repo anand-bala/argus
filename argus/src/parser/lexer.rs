@@ -2,9 +2,9 @@ use std::fmt;
 
 use chumsky::prelude::*;
 
-pub type Span = SimpleSpan<usize>;
-pub type Output<'a> = Vec<(Token<'a>, Span)>;
-pub type Error<'a> = extra::Err<Rich<'a, char, Span>>;
+pub(crate) type Span = SimpleSpan<usize>;
+pub(crate) type Output<'a> = Vec<(Token<'a>, Span)>;
+pub(crate) type Error<'a> = extra::Err<Rich<'a, char, Span>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token<'src> {

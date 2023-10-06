@@ -69,6 +69,7 @@ impl<'a, T> MonoWedge<'a, T>
 where
     T: PartialOrd,
 {
+    #[allow(dead_code)]
     pub fn min_wedge(duration: Duration) -> Self {
         Self::new(duration, T::lt)
     }

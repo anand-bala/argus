@@ -1,6 +1,6 @@
 use std::env;
 
-use argus_parser::parse_str;
+use argus::parse_str;
 use ariadne::{sources, Color, Label, Report, ReportKind};
 
 fn main() {

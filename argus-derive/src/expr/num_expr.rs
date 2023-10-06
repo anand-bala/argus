@@ -3,12 +3,12 @@ use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::DeriveInput;
 
-/// Implement [`IsNumExpr`](argus_core::expr::traits::IsNumExpr) and other Numean
+/// Implement [`IsNumExpr`](argus::expr::IsNumExpr) and other Numean
 /// operations (`Neg`, `Add`, `Mul`, `Sub`, and `Div`) for the input identifier.
 pub fn num_expr_impl(input: DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let marker_impl = quote! {
-        impl ::argus_core::expr::traits::IsNumExpr for #ident {}
+        impl ::argus::expr::IsNumExpr for #ident {}
     };
 
     let neg_impl = impl_num_neg(&input);
@@ -33,11 +33,11 @@ fn impl_num_neg(input: &DeriveInput) -> impl ToTokens {
     let ident = &input.ident;
     quote! {
         impl ::core::ops::Neg for #ident {
-            type Output = ::argus_core::expr::NumExpr;
+            type Output = ::argus::expr::NumExpr;
 
             #[inline]
             fn neg(self) -> Self::Output {
-                (::argus_core::expr::Neg { arg: Box::new(self.into()) }).into()
+                (::argus::expr::Neg { arg: Box::new(self.into()) }).into()
             }
         }
     }
@@ -79,14 +79,14 @@ fn impl_nary_op(input: &DeriveInput, op: NumOp) -> impl ToTokens {
     quote! {
         impl<T> ::core::ops::#trait_name<T> for #ident
         where
-            T: ::core::convert::Into<::argus_core::expr::NumExpr>
+            T: ::core::convert::Into<::argus::expr::NumExpr>
         {
-            type Output = ::argus_core::expr::NumExpr;
+            type Output = ::argus::expr::NumExpr;
 
             #[inline]
             fn #trait_fn(self, other: T) -> Self::Output {
-                use ::argus_core::expr::NumExpr;
-                use ::argus_core::expr::#node_name;
+                use ::argus::expr::NumExpr;
+                use ::argus::expr::#node_name;
                 let lhs: NumExpr = self.into();
                 let rhs: NumExpr = other.into();
 
@@ -115,13 +115,13 @@ fn impl_sub(input: &DeriveInput) -> impl ToTokens {
     quote! {
         impl<T> ::core::ops::Sub<T> for #ident
         where
-            T: ::core::convert::Into<::argus_core::expr::NumExpr>
+            T: ::core::convert::Into<::argus::expr::NumExpr>
         {
-            type Output = ::argus_core::expr::NumExpr;
+            type Output = ::argus::expr::NumExpr;
 
             #[inline]
             fn sub(self, other: T) -> Self::Output {
-                use ::argus_core::expr::Sub;
+                use ::argus::expr::Sub;
                 let expr = Sub {
                     lhs: Box::new(self.into()),
                     rhs: Box::new(other.into())
@@ -137,13 +137,13 @@ fn impl_div(input: &DeriveInput) -> impl ToTokens {
     quote! {
         impl<T> ::core::ops::Div<T> for #ident
         where
-            T: ::core::convert::Into<::argus_core::expr::NumExpr>
+            T: ::core::convert::Into<::argus::expr::NumExpr>
         {
-            type Output = ::argus_core::expr::NumExpr;
+            type Output = ::argus::expr::NumExpr;
 
             #[inline]
             fn div(self, other: T) -> Self::Output {
-                use ::argus_core::expr::Div;
+                use ::argus::expr::Div;
                 let expr = Div {
                     dividend: Box::new(self.into()),
                     divisor: Box::new(other.into())

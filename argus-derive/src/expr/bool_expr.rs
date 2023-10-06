@@ -3,12 +3,12 @@ use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use syn::DeriveInput;
 
-/// Implement [`IsBoolExpr`](argus_core::expr::traits::IsBoolExpr) and other Boolean
+/// Implement [`IsBoolExpr`](argus::expr::IsBoolExpr) and other Boolean
 /// operations (`Not`, `BitOr`, and `BitAnd`) for the input identifier.
 pub fn bool_expr_impl(input: DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let marker_impl = quote! {
-        impl ::argus_core::expr::traits::IsBoolExpr for #ident {}
+        impl ::argus::expr::IsBoolExpr for #ident {}
     };
 
     let not_impl = impl_bool_not(&input);
@@ -29,11 +29,11 @@ fn impl_bool_not(input: &DeriveInput) -> impl ToTokens {
     let ident = &input.ident;
     quote! {
         impl ::core::ops::Not for #ident {
-            type Output = ::argus_core::expr::BoolExpr;
+            type Output = ::argus::expr::BoolExpr;
 
             #[inline]
             fn not(self) -> Self::Output {
-                (::argus_core::expr::Not { arg: Box::new(self.into()) }).into()
+                (::argus::expr::Not { arg: Box::new(self.into()) }).into()
             }
         }
     }
@@ -62,12 +62,12 @@ fn impl_bool_and_or(input: &DeriveInput, op: BoolOp) -> impl ToTokens {
     };
     quote! {
         impl ::core::ops::#trait_name for #ident {
-            type Output = ::argus_core::expr::BoolExpr;
+            type Output = ::argus::expr::BoolExpr;
 
             #[inline]
             fn #trait_fn(self, other: Self) -> Self::Output {
-                use ::argus_core::expr::BoolExpr;
-                use ::argus_core::expr::#enum_id;
+                use ::argus::expr::BoolExpr;
+                use ::argus::expr::#enum_id;
                 let lhs: BoolExpr = self.into();
                 let rhs: BoolExpr = other.into();
 

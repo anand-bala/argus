@@ -1,6 +1,17 @@
-//! Traits to define semantics for temporal logic specifications
+//! Argus offline semantics
+//!
+//! In this crate, we are predominantly concerned with the monitoring of _offline system
+//! traces_, i.e., a collection of signals that have been extracted from observing and
+//! sampling from some system.
 
-use argus_core::prelude::*;
+mod boolean;
+mod quantitative;
+pub mod utils;
+
+pub use boolean::BooleanSemantics;
+pub use quantitative::QuantitativeSemantics;
+
+use crate::Signal;
 
 /// A trace is a collection of signals
 ///
@@ -9,8 +20,7 @@ use argus_core::prelude::*;
 /// An example of a `Trace` may be:
 ///
 /// ```rust
-/// use argus_core::signals::{Signal, AnySignal};
-/// use argus_semantics::Trace;
+/// use argus::{Signal, AnySignal, Trace};
 ///
 /// struct MyTrace {
 ///     x: Signal<bool>,

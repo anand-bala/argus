@@ -2,7 +2,7 @@ use chumsky::input::SpannedInput;
 use chumsky::prelude::*;
 use chumsky::Parser;
 
-use crate::lexer::{Span, Token};
+use super::lexer::{Span, Token};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Type {
