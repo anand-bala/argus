@@ -10,8 +10,8 @@ project = "Argus"
 copyright = "2023, Anand Balakrishnan"
 author = "Anand Balakrishnan"
 
-version = "v0.1.0"
-release = "0.1.0"
+version = "v0.1.1"
+release = "0.1.1"
 
 extensions = [
     "autoapi.extension",
@@ -30,7 +30,7 @@ html_theme_options = {"use_edit_page_button": True, "github_url": "https://githu
 html_context = {
     "github_user": "anand-bala",
     "github_repo": "argus",
-    "github_version": "v0.1.0",
+    "github_version": "v0.1.1",
     "doc_path": "docs",
 }
 

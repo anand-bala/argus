@@ -13,7 +13,7 @@ crate-type = ["cdylib"]
 test = false
 
 [dependencies]
-argus = { version = "0.1.0", path = "../argus" }
+argus = { version = "0.1.1", path = "../argus" }
 derive_more = "0.99.17"
 log = "0.4.20"
 paste = "1.0.14"
