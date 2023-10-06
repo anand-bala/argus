@@ -103,11 +103,11 @@ jobs:
       - name: Build Python package
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Build HTML docs
-        run: sphinx-build -b html docs docs/_build/${{ github.ref_name }}
+        run: sphinx-build -b html docs docs/_build/
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/')
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/build/
+          publish_dir: docs/_build/
           destination_dir: ${{ github.ref_name }}
