@@ -32,15 +32,14 @@ The project name is inspired from `Argus Panoptes`_.
 Installing
 ----------
 
-Currently, I am not publishing the library to PyPI, so you will have to install the
-package directly from the wheel files in the `latest Github release
-<https://github.com/anand-bala/argus/releases/latest>`_. For example, to install version
-``0.1.0`` of the library for Python 3.10 on a Linux distribution running on a 64-bit
-Intel/AMD machine, you just need to do:
-
 .. code-block:: bash
 
-   pip install https://github.com/anand-bala/argus/releases/download/v0.1.0/pyargus-0.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+   pip install argus-temporal-logic
+
+.. note::
+   The name is `argus-temporal-logic` as opposed to just `argus` or `pyargus` as there
+   are multiple similarly named projects on PyPI. The current package name minimizes
+   ambiguity.
 
 
 Contents
