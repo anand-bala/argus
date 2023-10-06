@@ -1,5 +1,5 @@
 [project]
-name = "pyargus"
+name = "argus-temporal-logic"
 version = "0.1.1"
 requires-python = ">=3.8"
 classifiers = [
