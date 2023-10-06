@@ -108,8 +108,11 @@ jobs:
   test-release:
     name: Release (test.pypi.org)
     runs-on: ubuntu-latest
-    environment: "Test PyPI"
-    # if: "startsWith(github.ref, 'refs/tags/')"
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/argus-temporal-logic
+    permissions:
+      id-token: write # IMPORTANT: mandatory for trusted publishing
     needs: [linux, windows, macos, sdist]
     steps:
       - uses: actions/download-artifact@v3
@@ -119,8 +122,7 @@ jobs:
       - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
           MATURIN_REPOSITORY_URL: "https://test.pypi.org"
         with:
           command: upload
-          args: --non-interactive --skip-existing dist/*
+          args: --non-interactive dist/*
