@@ -6,12 +6,20 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+
 project = "Argus"
 copyright = "2023, Anand Balakrishnan"
 author = "Anand Balakrishnan"
 
-version = "v0.1.1"
-release = "0.1.1"
+
+if os.environ.get("CI") is not None:
+    # In CI, use Github Action variables
+    version = os.environ["GITHUB_REF_NAME"]
+else:
+    # running locally, just use "dev"
+    version = "dev"
+release = version
 
 extensions = [
     "autoapi.extension",
@@ -26,7 +34,17 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
-html_theme_options = {"use_edit_page_button": True, "github_url": "https://github.com/anand-bala/argus"}
+html_theme_options = {
+    "use_edit_page_button": True,
+    "github_url": "https://github.com/anand-bala/argus",
+    "switcher": {
+        "json_url": "https://anand-bala.github.io/argus/dev/_static/switcher.json",
+        "version_match": version,
+    },
+    "check_switcher": False,
+    "navbar_align": "left",  # [left, content, right] For testing that the navbar items align properly
+    "navbar_center": ["version-switcher", "navbar-nav"],
+}
 html_context = {
     "github_user": "anand-bala",
     "github_repo": "argus",
