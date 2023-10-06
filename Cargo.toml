@@ -18,5 +18,9 @@ license = "BSD-3-Clause"
 edition = "2021"
 rust-version = "1.66"
 
+readme = "README.md"
+keywords = ["temporal logic", "monitoring"]
+repository = "https://github.com/anand-bala/argus"
+
 [workspace.metadata.workspaces]
 allow_branch = "dev"
