@@ -85,7 +85,7 @@ impl<'src> fmt::Display for Token<'src> {
 
 pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> {
     // A parser for numbers
-    let digits = text::digits(10).slice();
+    let digits = text::digits(10).to_slice();
 
     let frac = just('.').then(digits);
 
@@ -94,20 +94,23 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     let floating_number = just('-')
         .or_not()
         .then(digits)
-        .then(choice((frac.then(exp).slice(), frac.slice(), exp.slice())))
+        .then(choice((frac.then(exp).to_slice(), frac.to_slice(), exp.to_slice())))
         // .then(frac.or_not())
         // .then(exp.or_not())
-        .map_slice(|s: &str| Token::Float(s.parse().unwrap()))
+        .to_slice()
+        .map(|s: &str| Token::Float(s.parse().unwrap()))
         .boxed();
 
     let signed_int = one_of("+-")
         // .or_not()
         .then(digits)
         .then(frac.not().or(exp.not()))
-        .map_slice(|s: &str| Token::Int(s.parse().unwrap()));
+        .to_slice()
+        .map(|s: &str| Token::Int(s.parse().unwrap()));
     let unsigned_int = digits
         .then(frac.not().or(exp.not()))
-        .map_slice(|s: &str| Token::UInt(s.parse().unwrap()));
+        .to_slice()
+        .map(|s: &str| Token::UInt(s.parse().unwrap()));
 
     let number = choice((floating_number, signed_int, unsigned_int));
 
@@ -163,7 +166,8 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     let quoted_ident = just('"')
         .ignore_then(none_of('"').repeated())
         .then_ignore(just('"'))
-        .map_slice(Token::Ident);
+        .to_slice()
+        .map(Token::Ident);
 
     // A parser for identifiers and keywords
     let ident = text::ident().map(|ident: &str| match ident {
@@ -192,7 +196,7 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     let comment = just("//").then(any().and_is(just('\n').not()).repeated()).padded();
 
     token
-        .map_with_span(|tok, span| (tok, span))
+        .map_with(|tok, e| (tok, e.span()))
         .padded_by(comment.repeated())
         .padded()
         // If we encounter an error, skip and attempt to lex the next character as a token instead

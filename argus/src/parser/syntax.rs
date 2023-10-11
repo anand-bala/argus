@@ -204,7 +204,7 @@ fn num_expr_parser<'tokens, 'src: 'tokens>(
 
         let num_atom = var
             .or(num_literal)
-            .map_with_span(|expr, span: Span| (expr, span))
+            .map_with(|expr, e| (expr, e.span()))
             // Atoms can also just be normal expressions, but surrounded with parentheses
             .or(num_expr.clone().delimited_by(just(Token::LParen), just(Token::RParen)))
             // Attempt to recover anything that looks like a parenthesised expression but contains errors
@@ -217,9 +217,9 @@ fn num_expr_parser<'tokens, 'src: 'tokens>(
             .boxed();
 
         let neg_op = just(Token::Minus)
-            .map_with_span(|_, span: Span| (UnaryOps::Neg, span))
+            .map_with(|_, e| (UnaryOps::Neg, e.span()))
             .repeated()
-            .foldr(num_atom, |op, rhs| {
+            .foldr(num_atom, |op: Spanned<UnaryOps>, rhs: Spanned<Expr<'src>>| {
                 let span = op.1.start..rhs.1.end;
                 (Expr::unary_op(op.0, rhs, None), span.into())
             });
@@ -265,7 +265,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
             Token::UInt(val) => Expr::UInt(val),
             Token::Float(val) => Expr::Float(val),
         }
-        .map_with_span(|lit, span: Span| (lit, span));
+        .map_with(|lit, e| (lit, e.span()));
         let sep = just(Token::Comma).or(just(Token::DotDot));
 
         num_literal
@@ -273,13 +273,13 @@ pub fn parser<'tokens, 'src: 'tokens>(
             .then_ignore(sep)
             .then(num_literal.or_not())
             .delimited_by(just(Token::LBracket), just(Token::RBracket))
-            .map_with_span(|(a, b), span| {
+            .map_with(|(a, b), e| {
                 (
                     Interval {
                         a: a.map(Box::new),
                         b: b.map(Box::new),
                     },
-                    span,
+                    e.span(),
                 )
             })
             .boxed()
@@ -317,7 +317,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
         .labelled("atomic predicate");
 
         let atom = relational_op
-            .or(var.or(literal).map_with_span(|expr, span| (expr, span)))
+            .or(var.or(literal).map_with(|expr, e| (expr, e.span())))
             // Atoms can also just be normal expressions, but surrounded with parentheses
             .or(expr.clone().delimited_by(just(Token::LParen), just(Token::RParen)))
             // Attempt to recover anything that looks like a parenthesised expression but contains errors
@@ -330,7 +330,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
             .boxed();
 
         let not_op = just(Token::Not)
-            .map_with_span(|_, span: Span| (UnaryOps::Not, span))
+            .map_with(|_, e| (UnaryOps::Not, e.span()))
             .repeated()
             .foldr(atom, |op, rhs| {
                 let span = op.1.start..rhs.1.end;
@@ -344,7 +344,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 just(Token::Eventually).to(UnaryOps::Eventually),
                 just(Token::Always).to(UnaryOps::Always),
             ));
-            op.map_with_span(|op, span: Span| (op, span))
+            op.map_with(|op, e| (op, e.span()))
                 .then(interval.clone().or_not())
                 .repeated()
                 .foldr(not_op, |(op, interval), rhs| {
