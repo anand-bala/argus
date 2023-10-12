@@ -4,6 +4,15 @@
 .. py:module:: argus
 
 
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   test_utils/index.rst
+
+
 Package Contents
 ----------------
 
