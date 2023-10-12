@@ -1,24 +1,34 @@
 """Hypothesis strategies to generate Argus expressions
 """
+
 import hypothesis.strategies as st
+import lark
 from hypothesis.extra.lark import from_lark
-from lark import Lark, Transformer
 
 
-class T(Transformer):
-    def INT(self, tok):  # noqa: N802,ANN # type: ignore
-        "Convert the value of `tok` from string to int, while maintaining line number & column."
+class Transformer(lark.Transformer):
+    def INT(self, tok: lark.Token) -> lark.Token:  # noqa: N802
+        """Convert the value of `tok` from string to int, while maintaining line number & column.
+
+        Performs wrapping conversion for 64-bit integers
+        """
         return tok.update(value=int(tok) // 2**64)
 
 
-ARGUS_EXPR_GRAMMAR = Lark(
+ARGUS_EXPR_GRAMMAR = lark.Lark(
     r"""
 
 TRUE: "true" | "TRUE"
 FALSE: "false" | "FALSE"
 BOOLEAN: TRUE | FALSE
 
-IDENT: ESCAPED_STRING | CNAME
+KEYWORD: "X" | "G" | "F" | "U" | BOOLEAN
+
+ESCAPED_STRING: "\"" /(\w|[\t ]){1,20}/ "\""
+NUM_IDENT: ESCAPED_STRING
+         | "num_" CNAME
+BOOL_IDENT: ESCAPED_STRING
+         | "bool_" CNAME
 
 num_expr: num_expr "*" num_expr
         | num_expr "/" num_expr
@@ -26,7 +36,7 @@ num_expr: num_expr "*" num_expr
         | num_expr "-" num_expr
         | "-" num_expr
         | NUMBER
-        | IDENT
+        | NUM_IDENT
         | "(" num_expr ")"
 
 cmp_expr: num_expr ">=" num_expr
@@ -49,12 +59,11 @@ bool_expr: bool_expr "&&" bool_expr
          | "F" WS_INLINE INTERVAL? bool_expr
          | cmp_expr
          | BOOLEAN
-         | IDENT
+         | BOOL_IDENT
          | "(" bool_expr ")"
 
 phi: bool_expr
 
-%import common.ESCAPED_STRING
 %import common.CNAME
 %import common.NUMBER
 %import common.INT
@@ -64,10 +73,17 @@ phi: bool_expr
 
 """,
     start="phi",
+    parser="lalr",
+    transformer=Transformer(),
 )
 
 
 @st.composite
 def argus_expr(draw: st.DrawFn) -> str:
     """Strategy to generate an Argus STL expression from a pre-defined grammar"""
-    return draw(from_lark(ARGUS_EXPR_GRAMMAR, start="phi"))
+    return draw(
+        from_lark(
+            ARGUS_EXPR_GRAMMAR,
+            start="phi",
+        )
+    )

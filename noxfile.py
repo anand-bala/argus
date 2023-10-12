@@ -101,7 +101,7 @@ def ruff(session: nox.Session):
 
 @nox.session(tags=["lint", "python"])
 def mypy(session: nox.Session):
-    session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis")
+    session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis", "lark")
     session.env.update(ENV)
 
     with session.chdir(CURRENT_DIR / "pyargus"):

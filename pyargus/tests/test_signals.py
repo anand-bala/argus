@@ -3,8 +3,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 import argus
-
-from .utils.signals_gen import (
+from argus.test_utils.signals_gen import (
     constant_signal,
     draw_index,
     empty_signal,
