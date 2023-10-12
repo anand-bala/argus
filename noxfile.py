@@ -117,7 +117,7 @@ def mypy(session: nox.Session):
 
 @nox.session
 def tests(session: nox.Session):
-    session.conda_install("pytest", "hypothesis")
+    session.conda_install("pytest", "hypothesis", "lark")
     session.env.update(ENV)
     session.install("./pyargus")
     try:
@@ -127,14 +127,15 @@ def tests(session: nox.Session):
     except Exception:
         ...
     try:
-        session.run("pytest", "pyargus")
+        with session.chdir(CURRENT_DIR / "pyargus"):
+            session.run("pytest", ".")
     except Exception:
         ...
 
 
 @nox.session
 def coverage(session: nox.Session):
-    session.conda_install("pytest", "coverage", "hypothesis", "maturin", "lcov")
+    session.conda_install("pytest", "coverage", "hypothesis", "lark", "maturin", "lcov")
     session.run("cargo", "install", "grcov", external=True, silent=True)
 
     session.env.update(ENV)
@@ -181,15 +182,16 @@ def coverage(session: nox.Session):
         ...
 
     try:
-        session.run(
-            "coverage",
-            "run",
-            "--source",
-            "pyargus/argus,pyargus/src",
-            "-m",
-            "pytest",
-            silent=True,
-        )
+        with session.chdir(CURRENT_DIR / "pyargus"):
+            session.run(
+                "coverage",
+                "run",
+                "--source",
+                "argus,src",
+                "-m",
+                "pytest",
+                silent=True,
+            )
     except Exception:
         ...
 

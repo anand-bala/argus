@@ -16,6 +16,7 @@ dependencies:
   - pytest
   - pytest-cov
   - hypothesis
+  - lark # hypothesis[lark]
   - pip
   - sphinx
   - pydata-sphinx-theme
