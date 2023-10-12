@@ -4,10 +4,11 @@ use argus::parse_str;
 use ariadne::{sources, Color, Label, Report, ReportKind};
 
 fn main() {
+    env_logger::init();
     let src = env::args().nth(1).expect("Expected expression");
 
     match parse_str(&src) {
-        Ok(expr) => println!("{:#?}", expr),
+        Ok(expr) => println!("{}", expr),
         Err(errs) => {
             errs.into_iter().for_each(|e| {
                 Report::build(ReportKind::Error, src.clone(), e.span().start)

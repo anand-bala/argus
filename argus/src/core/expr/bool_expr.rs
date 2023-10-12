@@ -1,23 +1,28 @@
 //! Boolean expression types
-
 use std::ops::{Bound, RangeBounds};
 use std::time::Duration;
+
+use itertools::Itertools;
 
 use super::{AnyExpr, BoolExpr, NumExpr};
 
 /// Types of comparison operations
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, derive_more::Display)]
 pub enum Ordering {
     /// Equality check for two expressions
+    #[display(fmt = "==")]
     Eq,
     /// Non-equality check for two expressions
+    #[display(fmt = "!=")]
     NotEq,
     /// Less than check
+    #[display(fmt = "{}", r#"if *strict { "<".to_string() } else { "<=".to_string() } "#r)]
     Less {
         /// Denotes `lhs < rhs` if `strict`, and `lhs <= rhs` otherwise.
         strict: bool,
     },
     /// Greater than check
+    #[display(fmt = "{}", r#"if *strict { ">".to_string() } else { ">=".to_string() } "#r)]
     Greater {
         /// Denotes `lhs > rhs` if `strict`, and `lhs >= rhs` otherwise.
         strict: bool,
@@ -64,6 +69,21 @@ pub struct Interval {
     pub start: Bound<Duration>,
     /// End of the interval
     pub end: Bound<Duration>,
+}
+
+impl core::fmt::Display for Interval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let start_str = match self.start {
+            Bound::Included(b) | Bound::Excluded(b) => b.as_secs_f64().to_string(),
+            Bound::Unbounded => "".to_string(),
+        };
+
+        let end_str = match self.end {
+            Bound::Included(b) | Bound::Excluded(b) => b.as_secs_f64().to_string(),
+            Bound::Unbounded => "".to_string(),
+        };
+        write!(f, "[{}, {}]", start_str, end_str)
+    }
 }
 
 impl Interval {
@@ -174,13 +194,14 @@ macro_rules! impl_bool_expr {
 }
 
 /// A `bool` literal
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
 pub struct BoolLit(pub bool);
 
 impl_bool_expr!(BoolLit);
 
 /// A `bool` variable
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "{}", name)]
 pub struct BoolVar {
     /// Variable name
     pub name: String,
@@ -189,7 +210,8 @@ pub struct BoolVar {
 impl_bool_expr!(BoolVar);
 
 /// A comparison expression
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "{} {} {}", lhs, op, rhs)]
 pub struct Cmp {
     /// The type of comparison
     pub op: Ordering,
@@ -202,7 +224,8 @@ pub struct Cmp {
 impl_bool_expr!(Cmp, lhs, rhs);
 
 /// Logical negation of an expression
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "!({})", arg)]
 pub struct Not {
     /// Expression to be negated
     pub arg: Box<BoolExpr>,
@@ -211,7 +234,8 @@ pub struct Not {
 impl_bool_expr!(Not, arg);
 
 /// Logical conjunction of a list of expressions
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "({})", r#"args.iter().map(ToString::to_string).join(") && (")"#r)]
 pub struct And {
     /// Expressions to be "and"-ed
     pub args: Vec<BoolExpr>,
@@ -220,7 +244,8 @@ pub struct And {
 impl_bool_expr!(And, [args]);
 
 /// Logical disjunction of a list of expressions
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "({})", r#"args.iter().map(ToString::to_string).join(") || (")"#r)]
 pub struct Or {
     /// Expressions to be "or"-ed
     pub args: Vec<BoolExpr>,
@@ -231,7 +256,8 @@ impl_bool_expr!(Or, [args]);
 /// A temporal next expression
 ///
 /// Checks if the next time point in a signal is `true` or not.
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "X ({})", arg)]
 pub struct Next {
     /// Argument for `Next`
     pub arg: Box<BoolExpr>,
@@ -242,7 +268,8 @@ impl_bool_expr!(Next, arg);
 ///
 /// This is equivalent to `steps` number of nested [`Next`](BoolExpr::Next)
 /// expressions.
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "X[0,{}]({})", steps, arg)]
 pub struct Oracle {
     /// Number of steps to look ahead
     pub steps: usize,
@@ -256,7 +283,8 @@ impl_bool_expr!(Oracle, arg);
 /// - If the `interval` is `(Unbounded, Unbounded)` or equivalent to `(0, Unbounded)`:
 ///   checks if the signal is `true` for all points in a signal.
 /// - Otherwise: checks if the signal is `true` for all points within the `interval`.
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "G{}({})", interval, arg)]
 pub struct Always {
     /// Argument for `Always`
     pub arg: Box<BoolExpr>,
@@ -270,7 +298,8 @@ impl_bool_expr!(Always, arg);
 /// - If the `interval` is `(Unbounded, Unbounded)` or equivalent to `(0, Unbounded)`:
 ///   checks if the signal is `true` for some point in a signal.
 /// - Otherwise: checks if the signal is `true` for some point within the `interval`.
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "F{}({})", interval, arg)]
 pub struct Eventually {
     /// Argument for `Eventually`
     pub arg: Box<BoolExpr>,
@@ -282,7 +311,8 @@ impl_bool_expr!(Eventually, arg);
 /// A temporal until expression
 ///
 /// Checks if the `lhs` is always `true` for a signal until `rhs` becomes `true`.
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
+#[display(fmt = "({}) U{} ({})", lhs, interval, rhs)]
 pub struct Until {
     /// LHS to `lhs Until rhs`
     pub lhs: Box<BoolExpr>,

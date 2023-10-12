@@ -36,7 +36,7 @@ pub trait IsNumExpr: AnyExpr + Into<NumExpr> {}
 pub trait IsBoolExpr: AnyExpr + Into<BoolExpr> {}
 
 /// All expressions that are numeric
-#[derive(Clone, Debug, PartialEq, argus_derive::NumExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::NumExpr, derive_more::Display)]
 #[enum_dispatch(AnyExpr)]
 pub enum NumExpr {
     /// A signed integer literal
@@ -73,7 +73,7 @@ impl NumExpr {
 }
 
 /// All expressions that are evaluated to be of type `bool`
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr)]
+#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
 #[enum_dispatch(AnyExpr)]
 pub enum BoolExpr {
     /// A `bool` literal
@@ -139,7 +139,7 @@ pub enum ExprRef<'a> {
 }
 
 /// An expression (either [`BoolExpr`] or [`NumExpr`])
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, derive_more::Display)]
 #[enum_dispatch(AnyExpr)]
 pub enum Expr {
     /// A reference to a [`BoolExpr`]

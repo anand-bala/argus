@@ -16,6 +16,7 @@ derive_more = "0.99.17"
 enum_dispatch = "0.3.12"
 hashbrown = "0.14.1"
 itertools = "0.11"
+log = "0.4.20"
 num-traits = "0.2.16"
 paste = "1.0.14"
 proptest = { version = "1.2", optional = true }
@@ -24,6 +25,7 @@ thiserror = "1.0.47"
 [dev-dependencies]
 proptest = "1.2"
 argus = { path = ".", features = ["arbitrary"] }
+env_logger = "0.10.0"
 
 [features]
 default = []
