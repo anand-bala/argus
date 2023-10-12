@@ -10,6 +10,8 @@ use chumsky::prelude::Rich;
 use lexer::{lexer, Token};
 use syntax::{parser, Expr, Interval};
 
+use crate::Type;
+
 /// Parse a string expression into a concrete Argus expression.
 pub fn parse_str(src: &str) -> Result<crate::core::expr::Expr, Vec<Rich<'_, String>>> {
     use chumsky::prelude::{Input, Parser};
@@ -79,26 +81,26 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
     ctx: &mut ExprBuilder,
 ) -> Result<crate::core::expr::Expr, Rich<'tokens, Token<'src>, lexer::Span>> {
     match ast {
-        Expr::Error => unreachable!("Errors should have been caught by parser"),
+        Expr::Error => Err(Rich::custom(span, "Errors should have been caught by parser")),
         Expr::Bool(value) => Ok(ctx.bool_const(*value).into()),
         Expr::Int(value) => Ok(ctx.int_const(*value).into()),
         Expr::UInt(value) => Ok(ctx.uint_const(*value).into()),
         Expr::Float(value) => Ok(ctx.float_const(*value).into()),
         Expr::Var { name, kind } => match kind {
-            syntax::Type::Unknown => Err(Rich::custom(span, "All variables must have defined type by now.")),
-            syntax::Type::Bool => ctx
+            Type::Unknown => Err(Rich::custom(span, "All variables must have defined type by now.")),
+            Type::Bool => ctx
                 .bool_var(name.to_string())
                 .map(|var| var.into())
                 .map_err(|err| Rich::custom(span, err.to_string())),
-            syntax::Type::UInt => ctx
+            Type::UInt => ctx
                 .uint_var(name.to_string())
                 .map(|var| var.into())
                 .map_err(|err| Rich::custom(span, err.to_string())),
-            syntax::Type::Int => ctx
+            Type::Int => ctx
                 .int_var(name.to_string())
                 .map(|var| var.into())
                 .map_err(|err| Rich::custom(span, err.to_string())),
-            syntax::Type::Float => ctx
+            Type::Float => ctx
                 .float_var(name.to_string())
                 .map(|var| var.into())
                 .map_err(|err| Rich::custom(span, err.to_string())),

@@ -14,6 +14,7 @@ ariadne = { version = "0.3.0", optional = true }
 chumsky = { version = "1.0.0-alpha.6", features = ["default", "label"] }
 derive_more = "0.99.17"
 enum_dispatch = "0.3.12"
+hashbrown = "0.14.1"
 itertools = "0.11"
 num-traits = "0.2.16"
 paste = "1.0.14"

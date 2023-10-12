@@ -3,40 +3,10 @@ use chumsky::prelude::*;
 use chumsky::Parser;
 
 use super::lexer::{Span, Token};
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum Type {
-    #[default]
-    Unknown,
-    Bool,
-    UInt,
-    Int,
-    Float,
-}
-
-impl Type {
-    /// Get the lowest common supertype for the given types to a common
-    fn get_common_cast(self, other: Self) -> Self {
-        use Type::*;
-        match (self, other) {
-            (Unknown, other) | (other, Unknown) => other,
-            (Bool, ty) | (ty, Bool) => ty,
-            (UInt, Int) => Float,
-            (UInt, Float) => Float,
-            (Int, UInt) => Float,
-            (Int, Float) => Float,
-            (Float, UInt) => Float,
-            (Float, Int) => Float,
-            (lhs, rhs) => {
-                assert_eq!(lhs, rhs);
-                rhs
-            }
-        }
-    }
-}
+use crate::Type;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Interval<'src> {
+pub(crate) struct Interval<'src> {
     pub a: Option<Box<Spanned<Expr<'src>>>>,
     pub b: Option<Box<Spanned<Expr<'src>>>>,
 }
@@ -98,7 +68,7 @@ impl BinaryOps {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr<'src> {
+pub(crate) enum Expr<'src> {
     Error,
     Bool(bool),
     Int(i64),
@@ -258,7 +228,7 @@ fn num_expr_parser<'tokens, 'src: 'tokens>(
     })
 }
 
-pub fn parser<'tokens, 'src: 'tokens>(
+pub(crate) fn parser<'tokens, 'src: 'tokens>(
 ) -> impl Parser<'tokens, ParserInput<'tokens, 'src>, Spanned<Expr<'src>>, Error<'tokens, 'src>> + Clone {
     let interval = {
         let num_literal = select! {
@@ -327,6 +297,7 @@ pub fn parser<'tokens, 'src: 'tokens>(
                 [],
                 |span| (Expr::Error, span),
             )))
+            .or(expr)
             .boxed();
 
         let not_op = just(Token::Not)

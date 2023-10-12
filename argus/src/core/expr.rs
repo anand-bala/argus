@@ -1,6 +1,6 @@
 //! Expression tree for Argus specifications
 
-use std::collections::HashSet;
+use hashbrown::HashMap;
 
 mod bool_expr;
 pub mod iter;
@@ -13,7 +13,7 @@ pub use num_expr::*;
 pub use traits::*;
 
 use self::iter::AstIter;
-use crate::{ArgusResult, Error};
+use crate::{ArgusResult, Error, Type};
 
 /// A trait representing expressions
 #[enum_dispatch]
@@ -155,7 +155,7 @@ pub enum Expr {
 /// definitions for variables.
 #[derive(Clone, Debug, Default)]
 pub struct ExprBuilder {
-    declarations: HashSet<String>,
+    pub(crate) declarations: HashMap<String, Type>,
 }
 
 impl ExprBuilder {
@@ -188,37 +188,33 @@ impl ExprBuilder {
 
     /// Declare a boolean variable
     pub fn bool_var(&mut self, name: String) -> ArgusResult<BoolExpr> {
-        if self.declarations.insert(name.clone()) {
-            Ok((BoolVar { name }).into())
-        } else {
-            Err(Error::IdentifierRedeclaration)
+        match self.declarations.insert(name.clone(), Type::Bool) {
+            None | Some(Type::Bool) => Ok((BoolVar { name }).into()),
+            _ => Err(Error::IdentifierRedeclaration),
         }
     }
 
     /// Declare a integer variable
     pub fn int_var(&mut self, name: String) -> ArgusResult<NumExpr> {
-        if self.declarations.insert(name.clone()) {
-            Ok((IntVar { name }).into())
-        } else {
-            Err(Error::IdentifierRedeclaration)
+        match self.declarations.insert(name.clone(), Type::Int) {
+            None | Some(Type::Int) => Ok((IntVar { name }).into()),
+            _ => Err(Error::IdentifierRedeclaration),
         }
     }
 
     /// Declare a unsigned integer variable
     pub fn uint_var(&mut self, name: String) -> ArgusResult<NumExpr> {
-        if self.declarations.insert(name.clone()) {
-            Ok((UIntVar { name }).into())
-        } else {
-            Err(Error::IdentifierRedeclaration)
+        match self.declarations.insert(name.clone(), Type::UInt) {
+            None | Some(Type::UInt) => Ok((UIntVar { name }).into()),
+            _ => Err(Error::IdentifierRedeclaration),
         }
     }
 
     /// Declare a floating point variable
     pub fn float_var(&mut self, name: String) -> ArgusResult<NumExpr> {
-        if self.declarations.insert(name.clone()) {
-            Ok((FloatVar { name }).into())
-        } else {
-            Err(Error::IdentifierRedeclaration)
+        match self.declarations.insert(name.clone(), Type::Float) {
+            None | Some(Type::Float) => Ok((FloatVar { name }).into()),
+            _ => Err(Error::IdentifierRedeclaration),
         }
     }
 

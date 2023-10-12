@@ -87,13 +87,13 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     // A parser for numbers
     let digits = text::digits(10).to_slice();
 
-    let frac = just('.').then(digits);
+    let frac = just('.').then(digits.or_not());
 
     let exp = just('e').or(just('E')).then(one_of("+-").or_not()).then(digits);
 
     let floating_number = just('-')
         .or_not()
-        .then(digits)
+        .then(digits.or_not())
         .then(choice((frac.then(exp).to_slice(), frac.to_slice(), exp.to_slice())))
         // .then(frac.or_not())
         // .then(exp.or_not())
@@ -104,13 +104,9 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
     let signed_int = one_of("+-")
         // .or_not()
         .then(digits)
-        .then(frac.not().or(exp.not()))
         .to_slice()
         .map(|s: &str| Token::Int(s.parse().unwrap()));
-    let unsigned_int = digits
-        .then(frac.not().or(exp.not()))
-        .to_slice()
-        .map(|s: &str| Token::UInt(s.parse().unwrap()));
+    let unsigned_int = digits.to_slice().map(|s: &str| Token::UInt(s.parse().unwrap()));
 
     let number = choice((floating_number, signed_int, unsigned_int));
 
