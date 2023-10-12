@@ -139,8 +139,8 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
         just("&&").to(Token::And),
         just("&").to(Token::And),
         just("\u{2227}").to(Token::And), // ∧
-        just("||").to(Token::And),
-        just("|").to(Token::And),
+        just("||").to(Token::Or),
+        just("|").to(Token::Or),
         just("\u{2228}").to(Token::Or), // ∨
         just("^").to(Token::Xor),
         just("-").to(Token::Minus),

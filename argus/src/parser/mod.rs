@@ -7,6 +7,7 @@ mod lexer;
 mod syntax;
 
 use chumsky::prelude::Rich;
+use itertools::Itertools;
 use lexer::{lexer, Token};
 use syntax::{parser, Expr, Interval};
 
@@ -17,6 +18,10 @@ pub fn parse_str(src: &str) -> Result<crate::core::expr::Expr, Vec<Rich<'_, Stri
     use chumsky::prelude::{Input, Parser};
 
     let (tokens, lex_errors) = lexer().parse(src).into_output_errors();
+    log::debug!("** Tokens output **");
+    log::debug!("{:#?}", tokens);
+    log::debug!("** Lexing Errors **");
+    log::debug!("[{}]", lex_errors.iter().map(|e| e.to_string()).join("\n- "));
 
     let (parsed, parse_errors) = if let Some(tokens) = &tokens {
         parser()
@@ -25,6 +30,11 @@ pub fn parse_str(src: &str) -> Result<crate::core::expr::Expr, Vec<Rich<'_, Stri
     } else {
         (None, Vec::new())
     };
+
+    log::debug!("** Parse output **");
+    log::debug!("{:#?}", parsed);
+    log::debug!("** Parse Errors **");
+    log::debug!("[{}]", parse_errors.iter().map(|e| e.to_string()).join("\n- "));
 
     let (expr, expr_errors) = if let Some((ast, span)) = parsed {
         let mut expr_builder = ExprBuilder::new();
@@ -36,6 +46,11 @@ pub fn parse_str(src: &str) -> Result<crate::core::expr::Expr, Vec<Rich<'_, Stri
     } else {
         (None, vec![])
     };
+
+    log::debug!("** Final Expression **");
+    log::debug!("{:#?}", expr);
+    log::debug!("** AST to Expr Errors **");
+    log::debug!("[{}]", expr_errors.iter().map(|e| e.to_string()).join("\n- "));
 
     let errors: Vec<_> = lex_errors
         .into_iter()

@@ -21,7 +21,16 @@ pub enum UnaryOps {
 }
 
 impl UnaryOps {
+    /// Get the default type for the *arguments* of this kind of expression.
     fn default_args_type(&self) -> Type {
+        match self {
+            UnaryOps::Neg => Type::Float,
+            _ => Type::Bool,
+        }
+    }
+
+    /// Get the default type the expression with this operator should be
+    fn get_default_type(&self) -> Type {
         match self {
             UnaryOps::Neg => Type::Float,
             _ => Type::Bool,
@@ -50,6 +59,7 @@ pub enum BinaryOps {
 }
 
 impl BinaryOps {
+    /// Get the default type for the *arguments* of this kind of expression.
     fn default_args_type(&self) -> Type {
         match self {
             BinaryOps::Add
@@ -62,6 +72,14 @@ impl BinaryOps {
             | BinaryOps::Ge
             | BinaryOps::Eq
             | BinaryOps::Neq => Type::Float,
+            _ => Type::Bool,
+        }
+    }
+
+    /// Get the default type the expression with this operator should be
+    fn get_default_type(&self) -> Type {
+        match self {
+            BinaryOps::Add | BinaryOps::Sub | BinaryOps::Mul | BinaryOps::Div => Type::Float,
             _ => Type::Bool,
         }
     }
@@ -103,12 +121,12 @@ impl<'src> Expr<'src> {
                 op,
                 interval: _,
                 arg: _,
-            } => op.default_args_type(),
+            } => op.get_default_type(),
             Expr::Binary {
                 op,
                 interval: _,
                 args: _,
-            } => op.default_args_type(),
+            } => op.get_default_type(),
         }
     }
 
@@ -174,7 +192,7 @@ fn num_expr_parser<'tokens, 'src: 'tokens>(
 
         let num_atom = var
             .or(num_literal)
-            .map_with(|expr, e| (expr, e.span()))
+            .map_with(|e, ctx| (e, ctx.span()))
             // Atoms can also just be normal expressions, but surrounded with parentheses
             .or(num_expr.clone().delimited_by(just(Token::LParen), just(Token::RParen)))
             // Attempt to recover anything that looks like a parenthesised expression but contains errors
@@ -297,39 +315,36 @@ pub(crate) fn parser<'tokens, 'src: 'tokens>(
                 [],
                 |span| (Expr::Error, span),
             )))
-            .or(expr)
             .boxed();
 
-        let not_op = just(Token::Not)
-            .map_with(|_, e| (UnaryOps::Not, e.span()))
-            .repeated()
-            .foldr(atom, |op, rhs| {
-                let span = op.1.start..rhs.1.end;
-                (Expr::unary_op(op.0, rhs, None), span.into())
-            })
-            .boxed();
-
-        let unary_temporal_op = {
+        let unary_op = {
             let op = choice((
+                just(Token::Not).to(UnaryOps::Not),
                 just(Token::Next).to(UnaryOps::Next),
                 just(Token::Eventually).to(UnaryOps::Eventually),
                 just(Token::Always).to(UnaryOps::Always),
             ));
             op.map_with(|op, e| (op, e.span()))
                 .then(interval.clone().or_not())
+                .try_map(|(op, interval), _| match (op, interval) {
+                    ((UnaryOps::Not, _), Some((_, s))) => {
+                        Err(Rich::custom(s, "Not (`!`) operator cannot have an interval"))
+                    }
+                    (o, i) => Ok((o, i)),
+                })
                 .repeated()
-                .foldr(not_op, |(op, interval), rhs| {
+                .foldr(atom, |(op, interval), rhs| {
                     let span = op.1.start..rhs.1.end;
                     (Expr::unary_op(op.0, rhs, interval), span.into())
                 })
                 .boxed()
         };
 
-        let binary_temporal_op = unary_temporal_op
+        let until_op = unary_op
             .clone()
             .then(just(Token::Until).to(BinaryOps::Until).then(interval.or_not()))
             .repeated()
-            .foldr(unary_temporal_op, |(lhs, (op, interval)), rhs| {
+            .foldr(unary_op, |(lhs, (op, interval)), rhs| {
                 let span = lhs.1.start..rhs.1.end;
                 assert_eq!(op, BinaryOps::Until);
                 (Expr::binary_op(op, (lhs, rhs), interval), span.into())
@@ -338,9 +353,9 @@ pub(crate) fn parser<'tokens, 'src: 'tokens>(
 
         let and_op = {
             let op = just(Token::And).to(BinaryOps::And);
-            binary_temporal_op
+            until_op
                 .clone()
-                .foldl(op.then(binary_temporal_op).repeated(), |a, (op, b)| {
+                .foldl(op.then(until_op).repeated(), |a, (op, b)| {
                     let span = a.1.start..b.1.end;
                     (Expr::binary_op(op, (a, b), None), span.into())
                 })
