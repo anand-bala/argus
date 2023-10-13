@@ -65,6 +65,10 @@ impl PyNumExpr {
         format!("{:?}", &self.0)
     }
 
+    fn __str__(&self) -> String {
+        format!("{}", self.0)
+    }
+
     fn __neg__(&self) -> PyResult<Py<Negate>> {
         Python::with_gil(|py| Py::new(py, Negate::new(self.clone())))
     }
@@ -306,6 +310,10 @@ impl PyBoolExpr {
 impl PyBoolExpr {
     fn __repr__(&self) -> String {
         format!("{:?}", &self.0)
+    }
+
+    fn __str__(&self) -> String {
+        format!("{}", self.0)
     }
 
     fn __invert__(&self) -> PyResult<Py<Not>> {
