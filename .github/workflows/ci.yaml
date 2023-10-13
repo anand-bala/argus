@@ -40,11 +40,11 @@ jobs:
       - name: Build
         run: cargo build --release
       - name: Rust Tests
-        run: cargo test --release
+        run: RUST_BACKTRACE=1 cargo test --release
       - name: Build wheels
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Python Tests
-        run: pytest pyargus
+        run: RUST_BACKTRACE=1 pytest pyargus
 
   linting:
     strategy:
