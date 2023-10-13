@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`argus._argus`
-======================
-
-.. py:module:: argus._argus
-
-
