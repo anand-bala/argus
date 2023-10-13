@@ -49,6 +49,7 @@ def docs(session: nox.Session):
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.install("-e", ".")
     session.run("sphinx-multiversion", "docs", "_site", "-b", "html")
+    session.run("cp", "./docs/_templates/index-redirect.html", "_site/index.html")
 
 
 @nox.session(tags=["style", "fix", "rust"], python=False)

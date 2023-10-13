@@ -101,7 +101,9 @@ jobs:
       - name: Build Python package
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Build HTML docs
-        run: sphinx-multiversion docs _site -b html
+        run: |
+          sphinx-multiversion docs _site -b html
+          cp ./docs/_templates/index-redirect.html _site/index.html
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/')
