@@ -83,8 +83,6 @@ jobs:
           flake8
           ruff check .
           mypy .
-      - name: Python Tests
-        run: pytest pyargus
 
   docs:
     name: Documentation

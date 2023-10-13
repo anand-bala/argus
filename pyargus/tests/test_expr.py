@@ -1,14 +1,16 @@
 import logging
 
+import hypothesis.strategies as st
 from hypothesis import HealthCheck, given, settings
 
 import argus
 from argus.test_utils.expr_gen import argus_expr
 
 
-@given(spec=argus_expr())
+@given(data=st.data())
 @settings(suppress_health_check=[HealthCheck.too_slow])
-def test_correct_expr(spec: str) -> None:
+def test_correct_expr(data: st.DataObject) -> None:
+    spec = data.draw(argus_expr())
     try:
         _ = argus.parse_expr(spec)
     except ValueError as e:

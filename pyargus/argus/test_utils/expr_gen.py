@@ -10,9 +10,9 @@ class Transformer(lark.Transformer):
     def INT(self, tok: lark.Token) -> lark.Token:  # noqa: N802
         """Convert the value of `tok` from string to int, while maintaining line number & column.
 
-        Performs wrapping conversion for 64-bit integers
+        Performs wrapping conversion for 32-bit integers
         """
-        return tok.update(value=int(tok) // 2**64)
+        return tok.update(value=int(float(tok) // 2**32))
 
 
 ARGUS_EXPR_GRAMMAR = lark.Lark(
@@ -21,14 +21,15 @@ ARGUS_EXPR_GRAMMAR = lark.Lark(
 TRUE: "true" | "TRUE"
 FALSE: "false" | "FALSE"
 BOOLEAN: TRUE | FALSE
+INT: /[0-9]+/
 
 KEYWORD: "X" | "G" | "F" | "U" | BOOLEAN
 
-ESCAPED_STRING: "\"" /(\w|[\t ]){1,20}/ "\""
-NUM_IDENT: ESCAPED_STRING
+ESCAPED_STRING: /(\w|[\t ]){1,20}/
+NUM_IDENT: "\"num_" ESCAPED_STRING "\""
          | "num_" CNAME
-BOOL_IDENT: ESCAPED_STRING
-         | "bool_" CNAME
+BOOL_IDENT: "\"bool_" ESCAPED_STRING "\""
+          | "bool_" CNAME
 
 num_expr: num_expr "*" num_expr
         | num_expr "/" num_expr
@@ -66,7 +67,6 @@ phi: bool_expr
 
 %import common.CNAME
 %import common.NUMBER
-%import common.INT
 %import common.WS
 %import common.WS_INLINE
 %ignore WS
