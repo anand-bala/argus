@@ -98,15 +98,27 @@ pub fn lexer<'src>() -> impl Parser<'src, &'src str, Output<'src>, Error<'src>> 
         // .then(frac.or_not())
         // .then(exp.or_not())
         .to_slice()
-        .map(|s: &str| Token::Float(s.parse().unwrap()))
+        .try_map_with(|s: &str, e| {
+            s.parse()
+                .map(Token::Float)
+                .map_err(|err| Rich::custom(e.span(), format!("Unable to parse as 64-bit float: {}", err)))
+        })
         .boxed();
 
     let signed_int = one_of("+-")
         // .or_not()
         .then(digits)
         .to_slice()
-        .map(|s: &str| Token::Int(s.parse().unwrap()));
-    let unsigned_int = digits.to_slice().map(|s: &str| Token::UInt(s.parse().unwrap()));
+        .try_map_with(|s: &str, e| {
+            s.parse()
+                .map(Token::Int)
+                .map_err(|err| Rich::custom(e.span(), format!("Unable to parse as 64-bit signed int: {}", err)))
+        });
+    let unsigned_int = digits.to_slice().try_map_with(|s: &str, e| {
+        s.parse()
+            .map(Token::UInt)
+            .map_err(|err| Rich::custom(e.span(), format!("Unable to parse as 64-bit unsigned int: {}", err)))
+    });
 
     let number = choice((floating_number, signed_int, unsigned_int));
 

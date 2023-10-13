@@ -14,6 +14,8 @@ def test_correct_expr(data: st.DataObject) -> None:
     try:
         _ = argus.parse_expr(spec)
     except ValueError as e:
+        if "Unable to parse as 64-bit" in str(e):
+            return
         logging.critical(f"unable to parse expr: {spec}")
         raise e
     except BaseException as e:
