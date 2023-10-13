@@ -48,7 +48,7 @@ def docs(session: nox.Session):
     session.install("sphinx-autoapi", "sphinx-multiversion")
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.install("-e", ".")
-    session.run("sphinx-multiversion", "-b", "html", "docs", "_site")
+    session.run("sphinx-multiversion", "docs", "_site", "-b", "html")
 
 
 @nox.session(tags=["style", "fix", "rust"], python=False)
