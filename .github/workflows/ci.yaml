@@ -129,7 +129,7 @@ jobs:
               -s -D \
               -o index.html
           git config user.name github-actions
-          git config user.email github-actions@github.com
+          git config user.email actions@github.com
           git add .
           if [[ ! $(git diff --quiet) ]]; then
             git commit -m "update index.html"
