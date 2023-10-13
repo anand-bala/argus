@@ -78,7 +78,7 @@ Attributes
 
       Convert the value of `tok` from string to int, while maintaining line number & column.
 
-      Performs wrapping conversion for 64-bit integers
+      Performs wrapping conversion for 32-bit integers
 
 
 
