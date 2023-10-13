@@ -44,7 +44,7 @@ jobs:
       - name: Build wheels
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Python Tests
-        run: RUST_BACKTRACE=1 pytest pyargus
+        run: RUST_BACKTRACE=1 pytest pyargus --hypothesis-explain
 
   linting:
     strategy:
