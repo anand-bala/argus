@@ -41,14 +41,14 @@ def dev(session: nox.Session):
 def docs(session: nox.Session):
     session.conda_install(
         "sphinx",
-        "pydata-sphinx-theme",
+        "furo",
         "sphinx-copybutton",
         "myst-parser",
     )
-    session.install("sphinx-autoapi")
+    session.install("sphinx-autoapi", "sphinx-multiversion")
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.install("-e", ".")
-    session.run("sphinx-build", "-b", "html", "docs", "docs/_build/html")
+    session.run("sphinx-multiversion", "-b", "html", "docs", "_site")
 
 
 @nox.session(tags=["style", "fix", "rust"], python=False)

@@ -19,10 +19,11 @@ dependencies:
   - lark # hypothesis[lark]
   - pip
   - sphinx
-  - pydata-sphinx-theme
+  - furo
   - sphinx-copybutton
   - myst-parser
   - pip:
       - sphinx-autoapi
+      - sphinx-multiversion
 
 category: dev

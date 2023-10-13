@@ -27,29 +27,29 @@ extensions = [
     "myst_parser",
     "sphinx_copybutton",
     "sphinx.ext.inheritance_diagram",
+    "sphinx_multiversion",
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-html_theme = "pydata_sphinx_theme"
+html_theme = "furo"
 html_static_path = ["_static"]
 html_theme_options = {
-    "use_edit_page_button": True,
-    "github_url": "https://github.com/anand-bala/argus",
-    "switcher": {
-        "json_url": "https://anand-bala.github.io/argus/dev/_static/switcher.json",
-        "version_match": version,
-    },
-    "check_switcher": False,
-    "navbar_align": "left",  # [left, content, right] For testing that the navbar items align properly
-    "navbar_center": ["version-switcher", "navbar-nav"],
+    "source_repository": "https://github.com/anand-bala/argus/",
+    "source_branch": "dev",
+    "source_directory": "docs/",
 }
-html_context = {
-    "github_user": "anand-bala",
-    "github_repo": "argus",
-    "github_version": "v0.1.1",
-    "doc_path": "docs",
+html_sidebars = {
+    "**": [
+        "sidebar/brand.html",
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/ethical-ads.html",
+        "sidebar/scroll-end.html",
+        "versions.html",
+    ]
 }
 
 source_suffix = {
@@ -57,6 +57,10 @@ source_suffix = {
     ".txt": "markdown",
     ".md": "markdown",
 }
+
+
+# Whitelist pattern for branches (set to None to ignore all branches)
+smv_branch_whitelist = r"^dev$"
 
 autoapi_dirs = ["../pyargus/argus"]
 autoapi_root = "api"

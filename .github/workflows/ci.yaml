@@ -101,37 +101,10 @@ jobs:
       - name: Build Python package
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Build HTML docs
-        run: sphinx-build -b html docs docs/_build/
+        run: sphinx-multiversion -b html docs _site
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/')
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/_build/
-          destination_dir: ${{ github.ref_name }}
-      - uses: actions/checkout@v4
-        with:
-          ref: 'gh-pages'
-      - name: Install tree
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y tree
-      - run: |
-          tree -H '.' \
-              -L 1 \
-              --noreport \
-              --dirsfirst \
-              --charset utf-8 \
-              --ignore-case \
-              --timefmt '%d-%b-%Y %H:%M' \
-              -I "index.html" \
-              -T 'Argus Python Documentation versions' \
-              -s -D \
-              -o index.html
-          git config user.name github-actions
-          git config user.email actions@github.com
-          git add .
-          if [[ ! $(git diff --quiet) ]]; then
-            git commit -m "update index.html"
-            git push
-          fi
+          publish_dir: _site/
