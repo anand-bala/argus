@@ -53,7 +53,7 @@ pub enum Error {
     /// An identifier has been redeclared in a specification.
     ///
     /// This is called mainly from [`expr::ExprBuilder`].
-    #[error("redeclaration of identifier")]
+    #[error("redeclaration of identifier with different type")]
     IdentifierRedeclaration,
 
     /// An expression is provided with an insufficient number of arguments.
