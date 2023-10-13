@@ -20,8 +20,8 @@ pub fn parse_str(src: &str) -> Result<crate::core::expr::Expr, Vec<Rich<'_, Stri
     let (tokens, lex_errors) = lexer().parse(src).into_output_errors();
     log::debug!("** Tokens output **");
     log::debug!("{:#?}", tokens);
-    log::debug!("** Lexing Errors **");
-    log::debug!("[{}]", lex_errors.iter().map(|e| e.to_string()).join("\n- "));
+    log::debug!("** Lexing Errors: {} **", lex_errors.len());
+    log::debug!("\n{}", lex_errors.iter().map(|e| e.to_string()).join("\n"));
 
     let (parsed, parse_errors) = if let Some(tokens) = &tokens {
         parser()
@@ -33,8 +33,8 @@ pub fn parse_str(src: &str) -> Result<crate::core::expr::Expr, Vec<Rich<'_, Stri
 
     log::debug!("** Parse output **");
     log::debug!("{:#?}", parsed);
-    log::debug!("** Parse Errors **");
-    log::debug!("[{}]", parse_errors.iter().map(|e| e.to_string()).join("\n- "));
+    log::debug!("** Parse Errors: {}**", parse_errors.len());
+    log::debug!("\n{}", parse_errors.iter().map(|e| e.to_string()).join("\n"));
 
     let (expr, expr_errors) = if let Some((ast, span)) = parsed {
         let mut expr_builder = ExprBuilder::new();
@@ -49,16 +49,27 @@ pub fn parse_str(src: &str) -> Result<crate::core::expr::Expr, Vec<Rich<'_, Stri
 
     log::debug!("** Final Expression **");
     log::debug!("{:#?}", expr);
-    log::debug!("** AST to Expr Errors **");
-    log::debug!("[{}]", expr_errors.iter().map(|e| e.to_string()).join("\n- "));
+    log::debug!("** AST to Expr Errors: {} **", expr_errors.len());
+    log::debug!("\n{}", expr_errors.iter().map(|e| e.to_string()).join("\n"));
 
     let errors: Vec<_> = lex_errors
         .into_iter()
-        .map(|e| e.map_token(|c| c.to_string()))
+        .filter_map(|e| {
+            // HACK: Discard empty expected lex errors
+            // TODO: not sure why this happens
+            use chumsky::error::RichReason::*;
+            match e.reason() {
+                ExpectedFound { expected, found: _ } if expected.is_empty() => return None,
+                _ => {}
+            };
+            Some(e.map_token(|c| c.to_string()))
+        })
         .chain(parse_errors.into_iter().map(|e| e.map_token(|tok| tok.to_string())))
         .chain(expr_errors.into_iter().map(|e| e.map_token(|tok| tok.to_string())))
         .map(|e| e.into_owned())
         .collect();
+    log::debug!("** Total Errors: {}**", errors.len());
+    log::debug!("[{}]", errors.iter().map(|e| e.to_string()).join("\n"));
     if !errors.is_empty() {
         Err(errors)
     } else {
