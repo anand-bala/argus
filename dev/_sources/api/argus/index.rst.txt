@@ -1,0 +1,495 @@
+:py:mod:`argus`
+===============
+
+.. py:module:: argus
+
+
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   test_utils/index.rst
+
+
+Package Contents
+----------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   argus.Abs
+   argus.Add
+   argus.Always
+   argus.And
+   argus.BoolExpr
+   argus.BoolSignal
+   argus.Cmp
+   argus.ConstBool
+   argus.ConstFloat
+   argus.ConstInt
+   argus.ConstUInt
+   argus.Div
+   argus.Eventually
+   argus.Expr
+   argus.FloatSignal
+   argus.IntSignal
+   argus.Mul
+   argus.Negate
+   argus.Next
+   argus.Not
+   argus.NumExpr
+   argus.Or
+   argus.Signal
+   argus.Trace
+   argus.UnsignedIntSignal
+   argus.Until
+   argus.VarBool
+   argus.VarFloat
+   argus.VarInt
+   argus.VarUInt
+   argus.dtype
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   argus.eval_bool_semantics
+   argus.eval_robust_semantics
+   argus.parse_expr
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   argus.AllowedDtype
+   argus.__version__
+
+
+.. py:class:: Abs(arg: NumExpr)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: Add(args: list[NumExpr])
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: Always(arg: BoolExpr, *, interval: tuple[float | None, float | None])
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: And(args: list[BoolExpr])
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: BoolExpr
+
+
+   Bases: :py:obj:`Expr`
+
+   .. py:method:: __and__(other: typing_extensions.Self) -> BoolExpr
+
+
+   .. py:method:: __invert__() -> BoolExpr
+
+
+   .. py:method:: __or__(other: typing_extensions.Self) -> BoolExpr
+
+
+   .. py:method:: __rand__(other: typing_extensions.Self) -> BoolExpr
+
+
+   .. py:method:: __ror__(other: typing_extensions.Self) -> BoolExpr
+
+
+
+.. py:class:: BoolSignal(*, interpolation_method: _InterpolationMethod = 'linear')
+
+
+   Bases: :py:obj:`Signal`\ [\ :py:obj:`bool`\ ]
+
+   .. py:method:: constant(value: bool, *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: from_samples(samples: list[tuple[float, bool]], *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: push(time: float, value: bool) -> None
+
+
+   .. py:method:: at(time: float) -> bool | None
+
+
+
+.. py:class:: Cmp
+
+
+   Bases: :py:obj:`BoolExpr`
+
+   .. py:method:: equal(lhs: NumExpr, rhs: NumExpr) -> Cmp
+      :staticmethod:
+
+
+   .. py:method:: greater_than(lhs: NumExpr, rhs: NumExpr) -> Cmp
+      :staticmethod:
+
+
+   .. py:method:: greater_than_eq(lhs: NumExpr, rhs: NumExpr) -> Cmp
+      :staticmethod:
+
+
+   .. py:method:: less_than(lhs: NumExpr, rhs: NumExpr) -> Cmp
+      :staticmethod:
+
+
+   .. py:method:: less_than_eq(lhs: NumExpr, rhs: NumExpr) -> Cmp
+      :staticmethod:
+
+
+   .. py:method:: not_equal(lhs: NumExpr, rhs: NumExpr) -> Cmp
+      :staticmethod:
+
+
+
+.. py:class:: ConstBool(value: bool)
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: ConstFloat(value: float)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: ConstInt(value: int)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: ConstUInt(value: int)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: Div(dividend: NumExpr, divisor: NumExpr)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: Eventually(arg: BoolExpr, *, interval: tuple[float | None, float | None])
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: Expr
+
+
+
+.. py:class:: FloatSignal(*, interpolation_method: _InterpolationMethod = 'linear')
+
+
+   Bases: :py:obj:`Signal`\ [\ :py:obj:`float`\ ]
+
+   .. py:method:: constant(value: float, *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: from_samples(samples: list[tuple[float, float]], *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: push(time: float, value: float) -> None
+
+
+   .. py:method:: at(time: float) -> float | None
+
+
+
+.. py:class:: IntSignal(*, interpolation_method: _InterpolationMethod = 'linear')
+
+
+   Bases: :py:obj:`Signal`\ [\ :py:obj:`int`\ ]
+
+   .. py:method:: constant(value: int, *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: from_samples(samples: list[tuple[float, int]], *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: push(time: float, value: int) -> None
+
+
+   .. py:method:: at(time: float) -> int | None
+
+
+
+.. py:class:: Mul(args: list[NumExpr])
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: Negate(arg: NumExpr)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: Next(arg: BoolExpr)
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: Not(arg: BoolExpr)
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: NumExpr
+
+
+   Bases: :py:obj:`Expr`
+
+   .. py:method:: __ge__(other: typing_extensions.Self) -> NumExpr
+
+      Return self>=value.
+
+
+   .. py:method:: __gt__(other: typing_extensions.Self) -> NumExpr
+
+      Return self>value.
+
+
+   .. py:method:: __le__(other: typing_extensions.Self) -> NumExpr
+
+      Return self<=value.
+
+
+   .. py:method:: __lt__(other: typing_extensions.Self) -> NumExpr
+
+      Return self<value.
+
+
+   .. py:method:: __mul__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __eq__(other: typing_extensions.Self) -> NumExpr
+
+      Return self==value.
+
+
+   .. py:method:: __ne__(other: typing_extensions.Self) -> NumExpr
+
+      Return self!=value.
+
+
+   .. py:method:: __neg__() -> NumExpr
+
+
+   .. py:method:: __add__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __radd__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __rmul__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __sub__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __rsub__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __truediv__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __rtruediv__(other: typing_extensions.Self) -> NumExpr
+
+
+   .. py:method:: __abs__() -> NumExpr
+
+
+
+.. py:class:: Or(args: list[BoolExpr])
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: Signal(*, interpolation_method: _InterpolationMethod = 'linear')
+
+
+   Bases: :py:obj:`typing_extensions.Generic`\ [\ :py:obj:`_T`\ ]
+
+   .. py:property:: start_time
+      :type: float | None
+
+
+   .. py:property:: end_time
+      :type: float | None
+
+
+   .. py:property:: kind
+      :type: dtype
+
+
+   .. py:method:: constant(value: _T, *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: from_samples(samples: list[tuple[float, _T]], *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: push(time: float, value: _T) -> None
+
+
+   .. py:method:: at(time: float) -> _T | None
+
+
+   .. py:method:: is_empty() -> bool
+
+
+
+.. py:class:: Trace(signals: dict[str, Signal])
+
+
+
+.. py:class:: UnsignedIntSignal(*, interpolation_method: _InterpolationMethod = 'linear')
+
+
+   Bases: :py:obj:`Signal`\ [\ :py:obj:`int`\ ]
+
+   .. py:method:: constant(value: int, *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: from_samples(samples: list[tuple[float, int]], *, interpolation_method: _InterpolationMethod = 'linear') -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: push(time: float, value: int) -> None
+
+
+   .. py:method:: at(time: float) -> int | None
+
+
+
+.. py:class:: Until(lhs: BoolExpr, rhs: BoolExpr, *, interval: tuple[float | None, float | None])
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: VarBool(name: str)
+
+
+   Bases: :py:obj:`BoolExpr`
+
+
+.. py:class:: VarFloat(name: str)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: VarInt(name: str)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: VarUInt(name: str)
+
+
+   Bases: :py:obj:`NumExpr`
+
+
+.. py:class:: dtype
+
+
+   .. py:attribute:: bool_
+      :type: ClassVar[dtype]
+      :value: Ellipsis
+
+      
+
+   .. py:attribute:: float64
+      :type: ClassVar[dtype]
+      :value: Ellipsis
+
+      
+
+   .. py:attribute:: int64
+      :type: ClassVar[dtype]
+      :value: Ellipsis
+
+      
+
+   .. py:attribute:: uint64
+      :type: ClassVar[dtype]
+      :value: Ellipsis
+
+      
+
+   .. py:method:: convert(dtype: type[bool | int | float] | typing_extensions.Self) -> typing_extensions.Self
+      :classmethod:
+
+
+   .. py:method:: __eq__(other: object) -> bool
+
+      Return self==value.
+
+
+   .. py:method:: __int__() -> int
+
+
+
+.. py:function:: eval_bool_semantics(expr: BoolExpr, trace: Trace, *, interpolation_method: _InterpolationMethod = 'linear') -> BoolSignal
+
+
+.. py:function:: eval_robust_semantics(expr: BoolExpr, trace: Trace, *, interpolation_method: _InterpolationMethod = 'linear') -> BoolSignal
+
+
+.. py:function:: parse_expr(expr_str: str) -> Expr
+
+
+.. py:data:: AllowedDtype
+   :type: typing_extensions.TypeAlias
+
+   
+
+.. py:data:: __version__
+
+   
+

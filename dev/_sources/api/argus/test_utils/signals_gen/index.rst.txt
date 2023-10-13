@@ -1,0 +1,49 @@
+:py:mod:`argus.test_utils.signals_gen`
+======================================
+
+.. py:module:: argus.test_utils.signals_gen
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   argus.test_utils.signals_gen.gen_element_fn
+   argus.test_utils.signals_gen.gen_samples
+   argus.test_utils.signals_gen.empty_signal
+   argus.test_utils.signals_gen.constant_signal
+   argus.test_utils.signals_gen.sampled_signal
+   argus.test_utils.signals_gen.draw_index
+   argus.test_utils.signals_gen.gen_dtype
+
+
+
+.. py:function:: gen_element_fn(dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> hypothesis.strategies.SearchStrategy[argus.AllowedDtype]
+
+
+.. py:function:: gen_samples(min_size: int, max_size: int, dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> List[Tuple[float, argus.AllowedDtype]]
+
+   Generate arbitrary samples for a signal where the time stamps are strictly
+   monotonically increasing
+
+
+.. py:function:: empty_signal(dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> hypothesis.strategies.SearchStrategy[argus.Signal]
+
+
+.. py:function:: constant_signal(dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> hypothesis.strategies.SearchStrategy[argus.Signal]
+
+
+.. py:function:: sampled_signal(xs: List[Tuple[float, argus.AllowedDtype]], dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> argus.Signal
+
+
+.. py:function:: draw_index(vec: List) -> int
+
+
+.. py:function:: gen_dtype() -> hypothesis.strategies.SearchStrategy[Union[Type[argus.AllowedDtype], argus.dtype]]
+
+
