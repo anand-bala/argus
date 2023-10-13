@@ -1,6 +1,9 @@
 Argus: Temporal Logic Monitoring Tool
 =====================================
 
+.. image:: https://badge.fury.io/py/argus-temporal-logic.svg
+    :target: https://badge.fury.io/py/argus-temporal-logic
+
 Argus aims to be a tool to generate monitors for Signal Temporal Logic (STL), and its
 different semantics.
 
