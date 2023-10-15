@@ -183,16 +183,15 @@ def coverage(session: nox.Session):
         ...
 
     try:
-        with session.chdir(CURRENT_DIR / "pyargus"):
-            session.run(
-                "coverage",
-                "run",
-                "--source",
-                "argus,src",
-                "-m",
-                "pytest",
-                silent=True,
-            )
+        session.run(
+            "coverage",
+            "run",
+            "--source",
+            "pyargus/argus,pyargus/src",
+            "-m",
+            "pytest",
+            silent=True,
+        )
     except Exception:
         ...
 
