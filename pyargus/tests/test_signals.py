@@ -29,7 +29,7 @@ def test_correct_constant_signals(data: st.DataObject) -> None:
 def test_correctly_create_signals(data: st.DataObject) -> None:
     dtype_ = data.draw(gen_dtype())
     xs = data.draw(gen_samples(min_size=0, max_size=100, dtype_=dtype_))
-    signal = sampled_signal(xs, dtype_)
+    signal = sampled_signal(xs, dtype_)  # type: ignore
     assert isinstance(signal, argus.Signal)
     if len(xs) > 0:
         expected_start_time = xs[0][0]
@@ -46,7 +46,7 @@ def test_correctly_create_signals(data: st.DataObject) -> None:
         a = data.draw(draw_index(xs))
         assert a < len(xs)
         at, expected_val = xs[a]
-        actual_val = signal.at(at)
+        actual_val = signal.at(at)  # type: ignore
 
         assert actual_val is not None
         assert actual_val == expected_val
@@ -79,10 +79,10 @@ def test_signal_create_should_fail(data: st.DataObject) -> None:
     assert a < len(xs)
     assert b < len(xs)
     # Swap two indices in the samples
-    xs[b], xs[a] = xs[a], xs[b]
+    xs[b], xs[a] = xs[a], xs[b]  # type: ignore
 
     with pytest.raises(RuntimeError, match=r"trying to create a non-monotonically signal.+"):
-        _ = sampled_signal(xs, dtype_)
+        _ = sampled_signal(xs, dtype_)  # type: ignore
 
 
 @given(st.data())

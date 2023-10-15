@@ -35,24 +35,34 @@ def gen_samples(
     min_size: int,
     max_size: int,
     dtype_: Union[Type[AllowedDtype], dtype],
-) -> List[Tuple[float, AllowedDtype]]:
+    n_lists: int = 1,
+) -> Union[List[Tuple[float, AllowedDtype]], List[List[Tuple[float, AllowedDtype]]]]:
     """
     Generate arbitrary samples for a signal where the time stamps are strictly
     monotonically increasing
+
+    :param n_lists: used to generate multiple sample lists with the same time domain. This is used for testing against
+                    `metric-temporal-logic` as it doesn't check for non-overlapping domains.
     """
-    elements = gen_element_fn(dtype_)
-    values = draw(st.lists(elements, min_size=min_size, max_size=max_size))
-    xs = draw(
+    n_lists = max(1, n_lists)
+    timestamps = draw(
         st.lists(
             st.integers(min_value=0, max_value=2**32 - 1),
             unique=True,
-            min_size=len(values),
-            max_size=len(values),
-        )
-        .map(lambda t: map(float, sorted(set(t))))
-        .map(lambda t: list(zip(t, values)))
+            min_size=min_size,
+            max_size=max_size,
+        ).map(lambda t: list(map(float, sorted(set(t)))))
     )
-    return xs
+    elements = gen_element_fn(dtype_)
+
+    sample_lists = [
+        draw(st.lists(elements, min_size=len(timestamps), max_size=len(timestamps)).map(lambda xs: list(zip(timestamps, xs))))
+        for _ in range(n_lists)
+    ]
+    if n_lists == 1:
+        return sample_lists[0]
+    else:
+        return sample_lists
 
 
 def empty_signal(dtype_: Union[Type[AllowedDtype], dtype]) -> SearchStrategy[argus.Signal]:

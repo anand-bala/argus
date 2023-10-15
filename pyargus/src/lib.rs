@@ -4,10 +4,11 @@ mod signals;
 
 use argus::Error as ArgusError;
 use ariadne::Source;
-use expr::PyExpr;
 use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyFloat, PyInt, PyType};
+
+use crate::expr::{PyBoolExpr, PyNumExpr};
 
 #[derive(derive_more::From)]
 struct PyArgusError(ArgusError);
@@ -73,10 +74,14 @@ impl DType {
 /// Parse a string expression into a concrete Argus expression.
 #[pyfunction]
 fn parse_expr(expr_str: &str) -> PyResult<PyObject> {
+    use argus::expr::Expr;
     use ariadne::{Color, Label, Report, ReportKind};
 
     match argus::parse_str(expr_str) {
-        Ok(expr) => Python::with_gil(|py| PyExpr::from_expr(py, expr)),
+        Ok(expr) => Python::with_gil(|py| match expr {
+            Expr::Bool(e) => PyBoolExpr::from_expr(py, e),
+            Expr::Num(e) => PyNumExpr::from_expr(py, e),
+        }),
         Err(errs) => {
             let mut buf = Vec::new();
             {

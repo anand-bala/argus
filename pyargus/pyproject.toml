@@ -35,7 +35,13 @@ dev = [
   "black",
 ]
 
-test = ["pytest", "coverage", "hypothesis[lark]"]
+test = [
+  "pytest",
+  "coverage",
+  "hypothesis[lark]",
+  "metric-temporal-logic",
+  "rtamt",
+]
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
@@ -53,6 +59,11 @@ testpaths = ["tests"]
 packages = ["argus"]
 # ignore_missing_imports = true
 show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "mtl"
+ignore_missing_imports = true
+
 
 [tool.ruff]
 line-length = 127

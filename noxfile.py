@@ -136,7 +136,7 @@ def mypy(session: nox.Session):
 def tests(session: nox.Session):
     session.conda_install("pytest", "hypothesis", "lark")
     session.env.update(ENV)
-    session.install("./pyargus")
+    session.install("./pyargus[test]")
     try:
         session.run(
             "cargo", "test", "--workspace", "--exclude", "pyargus", external=True
@@ -181,6 +181,8 @@ def coverage(session: nox.Session):
         "develop",
         "-m",
         "./pyargus/Cargo.toml",
+        "-E",
+        "test",
         silent=True,
     )
     try:
