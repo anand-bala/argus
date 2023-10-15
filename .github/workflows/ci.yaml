@@ -139,27 +139,8 @@ jobs:
           post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
-      - name: Install dependencies
-        run: cargo install grcov
-      - name: Build
-        run: |
-          cargo +nightly build --release
-          maturin develop --manifest-path pyargus/Cargo.toml
-      - name: Tests
-        continue-on-error: true
-        run: |
-          cargo +nightly test --workspace --exclude pyargus
-          coverage run --source pyargus/argus,pyargus/src -m pytest
-      - name: Generate coverage reports
-        run: |
-          grcov . -s $GITHUB_WORKSPACE --binary-path target/debug \
-            --filter covered \
-            -t lcov \
-            --branch \
-            --ignore-not-existing \
-            --ignore $HOME/.cargo/** \
-            -o rust.lcov
-          coverage lcov -o python.lcov
+      - name: Generate Coverage Reports
+        run: nox -s coverage
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:
