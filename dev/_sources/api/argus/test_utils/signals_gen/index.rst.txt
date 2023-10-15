@@ -26,10 +26,13 @@ Functions
 .. py:function:: gen_element_fn(dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> hypothesis.strategies.SearchStrategy[argus.AllowedDtype]
 
 
-.. py:function:: gen_samples(min_size: int, max_size: int, dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> List[Tuple[float, argus.AllowedDtype]]
+.. py:function:: gen_samples(min_size: int, max_size: int, dtype_: Union[Type[argus.AllowedDtype], argus.dtype], n_lists: int = 1) -> Union[List[Tuple[float, argus.AllowedDtype]], List[List[Tuple[float, argus.AllowedDtype]]]]
 
    Generate arbitrary samples for a signal where the time stamps are strictly
    monotonically increasing
+
+   :param n_lists: used to generate multiple sample lists with the same time domain. This is used for testing against
+                   `metric-temporal-logic` as it doesn't check for non-overlapping domains.
 
 
 .. py:function:: empty_signal(dtype_: Union[Type[argus.AllowedDtype], argus.dtype]) -> hypothesis.strategies.SearchStrategy[argus.Signal]
