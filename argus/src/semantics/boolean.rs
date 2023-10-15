@@ -55,7 +55,7 @@ impl BooleanSemantics {
             BoolExpr::Or(Or { args }) => {
                 assert!(args.len() >= 2);
                 args.iter().map(|arg| Self::eval::<BoolI, NumI>(arg, trace)).try_fold(
-                    Signal::const_true(),
+                    Signal::const_false(),
                     |acc, item| {
                         let item = item?;
                         Ok(acc.or::<BoolI>(&item))
@@ -325,22 +325,15 @@ fn compute_timed_until<I: InterpolationMethod<bool>>(
     a: Duration,
     b: Option<Duration>,
 ) -> ArgusResult<Signal<bool>> {
-    match b {
-        Some(b) => {
-            // First compute eventually [a, b]
-            let ev_a_b_rhs = compute_timed_eventually::<I>(rhs.clone(), a, Some(b))?;
-            // Then compute until [a, \infty) (lhs, rhs)
-            let unt_a_inf = compute_timed_until::<I>(lhs, rhs, a, None)?;
-            // Then & them
-            Ok(ev_a_b_rhs.and::<I>(&unt_a_inf))
-        }
-        None => {
-            assert_ne!(a, Duration::ZERO, "untimed case wasn't handled for Until");
-            // First compute untimed until (lhs, rhs)
-            let untimed_until = compute_untimed_until::<I>(lhs, rhs)?;
-            // Compute G [0, a]
-            compute_timed_always::<I>(untimed_until, Duration::ZERO, Some(a))
-        }
+    // First compute eventually [a, b]
+    let ev_a_b_rhs = compute_timed_eventually::<I>(rhs.clone(), a, b)?;
+    // Then compute untimed until
+    let untimed = compute_untimed_until::<I>(lhs, rhs)?;
+    if a.is_zero() {
+        Ok(ev_a_b_rhs.and::<I>(&untimed))
+    } else {
+        let g_a = compute_timed_always::<I>(untimed, Duration::ZERO, Some(a))?;
+        Ok(ev_a_b_rhs.and::<I>(&g_a))
     }
 }
 
@@ -381,6 +374,7 @@ mod tests {
     use crate::core::expr::ExprBuilder;
     use crate::core::signals::interpolation::Linear;
     use crate::core::signals::AnySignal;
+    use crate::signals::interpolation::Constant;
 
     #[derive(Default)]
     struct MyTrace {
@@ -478,5 +472,42 @@ mod tests {
             assert!(values[..values.len() - 1].iter().all(|&v| v));
             assert!(!values[values.len() - 1]);
         }
+    }
+
+    #[test]
+    fn smoketest_1() {
+        let Expr::Bool(spec) = crate::parse_str("G(a -> F[0,2] b)").unwrap() else {
+            panic!("should be bool expr")
+        };
+        let signals: HashMap<String, Box<dyn AnySignal>> = (vec![
+            (
+                "a".to_owned(),
+                Box::new(
+                    vec![(1, false), (2, false), (3, false)]
+                        .into_iter()
+                        .map(|(t, v)| (Duration::from_secs(t), v))
+                        .collect::<Signal<bool>>(),
+                ) as Box<dyn AnySignal>,
+            ),
+            (
+                "b".to_owned(),
+                Box::new(
+                    vec![(1, false), (2, true), (3, false)]
+                        .into_iter()
+                        .map(|(t, v)| (Duration::from_secs(t), v))
+                        .collect::<Signal<bool>>(),
+                ) as Box<dyn AnySignal>,
+            ),
+        ])
+        .into_iter()
+        .collect();
+
+        let trace = MyTrace { signals };
+        let rob = BooleanSemantics::eval::<Constant, Constant>(&spec, &trace).unwrap();
+
+        let Signal::Sampled { values, time_points: _ } = rob else {
+            panic!("boolean semantics should remain sampled");
+        };
+        assert!(values.into_iter().all(|v| v));
     }
 }

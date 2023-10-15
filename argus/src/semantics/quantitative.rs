@@ -372,22 +372,15 @@ fn compute_timed_until<I: InterpolationMethod<f64>>(
     a: Duration,
     b: Option<Duration>,
 ) -> ArgusResult<Signal<f64>> {
-    match b {
-        Some(b) => {
-            // First compute eventually [a, b]
-            let ev_a_b_rhs = compute_timed_eventually::<I>(rhs.clone(), a, Some(b))?;
-            // Then compute until [a, \infty) (lhs, rhs)
-            let unt_a_inf = compute_timed_until::<I>(lhs, rhs, a, None)?;
-            // Then & them
-            Ok(ev_a_b_rhs.min::<I>(&unt_a_inf))
-        }
-        None => {
-            assert_ne!(a, Duration::ZERO, "untimed case wasn't handled for Until");
-            // First compute untimed until (lhs, rhs)
-            let untimed_until = compute_untimed_until::<I>(lhs, rhs)?;
-            // Compute G [0, a]
-            compute_timed_always::<I>(untimed_until, Duration::ZERO, Some(a))
-        }
+    // First compute eventually [a, b]
+    let ev_a_b_rhs = compute_timed_eventually::<I>(rhs.clone(), a, b)?;
+    // Then compute untimed until
+    let untimed = compute_untimed_until::<I>(lhs, rhs)?;
+    if a.is_zero() {
+        Ok(ev_a_b_rhs.min::<I>(&untimed))
+    } else {
+        let g_a = compute_timed_always::<I>(untimed, Duration::ZERO, Some(a))?;
+        Ok(ev_a_b_rhs.min::<I>(&g_a))
     }
 }
 
