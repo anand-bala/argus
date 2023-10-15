@@ -111,3 +111,58 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: _site/
           keep_files: true
+
+  coverage:
+    needs: [linting]
+    env:
+      RUSTC_BOOTSTRAP: "1"
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: >-
+        -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=unwind
+      RUSTDOCFLAGS: "-Cpanic=abort"
+      LLVM_PROFILE_FILE: "argus-%p-%m.profraw"
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.10"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: ci
+          environment-file: environment.yaml
+          create-args: >-
+            python==${{ matrix.python-version }}
+          init-shell: bash
+          cache-environment: true
+          post-cleanup: 'all'
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install dependencies
+        run: cargo install grcov
+      - name: Build
+        run: |
+          cargo +nightly build --release
+          maturin develop --manifest-path pyargus/Cargo.toml
+      - name: Tests
+        continue-on-error: true
+        run: |
+          cargo +nightly test --workspace --exclude pyargus
+          coverage run --source pyargus/argus,pyargus/src -m pytest
+      - name: Generate coverage reports
+        run: |
+          grcov . -s $GITHUB_WORKSPACE --binary-path target/debug \
+            --filter covered \
+            -t lcov \
+            --branch \
+            --ignore-not-existing \
+            --ignore $HOME/.cargo/** \
+            -o rust.lcov
+          coverage lcov -o python.lcov
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: rust.lcov,python.lcov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

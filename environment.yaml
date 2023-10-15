@@ -14,7 +14,7 @@ dependencies:
   - black
   - isort
   - pytest
-  - pytest-cov
+  - coverage
   - hypothesis
   - lark # hypothesis[lark]
   - pip
