@@ -36,8 +36,9 @@ pub trait IsNumExpr: AnyExpr + Into<NumExpr> {}
 pub trait IsBoolExpr: AnyExpr + Into<BoolExpr> {}
 
 /// All expressions that are numeric
-#[derive(Clone, Debug, PartialEq, argus_derive::NumExpr, derive_more::Display)]
-#[enum_dispatch(AnyExpr)]
+#[derive(
+    Clone, Debug, PartialEq, argus_derive::NumExpr, derive_more::Display, derive_more::From, derive_more::TryInto,
+)]
 pub enum NumExpr {
     /// A signed integer literal
     IntLit(IntLit),
@@ -72,9 +73,35 @@ impl NumExpr {
     }
 }
 
+impl AnyExpr for NumExpr {
+    fn is_numeric(&self) -> bool {
+        true
+    }
+    fn is_boolean(&self) -> bool {
+        false
+    }
+    fn args(&self) -> Vec<ExprRef<'_>> {
+        match self {
+            NumExpr::IntLit(expr) => expr.args(),
+            NumExpr::UIntLit(expr) => expr.args(),
+            NumExpr::FloatLit(expr) => expr.args(),
+            NumExpr::IntVar(expr) => expr.args(),
+            NumExpr::UIntVar(expr) => expr.args(),
+            NumExpr::FloatVar(expr) => expr.args(),
+            NumExpr::Neg(expr) => expr.args(),
+            NumExpr::Add(expr) => expr.args(),
+            NumExpr::Sub(expr) => expr.args(),
+            NumExpr::Mul(expr) => expr.args(),
+            NumExpr::Div(expr) => expr.args(),
+            NumExpr::Abs(expr) => expr.args(),
+        }
+    }
+}
+
 /// All expressions that are evaluated to be of type `bool`
-#[derive(Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display)]
-#[enum_dispatch(AnyExpr)]
+#[derive(
+    Clone, Debug, PartialEq, argus_derive::BoolExpr, derive_more::Display, derive_more::From, derive_more::TryInto,
+)]
 pub enum BoolExpr {
     /// A `bool` literal
     BoolLit(BoolLit),
@@ -129,6 +156,30 @@ impl BoolExpr {
     }
 }
 
+impl AnyExpr for BoolExpr {
+    fn is_boolean(&self) -> bool {
+        true
+    }
+    fn is_numeric(&self) -> bool {
+        false
+    }
+    fn args(&self) -> Vec<ExprRef<'_>> {
+        match self {
+            BoolExpr::BoolLit(expr) => expr.args(),
+            BoolExpr::BoolVar(expr) => expr.args(),
+            BoolExpr::Cmp(expr) => expr.args(),
+            BoolExpr::Not(expr) => expr.args(),
+            BoolExpr::And(expr) => expr.args(),
+            BoolExpr::Or(expr) => expr.args(),
+            BoolExpr::Next(expr) => expr.args(),
+            BoolExpr::Oracle(expr) => expr.args(),
+            BoolExpr::Always(expr) => expr.args(),
+            BoolExpr::Eventually(expr) => expr.args(),
+            BoolExpr::Until(expr) => expr.args(),
+        }
+    }
+}
+
 /// A reference to an expression (either [`BoolExpr`] or [`NumExpr`]).
 #[derive(Clone, Copy, Debug, derive_more::From)]
 pub enum ExprRef<'a> {
@@ -139,13 +190,29 @@ pub enum ExprRef<'a> {
 }
 
 /// An expression (either [`BoolExpr`] or [`NumExpr`])
-#[derive(Clone, Debug, derive_more::Display)]
-#[enum_dispatch(AnyExpr)]
+#[derive(Clone, Debug, derive_more::Display, derive_more::From, derive_more::TryInto)]
 pub enum Expr {
     /// A reference to a [`BoolExpr`]
     Bool(BoolExpr),
     /// A reference to a [`NumExpr`]
     Num(NumExpr),
+}
+
+impl AnyExpr for Expr {
+    fn is_numeric(&self) -> bool {
+        matches!(self, Expr::Num(_))
+    }
+
+    fn is_boolean(&self) -> bool {
+        matches!(self, Expr::Bool(_))
+    }
+
+    fn args(&self) -> Vec<ExprRef<'_>> {
+        match self {
+            Expr::Bool(expr) => expr.args(),
+            Expr::Num(expr) => expr.args(),
+        }
+    }
 }
 
 /// Expression builder
@@ -636,4 +703,26 @@ mod tests {
 
     test_bool_binop!(And, bitand with &);
     test_bool_binop!(Or, bitor with |);
+
+    #[test]
+    fn is_numeric() {
+        let mut builder = ExprBuilder::new();
+        let a = builder.int_const(10);
+        let b = builder.int_var("b".to_owned()).unwrap();
+        let spec = a + b;
+
+        assert!(spec.is_numeric());
+        assert!(!spec.is_boolean());
+    }
+
+    #[test]
+    fn is_boolean() {
+        let mut builder = ExprBuilder::new();
+        let a = builder.bool_const(true);
+        let b = builder.bool_var("b".to_owned()).unwrap();
+        let spec = a & b;
+
+        assert!(!spec.is_numeric());
+        assert!(spec.is_boolean());
+    }
 }

@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use crate::core::expr::ExprBuilder;
+use crate::core::AnyExpr;
 mod lexer;
 mod syntax;
 
@@ -137,6 +138,7 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
             match op {
                 syntax::UnaryOps::Neg => {
                     assert!(interval.is_none());
+                    assert!(arg.is_numeric(), "expected numeric expression, got {:?}", arg);
                     let crate::core::expr::Expr::Num(arg) = arg else {
                         unreachable!("- must have numeric expression argument");
                     };
@@ -144,6 +146,7 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::UnaryOps::Not => {
                     assert!(interval.is_none());
+                    assert!(arg.is_boolean(), "expected boolean expression, got {:?}", arg);
                     let crate::core::expr::Expr::Bool(arg) = arg else {
                         unreachable!("`Not` must have boolean expression argument");
                     };
@@ -151,6 +154,7 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::UnaryOps::Next => {
                     use core::ops::Bound;
+                    assert!(arg.is_boolean(), "expected boolean expression, got {:?}", arg);
                     let crate::core::expr::Expr::Bool(arg) = arg else {
                         unreachable!("`Next` must have boolean expression argument");
                     };
@@ -171,6 +175,7 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                     }
                 }
                 syntax::UnaryOps::Always => {
+                    assert!(arg.is_boolean(), "expected boolean expression, got {:?}", arg);
                     let crate::core::expr::Expr::Bool(arg) = arg else {
                         unreachable!("`Always` must have boolean expression argument");
                     };
@@ -180,6 +185,7 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                     }
                 }
                 syntax::UnaryOps::Eventually => {
+                    assert!(arg.is_boolean(), "expected boolean expression, got {:?}", arg);
                     let crate::core::expr::Expr::Bool(arg) = arg else {
                         unreachable!("`Eventually` must have boolean expression argument");
                     };
@@ -202,6 +208,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
             match op {
                 syntax::BinaryOps::Add => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("`Add` must have numeric expression arguments");
                     };
@@ -211,6 +220,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Sub => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("`Sub` must have numeric expression arguments");
                     };
@@ -218,6 +230,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Mul => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("`Mul` must have numeric expression arguments");
                     };
@@ -227,6 +242,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Div => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("`Div` must have numeric expression arguments");
                     };
@@ -234,6 +252,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Lt => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("Relational operation must have numeric expression arguments");
                     };
@@ -241,6 +262,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Le => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("Relational operation must have numeric expression arguments");
                     };
@@ -248,6 +272,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Gt => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("Relational operation must have numeric expression arguments");
                     };
@@ -255,6 +282,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Ge => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("Relational operation must have numeric expression arguments");
                     };
@@ -262,6 +292,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Eq => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got: {}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got: {}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("Relational operation must have numeric expression arguments");
                     };
@@ -269,6 +302,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Neq => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_numeric(), "expected numeric expression, got {:?}", lhs);
+                    assert!(rhs.is_numeric(), "expected numeric expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Num(lhs), crate::core::expr::Expr::Num(rhs)) = (lhs, rhs) else {
                         unreachable!("Relational operation must have numeric expression arguments");
                     };
@@ -276,6 +312,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::And => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_boolean(), "expected boolean expression, got {:?}", lhs);
+                    assert!(rhs.is_boolean(), "expected boolean expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Bool(lhs), crate::core::expr::Expr::Bool(rhs)) = (lhs, rhs) else {
                         unreachable!("`And` must have boolean expression arguments");
                     };
@@ -285,6 +324,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Or => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_boolean(), "expected boolean expression, got {:?}", lhs);
+                    assert!(rhs.is_boolean(), "expected boolean expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Bool(lhs), crate::core::expr::Expr::Bool(rhs)) = (lhs, rhs) else {
                         unreachable!("`Or` must have boolean expression arguments");
                     };
@@ -294,6 +336,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Implies => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_boolean(), "expected boolean expression, got {:?}", lhs);
+                    assert!(rhs.is_boolean(), "expected boolean expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Bool(lhs), crate::core::expr::Expr::Bool(rhs)) = (lhs, rhs) else {
                         unreachable!("`Implies` must have boolean expression arguments");
                     };
@@ -303,6 +348,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Equiv => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_boolean(), "expected boolean expression, got {:?}", lhs);
+                    assert!(rhs.is_boolean(), "expected boolean expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Bool(lhs), crate::core::expr::Expr::Bool(rhs)) = (lhs, rhs) else {
                         unreachable!("`Equiv` must have boolean expression arguments");
                     };
@@ -312,6 +360,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                 }
                 syntax::BinaryOps::Xor => {
                     assert!(interval.is_none());
+                    assert!(lhs.is_boolean(), "expected boolean expression, got {:?}", lhs);
+                    assert!(rhs.is_boolean(), "expected boolean expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Bool(lhs), crate::core::expr::Expr::Bool(rhs)) = (lhs, rhs) else {
                         unreachable!("`Xor` must have boolean expression arguments");
                     };
@@ -320,6 +371,9 @@ fn ast_to_expr<'tokens, 'src: 'tokens>(
                         .map_err(|err| Rich::custom(span, err.to_string()))
                 }
                 syntax::BinaryOps::Until => {
+                    assert!(lhs.is_boolean(), "expected boolean expression, got {:?}", lhs);
+                    assert!(rhs.is_boolean(), "expected boolean expression, got {:?}", rhs);
+
                     let (crate::core::expr::Expr::Bool(lhs), crate::core::expr::Expr::Bool(rhs)) = (lhs, rhs) else {
                         unreachable!("`Until` must have boolean expression arguments");
                     };
