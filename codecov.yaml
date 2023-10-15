@@ -1,0 +1,4 @@
+ignore:
+  - "argus/examples/"
+  - "pyargus/**/test_*.py"
+  - "argus-derive/"
