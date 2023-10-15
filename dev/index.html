@@ -136,7 +136,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -220,7 +220,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -228,27 +228,30 @@
         <article role="main">
           <section id="argus-temporal-logic-monitoring-tool">
 <h1>Argus: Temporal Logic Monitoring Tool<a class="headerlink" href="#argus-temporal-logic-monitoring-tool" title="Link to this heading">#</a></h1>
-<a class="reference external image-reference" href="https://badge.fury.io/py/argus-temporal-logic"><img alt="https://badge.fury.io/py/argus-temporal-logic.svg" src="https://badge.fury.io/py/argus-temporal-logic.svg" /></a>
+<p><a class="reference external" href="https://badge.fury.io/py/argus-temporal-logic"><img alt="PyPI version" src="https://badge.fury.io/py/argus-temporal-logic.svg" /></a></p>
+<p><a class="reference external" href="https://codecov.io/gh/anand-bala/argus"><img alt="codecov" src="https://codecov.io/gh/anand-bala/argus/graph/badge.svg?token=O2YXQPWTNS" /></a></p>
 <p>Argus aims to be a tool to generate monitors for Signal Temporal Logic (STL), and its
 different semantics.</p>
-<p>This library is a direct successor of my <a class="reference external" href="https://github.com/anand-bala/signal-temporal-logic/">signal-temporal-logic</a> tool, and is inspired by the
-following projects:</p>
+<p>This library is a direct successor of my
+<a class="reference external" href="https://github.com/anand-bala/signal-temporal-logic/"><code class="docutils literal notranslate"><span class="pre">signal-temporal-logic</span></code></a> tool,
+and is inspired by the following projects:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/mvcisback/py-metric-temporal-logic/">py-metric-temporal-logic</a> is a tool written in pure Python, and provides an elegant
 interface for evaluating discrete time signals using Metric Temporal Logic (MTL).</p></li>
 <li><p><a class="reference external" href="https://github.com/nickovic/rtamt">RTAMT</a> is a Python library for offline and online
 monitoring of STL specifications.</p></li>
-<li><p><a class="reference external" href="https://github.com/decyphir/breach">Breach</a> and <a class="reference external" href="https://sites.google.com/a/asu.edu/s-taliro/s-taliro">S-TaLiRo</a> are Matlab toolboxes designed for falsification and
+<li><p><a class="reference external" href="https://github.com/decyphir/breach">Breach</a> and <a class="reference external" href="https://sites.google.com/a/asu.edu/s-taliro/s-taliro">S-TaLiRo</a> are <a class="reference external" href="https://www.mathworks.com/products/matlab.html">Matlab</a> toolboxes designed for falsification and
 simulation-based testing of cyber-physical systems with STL and MTL specifications,
 respectively. One of their various features includes the ability to evaluate the
 robustness of signals against STL/MTL specifications.</p></li>
 </ul>
 <p>The goal of this tool is to provide offline and online monitors for Signal Temporal
 Logic (STL) and its semantics, focussing on performance and ease of use in controllers
-synthesis and analysis (for training and monitoring them).</p>
+(for training and monitoring them).</p>
 <p>The project name is inspired from <a class="reference external" href="https://www.britannica.com/topic/Argus-Greek-mythology">Argus Panoptes</a>.</p>
+</section>
 <section id="installing">
-<h2>Installing<a class="headerlink" href="#installing" title="Link to this heading">#</a></h2>
+<h1>Installing<a class="headerlink" href="#installing" title="Link to this heading">#</a></h1>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>argus-temporal-logic
 </pre></div>
 </div>
@@ -260,7 +263,7 @@ ambiguity.</p>
 </div>
 </section>
 <section id="contents">
-<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading">#</a></h2>
+<h1>Contents<a class="headerlink" href="#contents" title="Link to this heading">#</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a><ul>
@@ -275,15 +278,14 @@ ambiguity.</p>
 </li>
 </ul>
 </div>
-</section>
-</section>
 <section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">#</a></h1>
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
 <li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
+</section>
 </section>
 
         </article>
@@ -319,29 +321,8 @@ ambiguity.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">Argus: Temporal Logic Monitoring Tool</a><ul>
-<li><a class="reference internal" href="#installing">Installing</a></li>
-<li><a class="reference internal" href="#contents">Contents</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
