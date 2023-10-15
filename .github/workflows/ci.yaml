@@ -42,7 +42,7 @@ jobs:
       - name: Rust Tests
         run: RUST_BACKTRACE=1 cargo test --release
       - name: Build wheels
-        run: maturin develop --release --manifest-path pyargus/Cargo.toml
+        run: maturin develop --release --manifest-path pyargus/Cargo.toml -E test
       - name: Python Tests
         run: RUST_BACKTRACE=1 pytest pyargus --hypothesis-explain
 
@@ -74,7 +74,7 @@ jobs:
           cargo +nightly check --workspace
           cargo +nightly clippy --workspace
       - name: Build Python package
-        run: maturin develop --release --manifest-path pyargus/Cargo.toml
+        run: maturin develop --release --manifest-path pyargus/Cargo.toml -E dev
       - name: Python checks
         working-directory: pyargus
         run: |
