@@ -20,6 +20,7 @@ permissions:
 jobs:
   testing:
     strategy:
+      fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
@@ -48,6 +49,7 @@ jobs:
 
   linting:
     strategy:
+      fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
         python-version: ['3.10']
@@ -113,14 +115,6 @@ jobs:
           keep_files: true
 
   coverage:
-    needs: [linting]
-    env:
-      RUSTC_BOOTSTRAP: "1"
-      CARGO_INCREMENTAL: "0"
-      RUSTFLAGS: >-
-        -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=unwind
-      RUSTDOCFLAGS: "-Cpanic=abort"
-      LLVM_PROFILE_FILE: "argus-%p-%m.profraw"
     strategy:
       matrix:
         os: ["ubuntu-latest"]
