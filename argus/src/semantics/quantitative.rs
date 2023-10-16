@@ -296,7 +296,7 @@ fn compute_timed_eventually<I: InterpolationMethod<f64>>(
                     ret_vals.push(
                         wedge
                             .front()
-                            .map(|(&t, &v)| (t, v))
+                            .map(|(_, &v)| (*i - width, v))
                             .unwrap_or_else(|| panic!("wedge should have at least 1 element")),
                     )
                 }
