@@ -1,6 +1,6 @@
-from typing import ClassVar, Literal, TypeAlias, TypeVar, final
+from typing import ClassVar, Literal, TypeVar, final
 
-from typing_extensions import Generic, Self
+from typing_extensions import Generic, Self, TypeAlias
 
 __version__: str
 
