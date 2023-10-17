@@ -6,21 +6,11 @@ from pathlib import Path
 import nox
 import nox.registry
 
-MICROMAMBA = shutil.which("micromamba")
-
 CURRENT_DIR = Path(__file__).parent.resolve()
 TARGET_DIR = CURRENT_DIR / "target"
 COVERAGE_DIR = TARGET_DIR / "debug/coverage"
 
-if MICROMAMBA:
-    BIN_DIR = CURRENT_DIR / "build" / "bin"
-    BIN_DIR.mkdir(exist_ok=True, parents=True)
-    CONDA = BIN_DIR / "conda"
-    if not CONDA.is_file():
-        CONDA.hardlink_to(MICROMAMBA)
-    os.environ["PATH"] = os.pathsep.join([str(BIN_DIR), os.environ["PATH"]])
-    nox.options.default_venv_backend = "conda"
-elif shutil.which("mamba"):
+if shutil.which("mamba"):
     nox.options.default_venv_backend = "mamba"
 else:
     nox.options.default_venv_backend = "conda"
@@ -143,7 +133,7 @@ def mypy(session: nox.Session):
 
 @nox.session(python=PYTHONS)
 def tests(session: nox.Session):
-    session.conda_install("pytest", "hypothesis", "lark")
+    session.conda_install("pytest", "hypothesis", "lark", "maturin")
     session.env.update(ENV)
     try:
         session.run(
