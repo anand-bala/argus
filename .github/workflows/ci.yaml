@@ -143,6 +143,22 @@ jobs:
           post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
+      - name: Generate lockfile
+        run: cargo generate-lockfile
+      - name: Set up project cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            .nox/
+            .hypothesis/
+          key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', 'noxfile.py') }}
+          restore-keys: ${{ runner.os }}-argus-
       - name: Generate Coverage Reports
         run: nox -s coverage
       - name: Upload coverage reports to Codecov
