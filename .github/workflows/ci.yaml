@@ -49,7 +49,7 @@ jobs:
             target/
             .nox/
             .hypothesis/
-          key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', "noxfile.py") }}
+          key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', 'noxfile.py') }}
           restore-keys: ${{ runner.os }}-argus-
       - name: Run tests
         run: nox -s tests
@@ -88,7 +88,7 @@ jobs:
             target/
             .nox/
             .hypothesis/
-          key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', "noxfile.py") }}
+          key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', 'noxfile.py') }}
           restore-keys: ${{ runner.os }}-argus-
       - name: Run lints
         run: nox -s lint
