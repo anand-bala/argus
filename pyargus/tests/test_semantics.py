@@ -58,7 +58,11 @@ def test_boolean_propositional_expr(
                 "G b",
                 "(G(a & b))",
                 "(F(a | b))",
-                "G(a -> F[0,2] b)",
+                # FIXME: `mtl` doesn't contract the signal domain for F[0,2] so it fails if a is True and b is False in the
+                # last sample point.
+                # "G(a -> F[0,2] b)",
+                "G(a -> F b)",
+                "G F a -> F G b",
                 "(a U b)",
                 "(a U[0,2] b)",
             ]
