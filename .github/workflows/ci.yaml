@@ -23,7 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -31,28 +30,35 @@ jobs:
         with:
           environment-name: ci
           environment-file: environment.yaml
-          create-args: >-
-            python==${{ matrix.python-version }}
           init-shell: bash
           cache-environment: true
           post-cleanup: 'all'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        run: cargo build --release
-      - name: Rust Tests
-        run: RUST_BACKTRACE=1 cargo test --release
-      - name: Build wheels
-        run: maturin develop --release --manifest-path pyargus/Cargo.toml -E test
-      - name: Python Tests
-        run: RUST_BACKTRACE=1 pytest pyargus --hypothesis-explain
+      - name: Generate lockfile
+        run: cargo generate-lockfile
+      - name: Set up project cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            .nox/
+            .hypothesis/
+          key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', "noxfile.py") }}
+          restore-keys: ${{ runner.os }}-argus-
+      - name: Run tests
+        run: nox -s tests
 
   linting:
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ['3.10']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -60,8 +66,6 @@ jobs:
         with:
           environment-name: ci
           environment-file: environment.yaml
-          create-args: >-
-            python==${{ matrix.python-version }}
           init-shell: bash
           cache-environment: true
           post-cleanup: 'all'
@@ -70,21 +74,24 @@ jobs:
         with:
           toolchain: nightly
           components: "clippy, rustfmt"
-      - name: Rust lints
-        run: |
-          cargo +nightly fmt --all --check
-          cargo +nightly check --workspace
-          cargo +nightly clippy --workspace
-      - name: Build Python package
-        run: maturin develop --release --manifest-path pyargus/Cargo.toml -E dev
-      - name: Python checks
-        working-directory: pyargus
-        run: |
-          black .
-          isort .
-          flake8
-          ruff check .
-          mypy .
+      - name: Generate lockfile
+        run: cargo generate-lockfile
+      - name: Set up project cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            .nox/
+            .hypothesis/
+          key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', "noxfile.py") }}
+          restore-keys: ${{ runner.os }}-argus-
+      - name: Run lints
+        run: nox -s lint
 
   docs:
     name: Documentation
@@ -103,9 +110,7 @@ jobs:
       - name: Build Python package
         run: maturin develop --release --manifest-path pyargus/Cargo.toml
       - name: Build HTML docs
-        run: |
-          sphinx-multiversion docs _site -b html
-          cp ./docs/_templates/index-redirect.html _site/index.html
+        run: nox -s docs
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/')
@@ -118,7 +123,6 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.10"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -126,8 +130,6 @@ jobs:
         with:
           environment-name: ci
           environment-file: environment.yaml
-          create-args: >-
-            python==${{ matrix.python-version }}
           init-shell: bash
           cache-environment: true
           post-cleanup: 'all'

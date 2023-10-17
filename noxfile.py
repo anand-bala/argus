@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import nox
@@ -30,6 +31,13 @@ ENV = dict(
     CARGO_TARGET_DIR=str(TARGET_DIR),
 )
 
+DEFAULT_PYTHON = f"{sys.version_info.major}.{sys.version_info.minor}"
+if os.environ.get("CI"):
+    PYTHONS = [f"3.{i}" for i in range(8, 12 + 1)]
+    ENV["RUST_BACKTRACE"] = "1"
+else:
+    PYTHONS = [DEFAULT_PYTHON]
+
 
 @nox.session(python=False)
 def clean(session: nox.Session):
@@ -53,7 +61,7 @@ def dev(session: nox.Session):
     session.run("pre-commit", "install")
 
 
-@nox.session
+@nox.session(python=DEFAULT_PYTHON)
 def docs(session: nox.Session):
     session.conda_install(
         "sphinx",
@@ -78,11 +86,12 @@ def rustfmt(session: nox.Session):
 
 @nox.session(tags=["lint", "fix", "rust"], python=False)
 def cargo_check(session: nox.Session):
-    session.run("cargo", "check", "--workspace", external=True)
-    session.run("cargo", "clippy", "--workspace", external=True)
+    session.run("cargo", "+nightly", "fmt", "--all", "--check", external=True)
+    session.run("cargo", "+nightly", "check", "--workspace", external=True)
+    session.run("cargo", "+nightly", "clippy", "--workspace", external=True)
 
 
-@nox.session(tags=["style", "fix", "python"])
+@nox.session(tags=["style", "fix", "python"], python=DEFAULT_PYTHON)
 def black(session: nox.Session):
     session.conda_install("black")
     session.run("black", str(__file__))
@@ -90,14 +99,14 @@ def black(session: nox.Session):
         session.run("black", ".")
 
 
-@nox.session(tags=["style", "fix", "python"])
+@nox.session(tags=["style", "fix", "python"], python=DEFAULT_PYTHON)
 def isort(session: nox.Session):
     session.conda_install("isort")
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.run("isort", ".")
 
 
-@nox.session(tags=["lint", "python"])
+@nox.session(tags=["lint", "python"], python=DEFAULT_PYTHON)
 def flake8(session: nox.Session):
     session.conda_install(
         "flake8",
@@ -109,14 +118,14 @@ def flake8(session: nox.Session):
         session.run("flake8")
 
 
-@nox.session(tags=["lint", "fix", "python"])
+@nox.session(tags=["lint", "fix", "python"], python=DEFAULT_PYTHON)
 def ruff(session: nox.Session):
     session.conda_install("ruff")
     with session.chdir(CURRENT_DIR / "pyargus"):
         session.run("ruff", "--fix", "--exit-non-zero-on-fix", ".")
 
 
-@nox.session(tags=["lint", "python"])
+@nox.session(tags=["lint", "python"], python=PYTHONS)
 def mypy(session: nox.Session):
     session.conda_install("mypy", "typing-extensions", "pytest", "hypothesis", "lark")
     session.env.update(ENV)
@@ -132,25 +141,40 @@ def mypy(session: nox.Session):
         # )
 
 
-@nox.session
+@nox.session(python=PYTHONS)
 def tests(session: nox.Session):
     session.conda_install("pytest", "hypothesis", "lark")
     session.env.update(ENV)
-    session.install("./pyargus[test]")
     try:
         session.run(
-            "cargo", "test", "--workspace", "--exclude", "pyargus", external=True
+            "cargo",
+            "test",
+            "--release",
+            "--workspace",
+            "--exclude",
+            "pyargus",
+            external=True,
         )
     except Exception:
         ...
     try:
+        session.run(
+            "maturin",
+            "develop",
+            "--release",
+            "-m",
+            "./pyargus/Cargo.toml",
+            "-E",
+            "test",
+            silent=True,
+        )
         with session.chdir(CURRENT_DIR / "pyargus"):
-            session.run("pytest", ".")
+            session.run("pytest", ".", "--hypothesis-explain")
     except Exception:
         ...
 
 
-@nox.session
+@nox.session(python=DEFAULT_PYTHON)
 def coverage(session: nox.Session):
     session.conda_install("pytest", "coverage", "hypothesis", "lark", "maturin", "lcov")
     session.run("cargo", "install", "grcov", external=True, silent=True)
