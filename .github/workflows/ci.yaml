@@ -91,7 +91,7 @@ jobs:
           key: ${{ runner.os }}-argus-${{ hashFiles('**/Cargo.toml', 'noxfile.py') }}
           restore-keys: ${{ runner.os }}-argus-
       - name: Run lints
-        run: nox -s lint
+        run: nox -t lint
 
   docs:
     name: Documentation
