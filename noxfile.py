@@ -131,37 +131,41 @@ def mypy(session: nox.Session):
         # )
 
 
-@nox.session(python=PYTHONS)
-def tests(session: nox.Session):
-    session.conda_install("pytest", "hypothesis", "lark", "maturin")
+@nox.session(python=False)
+def rust_tests(session: nox.Session) -> None:
     session.env.update(ENV)
-    try:
-        session.run(
-            "cargo",
-            "test",
-            "--release",
-            "--workspace",
-            "--exclude",
-            "pyargus",
-            external=True,
-        )
-    except Exception:
-        ...
-    try:
-        session.run(
-            "maturin",
-            "develop",
-            "--release",
-            "-m",
-            "./pyargus/Cargo.toml",
-            "-E",
-            "test",
-            silent=True,
-        )
-        with session.chdir(CURRENT_DIR / "pyargus"):
-            session.run("pytest", ".", "--hypothesis-explain")
-    except Exception:
-        ...
+    session.run(
+        "cargo",
+        "test",
+        "--release",
+        "--workspace",
+        "--exclude",
+        "pyargus",
+        external=True,
+    )
+
+
+@nox.session(python=PYTHONS)
+def python_tests(session: nox.Session) -> None:
+    session.conda_install("pytest", "hypothesis", "lark", "maturin")
+    session.run(
+        "maturin",
+        "develop",
+        "--release",
+        "-m",
+        "./pyargus/Cargo.toml",
+        "-E",
+        "test",
+        silent=True,
+    )
+    with session.chdir(CURRENT_DIR / "pyargus"):
+        session.run("pytest", ".", "--hypothesis-explain")
+
+
+@nox.session(python=False)
+def tests(session: nox.Session):
+    session.notify("rust_tests")
+    session.notify("python_tests")
 
 
 @nox.session(python=DEFAULT_PYTHON)
