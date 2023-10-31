@@ -75,7 +75,7 @@ pub enum Error {
     /// Pushing the new value to the sampled signal makes it not strictly monotonically
     /// increasing.
     #[error(
-        "trying to create a non-monotonically signal, signal end time ({end_time:?}) > sample time point \
+        "trying to create a signal with non-monotonic time points, signal end time ({end_time:?}) > sample time point \
          ({current_sample:?})"
     )]
     NonMonotonicSignal {

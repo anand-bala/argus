@@ -1,6 +1,7 @@
 use std::ops::Bound;
 use std::time::Duration;
 
+use itertools::Itertools;
 use num_traits::{Num, NumCast};
 
 use super::utils::lemire_minmax::MonoWedge;
@@ -270,44 +271,69 @@ fn compute_timed_eventually<I: InterpolationMethod<f64>>(
     a: Duration,
     b: Option<Duration>,
 ) -> ArgusResult<Signal<f64>> {
+    let time_points = signal.time_points().unwrap().into_iter().copied().collect_vec();
+    let start_time = time_points.first().copied().unwrap();
+    let end_time = time_points.last().copied().unwrap();
+    // Shift the signal to the left by `a`, and interpolate at the time points.
+    let shifted = signal.shift_left::<I>(a);
+    let signal: Signal<f64> = time_points
+        .iter()
+        .map(|&t| (t, shifted.interpolate_at::<I>(t).unwrap()))
+        .collect();
     match b {
-        Some(b) => {
-            // We want to compute the windowed max/or of the signal.
-            // The window is dictated by the time duration though.
-            let Signal::Sampled { values, time_points } = signal else {
-                unreachable!("we shouldn't be passing non-sampled signals here")
-            };
+        Some(b) if end_time - start_time < (b - a) => {
             assert!(b > a);
-            assert!(!time_points.is_empty());
-            let signal_duration = *time_points.last().unwrap() - *time_points.first().unwrap();
-            let width = if signal_duration < (b - a) {
-                signal_duration
-            } else {
-                b - a
-            };
-            let mut ret_vals = Vec::with_capacity(values.len());
 
-            // For boolean signals we dont need to worry about intersections with ZERO as much as
-            // for quantitative signals, as linear interpolation is just a discrte switch.
-            let mut wedge = MonoWedge::<f64>::max_wedge(width);
-            for (i, value) in time_points.iter().zip(&values) {
-                wedge.update((i, value));
+            let time_points = signal
+                .sync_with_intersection::<I>(&Signal::zero())
+                .expect("Non-empty time points as we shouldn't be passing non-sampled signals here.");
+            let time_points_plus_b = time_points.iter().map(|t| end_time.min(*t + b)).collect_vec();
+            let time_points_minus_b = time_points
+                .iter()
+                .map(|t| start_time.max(t.saturating_sub(b)))
+                .collect_vec();
+            let time_points: Vec<Duration> = itertools::kmerge([time_points, time_points_plus_b, time_points_minus_b])
+                .dedup()
+                .collect();
+
+            assert!(!time_points.is_empty());
+            let width = b - a;
+            let mut ret_vals = Signal::<f64>::with_capacity(time_points.len());
+
+            let mut wedge = MonoWedge::<f64>::max_wedge();
+            let mut j: usize = 0;
+            for i in &time_points {
+                let value = signal
+                    .interpolate_at::<I>(*i)
+                    .expect("signal should be well defined at this point");
+                wedge.purge_before(i.saturating_sub(width));
+                wedge.update((*i, value));
                 if i >= &(time_points[0] + width) {
-                    ret_vals.push(
-                        wedge
-                            .front()
-                            .map(|(_, &v)| (*i - width, v))
-                            .unwrap_or_else(|| panic!("wedge should have at least 1 element")),
-                    )
+                    let (new_t, new_v) = wedge
+                        .front()
+                        .map(|(&t, &v)| (t, v))
+                        .unwrap_or_else(|| panic!("wedge should have at least 1 element"));
+                    ret_vals.push(new_t, new_v)?;
+                    j += 1;
                 }
             }
-            Signal::try_from_iter(ret_vals)
+            // Get the rest of the values
+            for i in &time_points[j..] {
+                wedge.purge_before(*i);
+                let (t, val) = wedge
+                    .front()
+                    .map(|(&t, &v)| (t, v))
+                    .unwrap_or_else(|| panic!("wedge should have at least 1 element"));
+                assert_eq!(
+                    t, *i,
+                    "{:?} != {:?}\n\ttime_points = {:?}, wedge.time_points = {:?}\n\tret_vals = {:?}",
+                    t, i, time_points, wedge.time_points, ret_vals,
+                );
+                ret_vals.push(*i, val)?;
+            }
+            Ok(ret_vals)
         }
-        None => {
-            // Shift the signal to the left by `a` and then run the untimed eventually.
-            let shifted = signal.shift_left::<I>(a);
-            compute_untimed_eventually::<I>(shifted)
-        }
+        _ => compute_untimed_eventually::<I>(shifted),
     }
 }
 

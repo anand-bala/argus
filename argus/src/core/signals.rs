@@ -73,7 +73,7 @@ impl<T> Signal<T> {
     }
 
     /// Create a new empty signal with the specified capacity
-    pub fn new_with_capacity(size: usize) -> Self {
+    pub fn with_capacity(size: usize) -> Self {
         Self::Sampled {
             values: Vec::with_capacity(size),
             time_points: Vec::with_capacity(size),
@@ -168,7 +168,7 @@ impl<T> Signal<T> {
         I: IntoIterator<Item = (Duration, T)>,
     {
         let iter = iter.into_iter();
-        let mut signal = Signal::new_with_capacity(iter.size_hint().0);
+        let mut signal = Signal::with_capacity(iter.size_hint().0);
         for (time, value) in iter.into_iter() {
             signal.push(time, value)?;
         }
@@ -308,9 +308,12 @@ impl<T> Signal<T> {
                             .interpolate_at::<Interp>(*t)
                             .map(|value| Sample { time: *t, value }),
                     };
-                    let intersect = Interp::find_intersection(&a, &b)
-                        .unwrap_or_else(|| panic!("unable to find intersection for crossing signals"));
-                    return_points.push(intersect.time);
+                    if let Some(intersect) = Interp::find_intersection(&a, &b) {
+                        // There is an intersection
+                        return_points.push(intersect.time);
+                    } else {
+                        // ignore, as the interpolation may not support intersection.
+                    }
                 }
             }
             return_points.push(*t);
@@ -448,7 +451,7 @@ pub mod arbitrary {
                 ts.sort_unstable();
                 ts.dedup();
                 ts.into_iter()
-                    .map(Duration::from_secs)
+                    .map(Duration::from_millis)
                     .zip(values.clone())
                     .collect::<Vec<_>>()
             })

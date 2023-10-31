@@ -47,11 +47,11 @@ def gen_samples(
     n_lists = max(1, n_lists)
     timestamps = draw(
         st.lists(
-            st.integers(min_value=0, max_value=2**32 - 1),
+            st.integers(min_value=0, max_value=2**32 - 1).map(lambda i: i / 1000),
             unique=True,
             min_size=min_size,
             max_size=max_size,
-        ).map(lambda t: list(map(float, sorted(set(t)))))
+        ).map(lambda t: list(sorted(set(t))))
     )
     elements = gen_element_fn(dtype_)
 

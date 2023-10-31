@@ -58,10 +58,8 @@ impl Trace for PyTrace {
 fn eval_bool_semantics(expr: &PyBoolExpr, trace: &PyTrace, interpolation_method: &str) -> PyResult<Py<BoolSignal>> {
     let interp = PyInterp::from_str(interpolation_method)?;
     let sig = match interp {
-        PyInterp::Linear => BooleanSemantics::eval::<Linear, Linear>(&expr.0, trace).map_err(PyArgusError::from)?,
-        PyInterp::Constant => {
-            BooleanSemantics::eval::<Constant, Constant>(&expr.0, trace).map_err(PyArgusError::from)?
-        }
+        PyInterp::Linear => BooleanSemantics::eval::<Linear>(&expr.0, trace).map_err(PyArgusError::from)?,
+        PyInterp::Constant => BooleanSemantics::eval::<Constant>(&expr.0, trace).map_err(PyArgusError::from)?,
     };
     Python::with_gil(|py| Py::new(py, (BoolSignal, PySignal::new(sig, interp))))
 }

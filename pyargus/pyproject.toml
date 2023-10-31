@@ -52,7 +52,7 @@ features = ["pyo3/extension-module"]
 module-name = "argus._argus"
 
 [tool.pytest.ini_options]
-addopts = "--import-mode=importlib --doctest-glob=../docs/*.rst --doctest-glob=../docs/**/*.rst"
+addopts = "--import-mode=importlib --doctest-glob=../docs/*.rst --doctest-glob=../docs/**/*.rst --hypothesis-explain"
 testpaths = ["tests"]
 
 [tool.mypy]
@@ -62,6 +62,9 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = "mtl"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "rtamt"
 ignore_missing_imports = true
 
 

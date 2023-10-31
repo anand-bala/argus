@@ -39,9 +39,9 @@ def test_correctly_create_signals(data: st.DataObject) -> None:
         actual_end_time = signal.end_time
 
         assert actual_start_time is not None
-        assert actual_start_time == expected_start_time
+        assert actual_start_time == pytest.approx(expected_start_time)
         assert actual_end_time is not None
-        assert actual_end_time == expected_end_time
+        assert actual_end_time == pytest.approx(expected_end_time)
 
         a = data.draw(draw_index(xs))
         assert a < len(xs)
@@ -49,7 +49,10 @@ def test_correctly_create_signals(data: st.DataObject) -> None:
         actual_val = signal.at(at)  # type: ignore
 
         assert actual_val is not None
-        assert actual_val == expected_val
+        if isinstance(actual_val, float):
+            assert actual_val == pytest.approx(expected_val)
+        else:
+            assert actual_val == expected_val
 
         # generate one more sample
         new_time = actual_end_time + 1
@@ -58,7 +61,10 @@ def test_correctly_create_signals(data: st.DataObject) -> None:
 
         get_val = signal.at(new_time)
         assert get_val is not None
-        assert get_val == new_value
+        if isinstance(get_val, float):
+            assert get_val == pytest.approx(new_value)
+        else:
+            assert get_val == new_value
 
     else:
         assert signal.is_empty()
@@ -81,7 +87,7 @@ def test_signal_create_should_fail(data: st.DataObject) -> None:
     # Swap two indices in the samples
     xs[b], xs[a] = xs[a], xs[b]  # type: ignore
 
-    with pytest.raises(RuntimeError, match=r"trying to create a non-monotonically signal.+"):
+    with pytest.raises(RuntimeError, match=r"trying to create a signal with non-monotonic time points.+"):
         _ = sampled_signal(xs, dtype_)  # type: ignore
 
 

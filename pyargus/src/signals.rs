@@ -237,7 +237,7 @@ macro_rules! impl_signals {
                     // if it is an empty signal, make it sampled. Otherwise, throw an error.
                     let signal: &mut Signal<$ty> = match signal {
                         Signal::Empty => {
-                            super_.signal = Signal::<$ty>::new_with_capacity(1).into();
+                            super_.signal = Signal::<$ty>::with_capacity(1).into();
                             (&mut super_.signal).try_into().unwrap()
                         }
                         _ => signal,

@@ -124,25 +124,29 @@ macro_rules! interpolate_for_num {
                 let t2 = second.time.as_secs_f64();
                 let at = time.as_secs_f64();
                 assert!((t1..=t2).contains(&at));
+                // Set t to a value in [0, 1]
+                let t = (at - t1) / (t2 - t1);
+                assert!((0.0..=1.0).contains(&t));
 
                 // We need to do stable linear interpolation
                 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0811r3.html
                 let a: f64 = cast(first.value).unwrap_or_else(|| panic!("unable to cast {:?} to f64", first.value));
                 let b: f64 = cast(second.value).unwrap_or_else(|| panic!("unable to cast {:?} to f64", second.value));
 
-                // Set t to a value in [0, 1]
-                let t = (at - t1) / (t2 - t1);
-                assert!((0.0..=1.0).contains(&t));
-
-                let val = if (a <= 0.0 && b >= 0.0) || (a >= 0.0 && b <= 0.0) {
-                    t * b + (1.0 - t) * a
-                } else if t == 1.0 {
-                    b
+                if !a.is_finite() || !b.is_finite() {
+                    // Cannot do stable interpolation for infinite values, so assume constant
+                    // interpolation
+                    cast(<Constant as InterpolationMethod<$ty>>::at(first, second, time).unwrap())
                 } else {
-                    a + t * (b - a)
-                };
-
-                cast(val)
+                    let val: f64 = if (a <= 0.0 && b >= 0.0) || (a >= 0.0 && b <= 0.0) {
+                        t * b + (1.0 - t) * a
+                    } else if t == 1.0 {
+                        b
+                    } else {
+                        a + t * (b - a)
+                    };
+                    cast(val)
+                }
             }
 
             fn find_intersection(a: &Neighborhood<$ty>, b: &Neighborhood<$ty>) -> Option<Sample<$ty>> {
@@ -169,12 +173,26 @@ macro_rules! interpolate_for_num {
                     // The lines may be parallel or coincident.
                     // We just return None
                     return None;
+                } else if !denom.is_finite() {
+                    // Assume parallel or coincident because the time of intersection is not finite
+                    return None;
                 }
 
                 let t_top = (((t1 * y2) - (y1 * t2)) * (t3 - t4)) - ((t1 - t2) * (t3 * y4 - y3 * t4));
+                if !t_top.is_finite() {
+                    // Assume parallel or coincident because the time of intersection is not finite
+                    return None;
+                }
                 let y_top = (((t1 * y2) - (y1 * t2)) * (y3 - y4)) - ((y1 - y2) * (t3 * y4 - y3 * t4));
 
-                let t = Duration::from_secs_f64(t_top / denom);
+                let t = Duration::try_from_secs_f64(t_top / denom).unwrap_or_else(|_| {
+                    panic!(
+                        "cannot convert {} / {} = {} to Duration",
+                        t_top,
+                        denom,
+                        t_top / denom
+                    )
+                });
                 let y: $ty = num_traits::cast(y_top / denom).unwrap();
                 Some(Sample { time: t, value: y })
             }
